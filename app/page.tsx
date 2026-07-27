@@ -2,12 +2,11 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Linkedin, Zap, ArrowRight, Sparkles, FileText } from 'lucide-react';
+import { Upload, Zap, ArrowRight, Sparkles, FileText } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [linkedinUrl, setLinkedinUrl] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -27,26 +26,22 @@ export default function Home() {
   const handleDragLeave = () => setDragging(false);
 
   const handleSubmit = async () => {
-    if (!selectedFile && !linkedinUrl) return;
+    if (!selectedFile) return;
     setLoading(true);
 
     const formData = new FormData();
-    if (selectedFile) formData.append('resume', selectedFile);
-    if (linkedinUrl) formData.append('linkedin', linkedinUrl);
+    formData.append('resume', selectedFile);
 
     try {
       const res = await fetch('/api/analyze', { method: 'POST', body: formData });
       const data = await res.json();
-      const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
-      analyses[data.id] = data;
-      localStorage.setItem('aura-analyses', JSON.stringify(analyses));
       router.push(`/results?id=${data.id}`);
     } catch {
       setLoading(false);
     }
   };
 
-  const canSubmit = selectedFile || linkedinUrl;
+  const canSubmit = !!selectedFile;
 
   return (
     <main className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
@@ -65,11 +60,11 @@ export default function Home() {
             Let AI Hack the ATS.
           </h1>
           <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-            Upload your resume, paste your LinkedIn URL, or both. We&apos;ll analyze each source and show you exactly where you&apos;re falling short.
+            Upload your resume and get an instant ATS compatibility score with detailed insights.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
+        <div className="mb-12">
           <div
             onDrop={handleDrop}
             onDragOver={handleDragOver}
@@ -92,6 +87,12 @@ export default function Home() {
                   <FileText className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
                   <p className="text-emerald-400 font-semibold mb-1">{selectedFile.name}</p>
                   <p className="text-slate-500 text-sm">Click or drop to replace</p>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
+                    className="mt-3 text-sm text-slate-500 hover:text-white underline"
+                  >
+                    Remove
+                  </button>
                 </>
               ) : (
                 <>
@@ -110,21 +111,8 @@ export default function Home() {
             />
           </div>
 
-          <div className="rounded-2xl border border-slate-700 hover:border-blue-500 bg-slate-900/80 p-8 transition-all relative">
-            <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
-              <span className="text-xs font-semibold text-blue-400">LinkedIn</span>
-            </div>
-            <div className="mt-6">
-              <Linkedin className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-              <p className="text-white font-semibold mb-4 text-center">Paste LinkedIn URL</p>
-              <input
-                type="url"
-                value={linkedinUrl}
-                onChange={(e) => setLinkedinUrl(e.target.value)}
-                placeholder="linkedin.com/in/yourprofile"
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors text-sm text-center"
-              />
-            </div>
+          <div className="mt-8 text-center text-slate-500 text-sm">
+            LinkedIn Analyser available in Dashboard (Pro plan)
           </div>
         </div>
 
@@ -139,7 +127,7 @@ export default function Home() {
             ) : (
               <>
                 <Zap className="w-5 h-5 group-hover:animate-pulse" />
-                {selectedFile && linkedinUrl ? 'Analyze Both' : 'Analyze My Profile'}
+                Analyze My Resume
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </>
             )}

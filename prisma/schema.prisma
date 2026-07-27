@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["clientExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String             @id @default(cuid())
+  email         String             @unique
+  name          String?
+  passwordHash  String?
+  image         String?
+  plan          String             @default("free")
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  resumes            Resume[]
+  analyses           Analysis[]
+  linkedin           LinkedInProfile?
+  jobMatches         JobMatch[]
+  roadmaps           Roadmap[]
+  portfolios         Portfolio[]
+  payments           Payment[]
+  usage              UsageRecord[]
+  linkedinTemplates  LinkedInTemplate[]
+  creditBalance      CreditBalance?
+}
+
+model Resume {
+  id        String     @id @default(cuid())
+  userId    String
+  title     String
+  fileUrl   String
+  fileKey   String?
+  rawText   String?    @db.Text
+  status    String     @default("uploaded")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analyses Analysis[]
+  jobs     JobMatch[]
+}
+
+model Analysis {
+  id            String   @id @default(cuid())
+  resumeId      String
+  userId        String
+  type          String   // "resume" | "linkedin" | "roadmap" | "gap"
+  overallScore  Float?
+  strengths     Json?
+  redFlags      Json?
+  suggestions   Json?
+  keywordGaps   Json?
+  modelUsed     String?
+  tokensUsed    Int?
+  createdAt     DateTime @default(now())
+
+  resume Resume? @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LinkedInProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  linkedinUrl   String?
+  headline      String?
+  summary       String?  @db.Text
+  experience    Json?
+  skills        Json?
+  analysisScore Float?
+  suggestions   Json?
+  lastSyncedAt  DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model JobMatch {
+  id            String   @id @default(cuid())
+  userId        String
+  resumeId      String?
+  title         String
+  company       String?
+  location      String?
+  salary        String?
+  url           String?
+  matchScore    Float?
+  source        String?
+  skills        Json?
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resume Resume? @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+}
+
+model Roadmap {
+  id            String   @id @default(cuid())
+  userId        String
+  title         String
+  goalRole      String
+  currentRole   String?
+  timeline      Json?
+  skillsToLearn Json?
+  milestones    Json?
+  aiGenerated   Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Portfolio {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  slug        String   @unique
+  description String?  @db.Text
+  theme       String?  @default("default")
+  sections    Json?
+  isPublished Boolean  @default(false)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  userId        String
+  razorpayId    String?  @unique
+  amount        Int
+  currency      String   @default("INR")
+  plan          String
+  status        String   @default("created")
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UsageRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "resume_analysis" | "linkedin_analysis" | "fix" | "roadmap" | "job_search" | "linkedin_template"
+  count     Int      @default(1)
+  modelUsed String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LinkedInTemplate {
+  id          String   @id @default(cuid())
+  userId      String
+  jdText      String   @db.Text
+  jdUrl       String?
+  templates   Json
+  matchHighlights Json?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model CreditBalance {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  balance   Int      @default(100)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

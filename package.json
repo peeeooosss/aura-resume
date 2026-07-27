@@ -8,27 +8,39 @@
     "start": "next start -p 3333"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.3",
     "@aws-sdk/client-s3": "^3.1095.0",
     "@aws-sdk/s3-request-presigner": "^3.1095.0",
     "@react-pdf/renderer": "^4.5.1",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
+    "dotenv": "^17.4.2",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.460.0",
+    "mammoth": "^1.12.0",
     "next": "^14.2.0",
+    "next-auth": "^4.24.15",
+    "pdf-parse": "^2.4.5",
+    "razorpay": "^2.9.8",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "tailwind-merge": "^3.6.0",
+    "ts-jobspy": "^2.0.3",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
+    "@prisma/client": "^5.12.1",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.19.43",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",
+    "prisma": "^5.12.1",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.0.0"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }

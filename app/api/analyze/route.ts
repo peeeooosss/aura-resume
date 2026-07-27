@@ -1,19 +1,224 @@
-import { NextRequest } from 'next/server';
-import { generateMockAnalysis } from '@/lib/mockData';
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { parseResumeFile, validateResumeText, cleanResumeText } from '@/lib/ai/parseResume';
+import { analyzeResume, analyzeLinkedIn, generateCoverLetter } from '@/lib/ai/openrouter';
+import { uploadFile, getResumeKey } from '@/lib/storage/r2';
+import { CREDIT_COSTS } from '@/lib/constants/credits';
 
 export async function POST(req: NextRequest) {
-  const formData = await req.formData();
-  const resumeFile = formData.get('resume') as File | null;
-  const linkedinUrl = formData.get('linkedin') as string | null;
+  try {
+    const formData = await req.formData();
+    const resumeFile = formData.get('resume') as File | null;
+    const linkedinUrl = formData.get('linkedin') as string | null;
+    const userId = formData.get('userId') as string | null;
+    const generateCoverLetterForJob = formData.get('jobDescription') as string | null;
 
-  if (!resumeFile && !linkedinUrl) {
-    return Response.json({ error: 'Provide resume or LinkedIn URL' }, { status: 400 });
+    if (!resumeFile && !linkedinUrl) {
+      return NextResponse.json(
+        { error: 'Provide resume or LinkedIn URL' },
+        { status: 400 }
+      );
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID required' },
+        { status: 400 }
+      );
+    }
+
+    let resumeText = '';
+    let fileKey = '';
+    let fileUrl = '';
+
+    if (resumeFile) {
+      const buffer = Buffer.from(await resumeFile.arrayBuffer());
+      const validation = validateResumeText('');
+      if (!validation.valid) {
+        return NextResponse.json({ error: validation.error }, { status: 400 });
+      }
+
+      fileKey = getResumeKey(userId, crypto.randomUUID(), resumeFile.name);
+      await uploadFile(fileKey, buffer, resumeFile.type);
+      fileUrl = `https://${process.env.R2_BUCKET}.${process.env.R2_ENDPOINT?.replace('https://', '')}/${fileKey}`;
+
+      resumeText = await parseResumeFile(buffer, resumeFile.type);
+      resumeText = cleanResumeText(resumeText);
+
+      const textValidation = validateResumeText(resumeText);
+      if (!textValidation.valid) {
+        return NextResponse.json({ error: textValidation.error }, { status: 400 });
+      }
+    }
+
+    let totalCost = 0;
+    if (resumeFile) totalCost += CREDIT_COSTS.resume_analysis;
+    if (linkedinUrl) totalCost += CREDIT_COSTS.linkedin_analysis;
+    if (generateCoverLetterForJob && resumeFile) totalCost += CREDIT_COSTS.cover_letter;
+
+    const creditBalance = await prisma.creditBalance.findUnique({
+      where: { userId },
+    });
+
+    if (!creditBalance || creditBalance.balance < totalCost) {
+      return NextResponse.json(
+        { error: 'Insufficient credits', required: totalCost, available: creditBalance?.balance || 0 },
+        { status: 402 }
+      );
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    let resumeAnalysis = null;
+    let linkedinAnalysis = null;
+    let coverLetter = null;
+    let totalTokensUsed = 0;
+
+    if (resumeFile && resumeText) {
+      const analysis = await analyzeResume(resumeText);
+      resumeAnalysis = analysis;
+      totalTokensUsed += analysis.tokensUsed;
+    }
+
+    if (linkedinUrl) {
+      const { scrapeLinkedInProfile } = await import('@/lib/apify/linkedin');
+      const profileData = await scrapeLinkedInProfile(linkedinUrl);
+      const analysis = await analyzeLinkedIn(profileData);
+      linkedinAnalysis = analysis;
+      totalTokensUsed += analysis.tokensUsed;
+
+      await prisma.linkedInProfile.upsert({
+        where: { userId },
+        update: {
+          linkedinUrl,
+          headline: profileData.headline,
+          summary: profileData.summary,
+          experience: profileData.experience,
+          skills: profileData.skills,
+          lastSyncedAt: new Date(),
+        },
+        create: {
+          userId,
+          linkedinUrl,
+          headline: profileData.headline,
+          summary: profileData.summary,
+          experience: profileData.experience,
+          skills: profileData.skills,
+          lastSyncedAt: new Date(),
+        },
+      });
+    }
+
+    if (generateCoverLetterForJob && resumeText) {
+      const letter = await generateCoverLetter(generateCoverLetterForJob, resumeText);
+      coverLetter = letter;
+      totalTokensUsed += letter.tokensUsed;
+    }
+
+    if (resumeAnalysis || linkedinAnalysis) {
+      await prisma.$transaction(async (tx) => {
+        const resumeRecord = resumeFile ? await tx.resume.create({
+          data: {
+            userId,
+            title: resumeFile.name.replace(/\.[^/.]+$/, ''),
+            fileUrl,
+            fileKey,
+            rawText: resumeText,
+            status: 'analyzed',
+          },
+        }) : null;
+
+        if (resumeAnalysis) {
+          await tx.analysis.create({
+            data: {
+              resumeId: resumeRecord?.id || '',
+              userId,
+              type: 'resume',
+              overallScore: resumeAnalysis.score,
+              strengths: resumeAnalysis.strengths,
+              redFlags: resumeAnalysis.redFlags,
+              suggestions: resumeAnalysis.suggestions,
+              keywordGaps: resumeAnalysis.keywordGaps,
+              modelUsed: 'anthropic/claude-3.5-sonnet',
+              tokensUsed: resumeAnalysis.tokensUsed,
+            },
+          });
+        }
+
+        if (linkedinAnalysis) {
+          await tx.analysis.create({
+            data: {
+              resumeId: resumeRecord?.id || '',
+              userId,
+              type: 'linkedin',
+              overallScore: linkedinAnalysis.score,
+              strengths: linkedinAnalysis.strengths,
+              redFlags: linkedinAnalysis.redFlags,
+              suggestions: linkedinAnalysis.suggestions,
+              modelUsed: 'anthropic/claude-3.5-sonnet',
+              tokensUsed: linkedinAnalysis.tokensUsed,
+            },
+          });
+        }
+
+        if (coverLetter) {
+          await tx.linkedInTemplate.create({
+            data: {
+              userId,
+              jdText: generateCoverLetterForJob!,
+              templates: {
+                coverLetter: coverLetter.coverLetter,
+                matchHighlights: coverLetter.matchHighlights,
+                subjectLines: coverLetter.suggestedSubjectLines,
+              },
+              matchHighlights: coverLetter.matchHighlights,
+            },
+          });
+        }
+
+        await tx.creditBalance.update({
+          where: { userId },
+          data: { balance: { decrement: totalCost } },
+        });
+
+        await tx.usageRecord.create({
+          data: {
+            userId,
+            type: resumeFile ? 'resume_analysis' : 'linkedin_analysis',
+            count: 1,
+            modelUsed: 'anthropic/claude-3.5-sonnet',
+          },
+        });
+
+        if (generateCoverLetterForJob) {
+          await tx.usageRecord.create({
+            data: {
+              userId,
+              type: 'linkedin_template',
+              count: 1,
+              modelUsed: 'anthropic/claude-3.5-sonnet',
+            },
+          });
+        }
+      });
+    }
+
+    return NextResponse.json({
+      id: crypto.randomUUID(),
+      resume: resumeAnalysis,
+      linkedin: linkedinAnalysis,
+      coverLetter,
+      creditsUsed: totalCost,
+      creditsRemaining: (creditBalance?.balance || 0) - totalCost,
+    });
+  } catch (error) {
+    console.error('Analysis error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Analysis failed' },
+      { status: 500 }
+    );
   }
-
-  const result = generateMockAnalysis(
-    resumeFile?.name || undefined,
-    linkedinUrl || undefined
-  );
-
-  return Response.json(result);
 }
