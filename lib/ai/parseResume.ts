@@ -27,7 +27,7 @@ async function parsePDF(buffer: Buffer): Promise<string> {
       console.warn(`[PDF Parse] Invalid PDF signature: ${pdfSignature}`);
     }
 
-    const pdfParse = (await import('pdf-parse')).default;
+    const pdfParse = (await import('pdf-parse-fork')).default;
     const result = await pdfParse(buffer);
     
     console.log(`[PDF Parse] Extracted text length: ${result.text.length}`);
