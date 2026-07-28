@@ -37,7 +37,7 @@ async function callOpenRouter(
   } = {}
 ): Promise<{ content: string; tokensUsed: number; finishReason: string }> {
   const {
-    model = 'google/gemini-2.0-flash',
+    model = 'google/gemini-2.5-flash',
     temperature = 0.3,
     maxTokens = 4000,
     expectJson = false,
@@ -138,42 +138,43 @@ export async function generateATSPerfectResume(
   optimizedResume: string;
   tokensUsed: number;
 }> {
-  const systemPrompt = `You are Aura, the world's most advanced Applicant Tracking System (ATS) optimization AI and elite career strategist. Your sole purpose is to rewrite candidate resumes to achieve a 100/100 ATS score and pass manual recruiter screening at MAANG-tier companies.
+  const systemPrompt = `You are Aura, an elite ATS optimization AI. Your sole purpose is to rewrite candidate resumes to achieve a 100/100 ATS score.
 
-You will receive the candidate's raw resume and an analysis of its ATS gaps. Whether the input is a sparse 50-word outline or a massive, multi-page document, your job is to clone the core facts and REWRITE them into a perfectly balanced ATS resume.
+You will receive the candidate's raw resume and an ATS gap analysis. Whether the input is a sparse 50-word outline or a massive, multi-page document, you must clone the core facts and REWRITE them into a perfectly formatted ATS resume.
 
 <rules>
-  <rule>1. STRICT COMPLETENESS: You MUST include every section from the original resume. You are absolutely FORBIDDEN from skipping EDUCATION, SKILLS, or PROJECTS if they exist in the raw text.</rule>
-  <rule>2. REWRITE, EXPAND, OR DISTILL: Do not simply copy the original text. 
-    - If the input is extremely brief (e.g., 50 words), logically expand the responsibilities into high-impact, professional bullets based on the job title.
+  <rule>1. STRICT COMPLETENESS: Include EVERY section present in the original resume. Rewrite and expand experience bullet points, project descriptions, and the summary for maximum ATS impact. If the original resume does NOT contain a CERTIFICATIONS, PROJECTS, EDUCATION, or SKILLS section, do NOT fabricate one — only include what actually exists.</rule>
+  <rule>2. CONTENT SCALING: 
+    - If the input is extremely brief, logically expand the responsibilities into high-impact, professional bullets based on the job title.
     - If the input is massive, distill it down to the most impactful points.
-    - You must write exactly 4-6 bullet points per role/project.</rule>
-  <rule>3. MANDATORY QUANTIFICATION: Every single bullet point MUST begin with a strong action verb and contain at least one hard metric (percentages, user counts, time saved, scale, or dollar amounts). If exact numbers aren't provided, logically infer a realistic, conservative scope based on context.</rule>
-  <rule>4. TONE & STYLE: Absolutely no personal pronouns (I, me, my) and no passive voice. Keep the text hierarchy completely flat (no tables, columns, or nested lists).</rule>
-  <rule>5. KEYWORDS: Seamlessly weave missing keywords from the analysis results into the Experience bullets and Summary. Never create a separate, out-of-context keyword block.</rule>
-  <rule>6. IGNORE METADATA: Completely ignore any PDF parsing artifacts, page numbers, timestamps, or garbage text (e.g., "ATS Dot 2026"). Do not include them.</rule>
-  <rule>7. OUTPUT FORMAT: Output ONLY the optimized resume in clean markdown. No explanations, no XML tags in your output, no pleasantries. Use ONLY standard headers in ALL CAPS: SUMMARY, EXPERIENCE, EDUCATION, SKILLS, PROJECTS, CERTIFICATIONS.</rule>
-  <rule>8. ABSOLUTELY NO TRUNCATION: You MUST output the ENTIRE resume — every section, every role, every bullet point — completely. Do not stop mid-section. Do not abbreviate. Do not use "..." or "[continued]". If your output reaches the maximum length, the system will automatically request a continuation — so do NOT self-limit. Every role and every project MUST have its full 4-6 complete bullet points. No exceptions.</rule>
+    - Output exactly 4-6 bullet points per role/project.</rule>
+  <rule>3. MANDATORY QUANTIFICATION: Every single bullet point MUST begin with a strong action verb and contain at least one hard metric (percentages, user counts, time saved). Logically infer conservative scope if exact numbers are missing.</rule>
+  <rule>4. PARSER-STRICT FORMATTING: Your markdown is parsed by a strict regex engine. You MUST use exactly \`## \` for main section headers with exactly one space after the hashes. You MUST use exactly \`### \` for role sub-headers with exactly one space after the hashes. Never use bolding (\`**\`) for headers. Never add extra spaces or omit the space after ## or ###.</rule>
+  <rule>5. KEYWORDS: Seamlessly weave missing keywords from the analysis results into the Experience bullets and Summary.</rule>
+  <rule>6. IGNORE METADATA: Completely ignore any PDF parsing artifacts, page numbers, timestamps, or garbage text (e.g., "ATS Dot 2026").</rule>
+  <rule>7. OUTPUT FORMAT: Output ONLY the raw markdown. No explanations, no conversational text, no thinking tags. No personal pronouns (I, me, my), no passive voice. Use ONLY these standard headers: SUMMARY, EXPERIENCE, EDUCATION, SKILLS, PROJECTS, CERTIFICATIONS.</rule>
 </rules>
-
-<important>
-You have ample output capacity and the system handles multi-part output automatically. Do NOT worry about output length. The resume should be complete regardless of how long it becomes. Every section header listed in the template MUST appear in your output with complete content. If the original resume has 5+ roles, include all of them with full bullets. If the original resume has multiple projects, include all of them.
-</important>
 
 <markdown_output_template>
 # [First Name] [Last Name]
 [Email] | [Phone] | [LinkedIn URL] | [GitHub/Portfolio URL]
 
 ## SUMMARY
-[A single, highly dense 3-4 sentence paragraph highlighting core expertise, years of experience, top technical skills, and a major career achievement. Must integrate missing keywords.]
+[3-4 sentence paragraph highlighting core expertise, years of experience, and top technical skills.]
 
 ## EXPERIENCE
 
 ### [Exact Job Title] | [Company Name] | [Month YYYY] – [Month YYYY or Present]
-- [Action Verb] [Task/Project] using [Keywords/Tech], resulting in [Metric/Quantifiable Impact]
-- [Action Verb] [Task/Project] using [Keywords/Tech], resulting in [Metric/Quantifiable Impact]
-- [Action Verb] [Task/Project] using [Keywords/Tech], resulting in [Metric/Quantifiable Impact]
-- [Action Verb] [Task/Project] using [Keywords/Tech], resulting in [Metric/Quantifiable Impact]
+- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
+- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
+- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
+- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
+
+### [Exact Job Title] | [Company Name] | [Month YYYY] – [Month YYYY]
+- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
+- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
+- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
+- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
 
 ## EDUCATION
 
@@ -182,7 +183,6 @@ You have ample output capacity and the system handles multi-part output automati
 
 ## SKILLS
 [Category 1] • [Category 2] • [Category 3] 
-(Ensure skills are formatted as a bullet-separated inline list. NEVER omit this section if technical skills are present or implied.)
 
 ## PROJECTS
 
@@ -191,19 +191,25 @@ You have ample output capacity and the system handles multi-part output automati
 - [Action Verb] [Task] resulting in [Metric]
 - [Action Verb] [Task] resulting in [Metric]
 - [Action Verb] [Task] resulting in [Metric]
+
+### [Project Name] | [Technologies Used] | [Month YYYY] - [Month YYYY]
+- [Action Verb] [Task] resulting in [Metric]
+- [Action Verb] [Task] resulting in [Metric]
+- [Action Verb] [Task] resulting in [Metric]
+- [Action Verb] [Task] resulting in [Metric]
+
+## CERTIFICATIONS
+
+### [Certification Name] | [Issuing Organization] | [Year]
+- [Brief detail — credential ID, validity, or relevance with metric if applicable]
+
+### [Certification Name] | [Issuing Organization] | [Year]
+- [Brief detail — credential ID, validity, or relevance with metric if applicable]
 </markdown_output_template>
 
-<completion_checklist>
-Before you finish, verify EVERY item:
-▢ # [Full Name] header with contact info (email, phone, LinkedIn, GitHub/portfolio URLs from the original resume)
-▢ ## SUMMARY section with 3-4 dense sentences containing keywords from the analysis
-▢ ## EXPERIENCE section with EVERY role from the original resume, each with ### header and 4-6 quantified bullets
-▢ ## EDUCATION section with degree details
-▢ ## SKILLS section as bullet-separated inline list
-▢ ## PROJECTS section with EVERY project from the original resume, each with ### header and 4-6 quantified bullets
-▢ ## CERTIFICATIONS section if any exist in the original resume
-Do NOT stop until EVERY checkbox above is filled.
-</completion_checklist>
+<critical>
+Output the resume exactly ONCE. Do NOT prepend the original raw resume text. Do NOT echo the input. Do NOT include a "before" and "after" version. Do NOT repeat any section. Start directly with "# [Name]" and end naturally after the last section. The output must be a single, complete, non-duplicated resume.
+</critical>
 
 PROCESS THE INPUT NOW. OUTPUT ONLY THE FINAL MARKDOWN FOLLOWING THE TEMPLATE ABOVE.`;
 
@@ -231,9 +237,8 @@ ${resumeText}
     { role: 'system', content: systemPrompt },
     { role: 'user', content: userMessage },
   ], {
-    model: 'anthropic/claude-opus-4.8',
     temperature: 0.1,
-    maxTokens: 16000,
+    maxTokens: 24000,
     expectJson: false,
   });
 
@@ -244,72 +249,76 @@ ${resumeText}
   let finalContent = firstContent;
   let totalTokens = firstTokens;
 
-  const requiredSections = ['## SUMMARY', '## EXPERIENCE', '## EDUCATION', '## SKILLS', '## PROJECTS'];
+  const requiredSections = ['## SUMMARY', '## EXPERIENCE'];
+  if (/education|university|college|institute|b\.?\s*tech|bachelor|master|degree|gpa|school/i.test(resumeText)) {
+    requiredSections.push('## EDUCATION');
+  }
+  if (/skill|proficient|expertise|competenc|technolog|language|framework/i.test(resumeText)) {
+    requiredSections.push('## SKILLS');
+  }
+  if (/project|portfolio|github|hackathon|built|developed|created|launched|deployed/i.test(resumeText)) {
+    requiredSections.push('## PROJECTS');
+  }
+  if (/certif|course|credential|coursera|udemy|aws.*cert|comptia|license/i.test(resumeText)) {
+    requiredSections.push('## CERTIFICATIONS');
+  }
 
-  if (finishReason === 'length') {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const lines = finalContent.split('\n').filter(l => l.trim());
-      const lastHeaderMatch = [...lines].reverse().find(l => l.trim().match(/^## /));
-      const lastSectionName = lastHeaderMatch ? lastHeaderMatch.trim() : 'the last section';
+  const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userMessage },
+  ];
 
-      const continueMessage = `CONTINUE FROM WHERE YOU STOPPED. You were in the middle of or just finished: ${lastSectionName}. Continue with the NEXT remaining content after "${lastSectionName}". Only output NEW content not yet written. Do NOT repeat any section headers or content already present above. Begin immediately with the next ## section or the remaining bullet points.`;
+  let currentFinishReason = finishReason;
+  let retries = 0;
 
-      const { content: contContent, tokensUsed: contTokens, finishReason: contReason } = await callOpenRouter([
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage },
-        { role: 'assistant', content: finalContent },
-        { role: 'user', content: continueMessage },
-      ], {
-        model: 'anthropic/claude-opus-4.8',
-        temperature: 0.1,
-        maxTokens: 8000,
-        expectJson: false,
-      });
+  while (currentFinishReason === 'length' && retries < 3) {
+    const continuationMessage = {
+      role: 'user' as const,
+      content: 'You hit the length limit. Continue generating the exact markdown resume from exactly where you left off. DO NOT repeat any previous text. DO NOT add any introductory text like "Continuing..." or "Here is the rest". Output ONLY the raw markdown continuation.',
+    };
 
-      if (contContent && contContent.length > 20) {
-        const contLines = contContent.split('\n').map(l => l.trim()).filter(l => l);
-        const firstContLine = contLines[0] || '';
-        const lastFinalLine = finalContent.split('\n').filter(l => l.trim()).pop() || '';
+    messages.push({ role: 'assistant', content: finalContent });
+    messages.push(continuationMessage);
 
-        if (firstContLine === lastFinalLine) {
-          contLines.shift();
-        }
-        let dedupedCont = contLines.join('\n');
+    const { content: contContent, tokensUsed: contTokens, finishReason: contReason } = await callOpenRouter(messages, {
+      temperature: 0.1,
+      maxTokens: 8000,
+      expectJson: false,
+    });
 
-        const h1Match = dedupedCont.match(/^# .+/);
-        if (h1Match && finalContent.includes(h1Match[0])) {
-          dedupedCont = dedupedCont.replace(/^# .+\n?/, '').trim();
-        }
+    if (contContent && contContent.length > 20) {
+      finalContent += '\n' + contContent;
+      totalTokens += contTokens;
+    }
 
-        finalContent = finalContent + '\n' + dedupedCont;
-        totalTokens += contTokens;
-      }
+    currentFinishReason = contReason;
+    retries++;
+  }
 
-      if (contReason !== 'length') break;
+  const missingSections: string[] = [];
+  for (const section of requiredSections) {
+    if (!finalContent.includes(section)) {
+      missingSections.push(section.replace('## ', ''));
     }
   }
 
-  for (const section of requiredSections) {
-    if (!finalContent.includes(section)) {
-      const sectionName = section.replace('## ', '');
-      const missingMessage = `The resume output is missing the ## ${sectionName} section. Generate ONLY this section now following the template format. Output the ## ${sectionName} header and its complete content only.`;
+  if (missingSections.length > 0) {
+    const fallbackMessage = {
+      role: 'user' as const,
+      content: `You failed to include the following mandatory sections: ${missingSections.join(', ')}. Generate ONLY these missing sections in strict markdown format using '## [SECTION NAME]' headers. Use the raw resume data provided earlier. Do not output anything else. Do not add introductory text.`,
+    };
 
-      const { content: missingContent, tokensUsed: missingTokens } = await callOpenRouter([
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage },
-        { role: 'assistant', content: finalContent },
-        { role: 'user', content: missingMessage },
-      ], {
-        model: 'anthropic/claude-opus-4.8',
-        temperature: 0.1,
-        maxTokens: 4000,
-        expectJson: false,
-      });
+    messages.push(fallbackMessage);
 
-      if (missingContent && missingContent.length > 20) {
-        finalContent = finalContent + '\n\n' + missingContent.trim();
-        totalTokens += missingTokens;
-      }
+    const { content: missingContent, tokensUsed: missingTokens } = await callOpenRouter(messages, {
+      temperature: 0.1,
+      maxTokens: 4000,
+      expectJson: false,
+    });
+
+    if (missingContent && missingContent.length > 20) {
+      finalContent += '\n\n' + missingContent.trim();
+      totalTokens += missingTokens;
     }
   }
 
