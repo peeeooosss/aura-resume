@@ -2,9 +2,10 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Check, Lock, Shield, ArrowLeft, Download, Sparkles, FileText, Linkedin as LinkedinIcon, Link, Star, Zap, Users, Award, ArrowRight } from 'lucide-react';
+import { Check, Lock, Shield, ArrowLeft, Download, Sparkles, FileText, Linkedin as LinkedinIcon, Link, Star, Zap, Users, Award, ArrowRight, FileDown } from 'lucide-react';
 import type { DualAnalysisResult, SingleAnalysis } from '@/lib/types';
 import { generateMockAnalysis } from '@/lib/mockData';
+import { generateAnalysisPDF, downloadPDF } from '@/lib/pdf/generateReport';
 
 function getScoreColor(score: number): string {
   if (score >= 80) return 'text-emerald-400';
@@ -232,25 +233,83 @@ export default function ResultsContent({ id, testMode }: Props) {
   const router = useRouter();
   const [result, setResult] = useState<DualAnalysisResult | null>(null);
   const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   useEffect(() => {
     if (testMode) {
       setResult(generateMockAnalysis('resume.pdf', 'linkedin.com/in/test'));
+      setLoading(false);
       return;
     }
 
     if (!id) {
       setError(true);
+      setLoading(false);
       return;
     }
 
+    // Try to get from sessionStorage first (passed from analyze API)
+    const stored = sessionStorage.getItem(`aura-result-${id}`);
+    if (stored) {
+      try {
+        const data = JSON.parse(stored);
+        setResult(data);
+        sessionStorage.removeItem(`aura-result-${id}`); // cleanup after use
+        setLoading(false);
+        return;
+      } catch {
+        // fall through to error
+      }
+    }
+
+    // Fallback: try localStorage (for backward compatibility)
     const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
     if (analyses[id]) {
       setResult(analyses[id]);
-    } else {
-      setError(true);
+      setLoading(false);
+      return;
     }
+
+    setError(true);
+    setLoading(false);
   }, [id, testMode]);
+
+  const handleQuickFix = async () => {
+    if (!result) return;
+    
+    setGeneratingPdf(true);
+    try {
+      const fileName = `aura-resume-analysis-${Date.now()}.pdf`;
+      const analyzedAt = new Date().toLocaleString();
+      
+      const pdfData = {
+        resume: result.resume,
+        linkedin: result.linkedin,
+        coverLetter: result.coverLetter,
+        creditsUsed: result.creditsUsed,
+        creditsRemaining: result.creditsRemaining,
+        fileName: 'resume.pdf',
+        analyzedAt,
+      };
+      
+      const doc = generateAnalysisPDF(pdfData);
+      downloadPDF(doc, fileName);
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <p className="text-white text-lg animate-pulse">Loading your analysis...</p>
+      </main>
+    );
+  }
 
   if (error || (!id && !testMode)) {
     return (
@@ -334,7 +393,7 @@ export default function ResultsContent({ id, testMode }: Props) {
               ]}
               cta="Perfect for a quick resume check before applying"
               highlighted={false}
-              onClick={() => alert('Quick Fix selected - integrate with payment')}
+              onClick={handleQuickFix}
             />
             <PricingCard
               tier="Pro Bundle"

@@ -33,10 +33,6 @@ export async function POST(req: NextRequest) {
 
     if (resumeFile) {
       const buffer = Buffer.from(await resumeFile.arrayBuffer());
-      const validation = validateResumeText('');
-      if (!validation.valid) {
-        return NextResponse.json({ error: validation.error }, { status: 400 });
-      }
 
       fileKey = getResumeKey(userId, crypto.randomUUID(), resumeFile.name);
       await uploadFile(fileKey, buffer, resumeFile.type);
@@ -119,6 +115,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (resumeAnalysis || linkedinAnalysis) {
+      let resultId: string | undefined;
+
       await prisma.$transaction(async (tx) => {
         const resumeRecord = resumeFile ? await tx.resume.create({
           data: {
@@ -130,6 +128,10 @@ export async function POST(req: NextRequest) {
             status: 'analyzed',
           },
         }) : null;
+
+        if (resumeRecord) {
+          resultId = resumeRecord.id;
+        }
 
         if (resumeAnalysis) {
           await tx.analysis.create({
@@ -204,15 +206,30 @@ export async function POST(req: NextRequest) {
           });
         }
       });
+
+      // For LinkedIn-only analysis, use a composite ID
+      if (!resultId) {
+        resultId = `linkedin-${userId}-${Date.now()}`;
+      }
+
+      return NextResponse.json({
+        id: resultId,
+        resume: resumeAnalysis,
+        linkedin: linkedinAnalysis,
+        coverLetter,
+        creditsUsed: totalCost,
+        creditsRemaining: (creditBalance?.balance || 0) - totalCost,
+      });
     }
 
+    // Fallback if no analysis was done
     return NextResponse.json({
       id: crypto.randomUUID(),
-      resume: resumeAnalysis,
-      linkedin: linkedinAnalysis,
-      coverLetter,
-      creditsUsed: totalCost,
-      creditsRemaining: (creditBalance?.balance || 0) - totalCost,
+      resume: null,
+      linkedin: null,
+      coverLetter: null,
+      creditsUsed: 0,
+      creditsRemaining: creditBalance?.balance || 0,
     });
   } catch (error) {
     console.error('Analysis error:', error);

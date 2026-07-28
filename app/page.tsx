@@ -32,10 +32,24 @@ export default function Home() {
 
     const formData = new FormData();
     formData.append('resume', selectedFile);
+    formData.append('userId', 'demo-user');
 
     try {
       const res = await fetch('/api/analyze', { method: 'POST', body: formData });
       const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Analysis failed');
+        setLoading(false);
+        return;
+      }
+      // Store full result in sessionStorage for results page
+      sessionStorage.setItem(`aura-result-${data.id}`, JSON.stringify({
+        resume: data.resume,
+        linkedin: data.linkedin,
+        coverLetter: data.coverLetter,
+        creditsUsed: data.creditsUsed,
+        creditsRemaining: data.creditsRemaining,
+      }));
       router.push(`/results?id=${data.id}`);
     } catch {
       setLoading(false);
