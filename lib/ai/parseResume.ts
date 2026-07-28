@@ -17,24 +17,69 @@ export async function parseResumeFile(buffer: Buffer, mimeType: string): Promise
 
 async function parsePDF(buffer: Buffer): Promise<string> {
   try {
+    // Debug: Check buffer
+    console.log(`[PDF Parse] Buffer length: ${buffer.length}`);
+    console.log(`[PDF Parse] First 32 bytes: ${buffer.toString('hex', 0, 32)}`);
+    
+    // Check for PDF signature
+    const pdfSignature = buffer.toString('ascii', 0, 4);
+    if (pdfSignature !== '%PDF') {
+      console.warn(`[PDF Parse] Invalid PDF signature: ${pdfSignature}`);
+    }
+
     const { PDFParse } = await import('pdf-parse');
     const parser = new PDFParse({ data: new Uint8Array(buffer) });
     const result = await parser.getText();
     await parser.destroy();
+    
+    console.log(`[PDF Parse] Extracted text length: ${result.text.length}`);
+    console.log(`[PDF Parse] Sample text: ${result.text.slice(0, 100)}`);
+    
+    if (!result.text || result.text.trim().length === 0) {
+      throw new Error('PDF extracted empty text - may be scanned/image-based PDF');
+    }
+    
     return result.text;
-  } catch (error) {
-    console.error('PDF parsing error:', error);
-    throw new Error('Failed to parse PDF. Ensure file is not password-protected or corrupted.');
+  } catch (error: unknown) {
+    console.error('[PDF Parse] Error:', error);
+    
+    // Check for specific error types
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg.includes('Invalid PDF')) {
+      throw new Error('Invalid PDF file format');
+    }
+    if (errMsg.includes('password') || errMsg.includes('encrypted')) {
+      throw new Error('PDF is password-protected. Please remove password and re-upload.');
+    }
+    if (errMsg.includes('empty text')) {
+      throw new Error('PDF appears to be scanned/image-based. Please upload a text-based PDF or use OCR first.');
+    }
+    throw new Error(`Failed to parse PDF: ${errMsg}`);
   }
 }
 
 async function parseDOCX(buffer: Buffer): Promise<string> {
   try {
+    console.log(`[DOCX Parse] Buffer length: ${buffer.length}`);
+    console.log(`[DOCX Parse] First 32 bytes: ${buffer.toString('hex', 0, 32)}`);
+    
     const result = await extractRawText({ buffer });
+    
+    console.log(`[DOCX Parse] Extracted text length: ${result.value.length}`);
+    
+    if (!result.value || result.value.trim().length === 0) {
+      throw new Error('DOCX extracted empty text');
+    }
+    
     return result.value;
-  } catch (error) {
-    console.error('DOCX parsing error:', error);
-    throw new Error('Failed to parse DOCX. Ensure file is not corrupted.');
+  } catch (error: unknown) {
+    console.error('[DOCX Parse] Error:', error);
+    
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg.includes('encrypted') || errMsg.includes('password')) {
+      throw new Error('DOCX is password-protected. Please remove password and re-upload.');
+    }
+    throw new Error(`Failed to parse DOCX: ${errMsg}`);
   }
 }
 
