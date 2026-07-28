@@ -8,7 +8,32 @@ Return ONLY valid JSON in this exact format:
   "strengths": string[] (3-5 items, specific and actionable),
   "redFlags": string[] (4-6 items, specific issues that hurt ATS parsing),
   "suggestions": string[] (3-5 items, actionable improvements),
-  "keywordGaps": string[] (3-5 items, missing keywords for common roles)
+  "keywordGaps": string[] (3-5 items, missing keywords for common roles),
+  "jobRolePotential": {
+    "potentialRoles": [
+      {
+        "title": "Job Title",
+        "matchScore": number (0-100),
+        "company": "Company type (e.g., Tech Startup, MNC, Enterprise)",
+        "salaryRange": "Salary range (e.g., ₹15L-25L)",
+        "requiredSkills": ["skill1", "skill2", "skill3"]
+      }
+    ],
+    "skillsGap": [
+      {
+        "skill": "Skill name",
+        "importance": "high|medium|low",
+        "currentLevel": "Beginner|Intermediate|Advanced",
+        "targetLevel": "Intermediate|Advanced|Expert"
+      }
+    ],
+    "salaryRange": {
+      "minimum": "₹X L",
+      "maximum": "₹Y L",
+      "average": "₹Z L"
+    },
+    "matchReasoning": "Detailed reasoning for job role recommendations based on candidate's experience, skills, and market demand"
+  }
 }
 
 Scoring criteria:
@@ -25,7 +50,15 @@ Red flags should be SPECIFIC to this resume, not generic. Examples:
 - "Dates formatted as 'Jan 2020 - Present' inconsistently"
 - "File contains embedded images that ATS cannot read"
 
-Strengths should highlight what's working well. Suggestions must be actionable.`;
+Strengths should highlight what's working well. Suggestions must be actionable.
+
+Job Role Potential Guidelines:
+- Provide 3-5 potential roles that match the candidate's profile
+- Match scores should be realistic based on experience and skills
+- Skills gap should identify 5-8 key skills with importance levels
+- Salary ranges should be realistic for Indian market (in INR lakhs)
+- Match reasoning should be specific and actionable
+- Consider current job market trends for the candidate's experience level`;
 
 export const LINKEDIN_ANALYSIS_PROMPT = `You are an expert LinkedIn profile optimizer and personal branding strategist. Analyze the provided LinkedIn profile data and return a comprehensive analysis in the specified JSON format.
 
@@ -119,4 +152,45 @@ export function buildCoverLetterPrompt(jobDescription: string, resumeText: strin
 
 export function buildJobMatchPrompt(jobDescription: string, resumeText: string) {
   return `Job Description:\n${jobDescription}\n\nCandidate Resume:\n${resumeText}`;
+}
+
+export const JOB_ROLE_POTENTIAL_PROMPT = `You are an expert career strategist and job market analyst. Based on the resume analysis, provide a comprehensive job role potential assessment.
+
+Return ONLY valid JSON in this exact format:
+{
+  "potentialRoles": [
+    {
+      "title": "Job Title",
+      "matchScore": number (0-100),
+      "company": "Company type (e.g., Tech Startup, MNC, Enterprise)",
+      "salaryRange": "Salary range (e.g., ₹15L-25L)",
+      "requiredSkills": ["skill1", "skill2", "skill3"]
+    }
+  ],
+  "skillsGap": [
+    {
+      "skill": "Skill name",
+      "importance": "high|medium|low",
+      "currentLevel": "Beginner|Intermediate|Advanced",
+      "targetLevel": "Intermediate|Advanced|Expert"
+    }
+  ],
+  "salaryRange": {
+    "minimum": "₹X L",
+    "maximum": "₹Y L",
+    "average": "₹Z L"
+  },
+  "matchReasoning": "Detailed reasoning for job role recommendations based on candidate's experience, skills, and market demand"
+}
+
+Guidelines:
+- Provide 3-5 potential roles that match the candidate's profile
+- Match scores should be realistic based on experience and skills
+- Skills gap should identify 5-8 key skills with importance levels
+- Salary ranges should be realistic for Indian market (in INR lakhs)
+- Match reasoning should be specific and actionable
+- Consider current job market trends for the candidate's experience level`;
+
+export function buildJobRolePotentialPrompt(resumeText: string, analysis: any) {
+  return `Based on this resume analysis, provide job role potential assessment:\n\nResume Text:\n${resumeText}\n\nAnalysis Summary:\n${JSON.stringify(analysis, null, 2)}`;
 }

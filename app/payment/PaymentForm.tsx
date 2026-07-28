@@ -8,15 +8,19 @@ export default function PaymentForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const plan = searchParams.get('plan') || 'quick-fix';
+  const resultId = searchParams.get('resultId');
 
   const [step, setStep] = useState<'details' | 'processing' | 'success'>('details');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const planConfig = plan === 'quick-fix'
-    ? { name: 'Quick Fix', price: 49, period: 'one-time', features: ['Full ATS scan', 'Red flag details', 'PDF report'] }
-    : { name: 'Pro Bundle', price: 499, period: '/3 months', features: ['AI resume rewrite', 'Cover letters', 'LinkedIn review', 'AI interviews'] };
+  const planConfig =
+    plan === 'quick-fix'
+      ? { name: 'Quick Fix', price: 49, period: 'one-time', features: ['Full ATS scan', 'Red flag details', 'PDF report'] }
+      : plan === 'vip-mentorship'
+      ? { name: 'VIP Mentorship', price: 1499, period: '/3 months', features: ['Everything in Pro', '1-on-1 mentoring', 'Salary coaching', 'Unlimited support'] }
+      : { name: 'Pro Bundle', price: 499, period: '/3 months', features: ['AI resume rewrite', 'Cover letters', 'LinkedIn review', 'Portfolio builder'] };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +45,19 @@ export default function PaymentForm() {
             <h1 className="text-3xl font-bold text-white mb-2">Payment Successful!</h1>
             <p className="text-slate-400 mb-6">Your {planConfig.name} is now active. Check your email for the PDF report.</p>
             <button
-              onClick={() => router.push('/results?test=true')}
+              onClick={() => {
+                if (resultId) {
+                  const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
+                  if (analyses[resultId]) {
+                    analyses[resultId].unlockedTier = plan === 'vip-mentorship' ? 'vip' : plan === 'quick-fix' ? 'quick' : 'pro';
+                    localStorage.setItem('aura-analyses', JSON.stringify(analyses));
+                  }
+                  localStorage.setItem(`aura-unlocked-${resultId}`, JSON.stringify({ tier: plan === 'vip-mentorship' ? 'vip' : plan === 'quick-fix' ? 'quick' : 'pro', at: Date.now() }));
+                  router.push(`/report/${resultId}`);
+                } else {
+                  router.push('/results?test=true');
+                }
+              }}
               className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
             >
               View Your Report

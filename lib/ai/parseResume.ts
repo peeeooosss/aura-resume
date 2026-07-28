@@ -82,13 +82,27 @@ async function parseDOCX(buffer: Buffer): Promise<string> {
 }
 
 export function cleanResumeText(text: string): string {
-  return text
+  const cleaned = text
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
     .replace(/\t/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .replace(/ {2,}/g, ' ')
     .trim();
+
+  const urlPattern = /https?:\/\/[^\s)>\]]+/g;
+  const urls = cleaned.match(urlPattern);
+
+  if (urls && urls.length > 0) {
+    const uniqueUrls: string[] = [];
+    for (const url of urls) {
+      if (uniqueUrls.indexOf(url) === -1) uniqueUrls.push(url);
+    }
+    const linksSection = '\n\n## Detected Links\n' + uniqueUrls.map((url, i) => `- ${url}`).join('\n');
+    return cleaned + linksSection;
+  }
+
+  return cleaned;
 }
 
 export function validateResumeText(text: string): { valid: boolean; error?: string } {

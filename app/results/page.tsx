@@ -5,8 +5,8 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
   const params = await searchParams;
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <p className="text-white text-lg animate-pulse">Loading your analysis...</p>
+      <main className="min-h-screen bg-surface-50 dark:bg-slate-950 flex items-center justify-center">
+        <p className="text-surface-900 dark:text-white text-lg animate-pulse">Loading your analysis...</p>
       </main>
     }>
       <ResultsContent id={params.id} testMode={params.test === 'true'} />

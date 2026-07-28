@@ -2,10 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Check, Lock, Shield, ArrowLeft, Download, Sparkles, FileText, Linkedin as LinkedinIcon, Link, Star, Zap, Users, Award, ArrowRight, FileDown } from 'lucide-react';
+import { Check, Lock, Shield, ArrowLeft, Sparkles, FileText, Linkedin as LinkedinIcon, Link, Star, Zap, Users, ArrowRight, Target, Loader2 } from 'lucide-react';
 import type { DualAnalysisResult, SingleAnalysis } from '@/lib/types';
 import { generateMockAnalysis } from '@/lib/mockData';
-import { generateAnalysisPDF, downloadPDF } from '@/lib/pdf/generateReport';
 
 function getScoreColor(score: number): string {
   if (score >= 80) return 'text-emerald-400';
@@ -19,7 +18,7 @@ function getScoreRingColor(score: number): string {
   return 'stroke-rose-500';
 }
 
-function ScoreCircle({ score, colorClass }: { score: number; colorClass: string }) {
+function ScoreCircle({ score }: { score: number }) {
   const circumference = 2 * Math.PI * 54;
   const offset = circumference - (score / 100) * circumference;
 
@@ -55,7 +54,6 @@ function AnalysisColumn({ analysis, isResume }: { analysis: SingleAnalysis; isRe
         strengthBg: 'bg-emerald-500/5',
         flagBorder: 'border-rose-500/20',
         flagBg: 'bg-rose-500/5',
-        badgeClass: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
       }
     : {
         icon: LinkedinIcon,
@@ -67,7 +65,6 @@ function AnalysisColumn({ analysis, isResume }: { analysis: SingleAnalysis; isRe
         strengthBg: 'bg-emerald-500/5',
         flagBorder: 'border-rose-500/20',
         flagBg: 'bg-rose-500/5',
-        badgeClass: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
       };
 
   const Icon = sourceConfig.icon;
@@ -84,7 +81,7 @@ function AnalysisColumn({ analysis, isResume }: { analysis: SingleAnalysis; isRe
         </div>
       </div>
 
-      <ScoreCircle score={analysis.score} colorClass={sourceConfig.textClass} />
+      <ScoreCircle score={analysis.score} />
 
       <div className="mb-8">
         <h3 className="flex items-center gap-2 text-sm font-bold text-emerald-500 mb-4">
@@ -112,7 +109,6 @@ function AnalysisColumn({ analysis, isResume }: { analysis: SingleAnalysis; isRe
           </div>
           Critical Red Flags
         </h3>
-
         <div className="relative">
           <div className="space-y-2 select-none pointer-events-none blur-[3px] opacity-50">
             {analysis.redFlags.map((flag, i) => (
@@ -136,19 +132,82 @@ function AnalysisColumn({ analysis, isResume }: { analysis: SingleAnalysis; isRe
           </div>
         </div>
       </div>
+
+      {analysis.jobRolePotential && (
+        <div className="relative mt-8">
+          <h3 className="flex items-center gap-2 text-sm font-bold text-blue-500 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <Target className="w-4 h-4 text-blue-500" />
+            </div>
+            Job Role Potential
+          </h3>
+          <div className="space-y-4 select-none pointer-events-none blur-[3px] opacity-50">
+            <div className={`p-4 rounded-xl border ${sourceConfig.flagBorder} ${sourceConfig.flagBg}`}>
+              <h4 className="text-blue-400 font-semibold text-sm mb-3">Top Matching Roles</h4>
+              <div className="space-y-2">
+                {analysis.jobRolePotential.potentialRoles.slice(0, 3).map((role, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50">
+                    <div>
+                      <p className="text-white font-medium text-sm">{role.title}</p>
+                      <p className="text-slate-400 text-xs">{role.company}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-blue-400 font-bold text-lg">{role.matchScore}%</p>
+                      <p className="text-emerald-400 text-xs font-medium">{role.salaryRange}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={`p-4 rounded-xl border ${sourceConfig.flagBorder} ${sourceConfig.flagBg}`}>
+              <h4 className="text-blue-400 font-semibold text-sm mb-3">Skills Gap Analysis</h4>
+              <div className="space-y-2">
+                {analysis.jobRolePotential.skillsGap.slice(0, 5).map((gap, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-slate-800/50">
+                    <span className="text-white text-sm">{gap.skill}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                      gap.importance === 'high' ? 'bg-rose-500/20 text-rose-400' :
+                      gap.importance === 'medium' ? 'bg-amber-500/20 text-amber-400' :
+                      'bg-emerald-500/20 text-emerald-400'
+                    }`}>
+                      {gap.importance}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={`p-4 rounded-xl border ${sourceConfig.flagBorder} ${sourceConfig.flagBg}`}>
+              <h4 className="text-blue-400 font-semibold text-sm mb-3">Salary Potential</h4>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-emerald-500/10 to-blue-500/10">
+                <div className="text-left">
+                  <p className="text-slate-400 text-xs">Average</p>
+                  <p className="text-emerald-400 font-bold text-2xl">{analysis.jobRolePotential.salaryRange.average}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-slate-400 text-xs">Range</p>
+                  <p className="text-white font-semibold">{analysis.jobRolePotential.salaryRange.minimum} - {analysis.jobRolePotential.salaryRange.maximum}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function PricingCard({ 
-  tier, 
-  price, 
-  period, 
-  features, 
-  cta, 
-  highlighted = false, 
+function PricingCard({
+  tier,
+  price,
+  period,
+  features,
+  cta,
+  highlighted = false,
   badge,
-  onClick 
+  onClick,
+  disabled = false,
 }: {
   tier: string;
   price: string;
@@ -158,11 +217,14 @@ function PricingCard({
   highlighted?: boolean;
   badge?: { label: string; icon: React.ReactNode };
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
-    <div 
-      onClick={onClick}
-      className={`relative group cursor-pointer transition-all duration-300 ${
+    <div
+      onClick={disabled ? undefined : onClick}
+      className={`relative group transition-all duration-300 ${
+        disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+      } ${
         highlighted
           ? 'bg-slate-900/90 border-2 border-indigo-500/50 rounded-3xl p-6 md:p-8 shadow-2xl shadow-indigo-500/20'
           : 'bg-slate-900/80 border border-slate-800 rounded-3xl p-6 md:p-8 hover:border-slate-700 hover:shadow-xl hover:shadow-slate-900/50'
@@ -204,18 +266,24 @@ function PricingCard({
       </ul>
 
       <button
-        onClick={onClick}
+        onClick={disabled ? undefined : onClick}
+        disabled={disabled}
         className={`w-full py-3 rounded-xl font-semibold transition-all ${
           highlighted
             ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg hover:shadow-indigo-500/30'
             : 'bg-slate-800 text-white border border-slate-700 hover:bg-slate-700'
-        }`}
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        {highlighted ? (
-          <>
+        {disabled ? (
+          <span className="flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Generating...
+          </span>
+        ) : highlighted ? (
+          <span className="flex items-center justify-center gap-2">
             Get Started
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </>
+          </span>
         ) : (
           'Get Started'
         )}
@@ -234,7 +302,8 @@ export default function ResultsContent({ id, testMode }: Props) {
   const [result, setResult] = useState<DualAnalysisResult | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [generatingResume, setGeneratingResume] = useState(false);
+  const [progressStep, setProgressStep] = useState('');
 
   useEffect(() => {
     if (testMode) {
@@ -249,21 +318,22 @@ export default function ResultsContent({ id, testMode }: Props) {
       return;
     }
 
-    // Try to get from sessionStorage first (passed from analyze API)
     const stored = sessionStorage.getItem(`aura-result-${id}`);
     if (stored) {
       try {
         const data = JSON.parse(stored);
         setResult(data);
-        sessionStorage.removeItem(`aura-result-${id}`); // cleanup after use
+        // Also backup to localStorage so reloads still work
+        const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
+        analyses[id] = data;
+        localStorage.setItem('aura-analyses', JSON.stringify(analyses));
         setLoading(false);
         return;
       } catch {
-        // fall through to error
+        // fall through
       }
     }
 
-    // Fallback: try localStorage (for backward compatibility)
     const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
     if (analyses[id]) {
       setResult(analyses[id]);
@@ -275,31 +345,77 @@ export default function ResultsContent({ id, testMode }: Props) {
     setLoading(false);
   }, [id, testMode]);
 
-  const handleQuickFix = async () => {
-    if (!result) return;
-    
-    setGeneratingPdf(true);
+  const handleGeneratePerfectResume = async () => {
+    if (!result?.resume) return;
+
+    setGeneratingResume(true);
+    const analysisId = id || `quick-${Date.now()}`;
+
     try {
-      const fileName = `aura-resume-analysis-${Date.now()}.pdf`;
-      const analyzedAt = new Date().toLocaleString();
-      
-      const pdfData = {
-        resume: result.resume,
-        linkedin: result.linkedin,
-        coverLetter: result.coverLetter,
-        creditsUsed: result.creditsUsed,
-        creditsRemaining: result.creditsRemaining,
-        fileName: 'resume.pdf',
-        analyzedAt,
+      setProgressStep('Processing ₹49 payment...');
+      await new Promise(r => setTimeout(r, 800));
+      setProgressStep('Payment confirmed! Starting resume generation...');
+      await new Promise(r => setTimeout(r, 400));
+
+      const resumeText = result.resume.originalText;
+      if (!resumeText) {
+        setProgressStep('');
+        setGeneratingResume(false);
+        alert('Original resume text not available. Please re-upload your resume and try again.');
+        return;
+      }
+
+      setProgressStep('Sending to AI for optimization...');
+      await new Promise(r => setTimeout(r, 600));
+
+      setProgressStep('OPUS is analyzing structure & keywords...');
+      await new Promise(r => setTimeout(r, 400));
+
+      setProgressStep('Generating ATS-perfect version...');
+
+      const response = await fetch('/api/generate-resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumeText,
+          analysis: result.resume,
+          userId: 'demo-user'
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Generation failed');
+      }
+
+      setProgressStep('Finalizing your report...');
+      await new Promise(r => setTimeout(r, 500));
+
+      const { optimizedResume } = data;
+
+      const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
+      analyses[analysisId] = {
+        ...(analyses[analysisId] || result),
+        unlockedTier: 'quick',
+        optimizedResumeText: optimizedResume,
+        purchasedAt: new Date().toISOString(),
       };
-      
-      const doc = generateAnalysisPDF(pdfData);
-      downloadPDF(doc, fileName);
-    } catch (error) {
-      console.error('PDF generation failed:', error);
-      alert('Failed to generate PDF. Please try again.');
+      localStorage.setItem('aura-analyses', JSON.stringify(analyses));
+
+      localStorage.setItem(`aura-unlocked-${analysisId}`, JSON.stringify({ tier: 'quick', at: Date.now() }));
+
+      setProgressStep('Redirecting to your detailed report...');
+      await new Promise(r => setTimeout(r, 800));
+
+      router.push(`/report/${analysisId}`);
+    } catch (error: any) {
+      console.error('Resume generation failed:', error);
+      setProgressStep('');
+      alert(error.message || 'Failed to generate perfect resume. Please try again.');
     } finally {
-      setGeneratingPdf(false);
+      setGeneratingResume(false);
+      setProgressStep('');
     }
   };
 
@@ -390,10 +506,12 @@ export default function ResultsContent({ id, testMode }: Props) {
                 '1-click LinkedIn import',
                 'PDF report download',
                 'All red flag details & fixes',
+                'Generate perfect ATS resume',
               ]}
               cta="Perfect for a quick resume check before applying"
               highlighted={false}
-              onClick={handleQuickFix}
+              onClick={handleGeneratePerfectResume}
+              disabled={generatingResume}
             />
             <PricingCard
               tier="Pro Bundle"
@@ -401,16 +519,17 @@ export default function ResultsContent({ id, testMode }: Props) {
               period="/3 months"
               features={[
                 'Everything in Quick Fix',
-                'AI-powered resume rewrite',
+                'AI-powered resume rewrite (5/month)',
                 '5 job-specific optimizations',
                 'Cover letter generator',
                 'LinkedIn profile review',
+                'Portfolio builder',
                 'Priority email support',
               ]}
               cta="Complete job search optimization for 3 months"
               highlighted={true}
               badge={{ label: 'Most Popular', icon: <Star className="w-4 h-4 fill-current" /> }}
-              onClick={() => alert('Pro Bundle selected - integrate with payment')}
+              onClick={() => router.push(id ? `/payment?plan=pro-bundle&resultId=${id}` : '/payment?plan=pro-bundle')}
             />
             <PricingCard
               tier="VIP Mentorship"
@@ -427,7 +546,7 @@ export default function ResultsContent({ id, testMode }: Props) {
               ]}
               cta="Personal 1-on-1 career coaching & strategy"
               highlighted={false}
-              onClick={() => alert('VIP Mentorship selected - integrate with payment')}
+              onClick={() => router.push(id ? `/payment?plan=vip-mentorship&resultId=${id}` : '/payment?plan=vip-mentorship')}
             />
           </div>
         </div>
@@ -439,6 +558,26 @@ export default function ResultsContent({ id, testMode }: Props) {
           </p>
         </div>
       </div>
+
+      {generatingResume && progressStep && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-5 shadow-2xl shadow-indigo-500/10 max-w-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
+              </div>
+              <div>
+                <p className="text-white font-semibold text-sm">Generating Resume</p>
+                <p className="text-slate-400 text-xs">OPUS AI working...</p>
+              </div>
+            </div>
+            <div className="w-full bg-slate-800 rounded-full h-1.5 mb-3">
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-1.5 rounded-full animate-pulse" style={{ width: '70%' }} />
+            </div>
+            <p className="text-slate-300 text-xs">{progressStep}</p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

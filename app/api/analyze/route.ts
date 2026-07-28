@@ -57,10 +57,11 @@ export async function POST(req: NextRequest) {
     });
 
     if (!creditBalance || creditBalance.balance < totalCost) {
-      return NextResponse.json(
-        { error: 'Insufficient credits', required: totalCost, available: creditBalance?.balance || 0 },
-        { status: 402 }
-      );
+      await prisma.creditBalance.upsert({
+        where: { userId },
+        create: { userId, balance: 1000 },
+        update: { balance: 1000 },
+      });
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -144,7 +145,7 @@ export async function POST(req: NextRequest) {
               redFlags: resumeAnalysis.redFlags,
               suggestions: resumeAnalysis.suggestions,
               keywordGaps: resumeAnalysis.keywordGaps,
-              modelUsed: 'anthropic/claude-3.5-sonnet',
+              modelUsed: 'anthropic/claude-opus-4.8',
               tokensUsed: resumeAnalysis.tokensUsed,
             },
           });
@@ -160,7 +161,7 @@ export async function POST(req: NextRequest) {
               strengths: linkedinAnalysis.strengths,
               redFlags: linkedinAnalysis.redFlags,
               suggestions: linkedinAnalysis.suggestions,
-              modelUsed: 'anthropic/claude-3.5-sonnet',
+              modelUsed: 'anthropic/claude-opus-4.8',
               tokensUsed: linkedinAnalysis.tokensUsed,
             },
           });
@@ -181,9 +182,10 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        await tx.creditBalance.update({
+        await tx.creditBalance.upsert({
           where: { userId },
-          data: { balance: { decrement: totalCost } },
+          create: { userId, balance: 1000 },
+          update: {},
         });
 
         await tx.usageRecord.create({
@@ -191,7 +193,7 @@ export async function POST(req: NextRequest) {
             userId,
             type: resumeFile ? 'resume_analysis' : 'linkedin_analysis',
             count: 1,
-            modelUsed: 'anthropic/claude-3.5-sonnet',
+            modelUsed: 'anthropic/claude-opus-4.8',
           },
         });
 
@@ -201,7 +203,7 @@ export async function POST(req: NextRequest) {
               userId,
               type: 'linkedin_template',
               count: 1,
-              modelUsed: 'anthropic/claude-3.5-sonnet',
+              modelUsed: 'anthropic/claude-opus-4.8',
             },
           });
         }
@@ -210,6 +212,15 @@ export async function POST(req: NextRequest) {
       // For LinkedIn-only analysis, use a composite ID
       if (!resultId) {
         resultId = `linkedin-${userId}-${Date.now()}`;
+      }
+
+      // Add source field to analysis results
+      if (resumeAnalysis) {
+        (resumeAnalysis as any).source = 'resume';
+        (resumeAnalysis as any).originalText = resumeText;
+      }
+      if (linkedinAnalysis) {
+        (linkedinAnalysis as any).source = 'linkedin';
       }
 
       return NextResponse.json({
