@@ -61,7 +61,7 @@ export function Header() {
               placeholder="Search jobs, resumes, roadmaps... (⌘K)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-surface-100 dark:bg-slate-800/50 border border-surface-300 dark:border-slate-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-500 dark:placeholder-slate-500 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all text-sm"
+              className="w-full pl-10 pr-4 py-2 bg-surface-100 dark:bg-slate-800/50 border border-surface-300 dark:border-slate-700 rounded-xl text-surface-900 dark:text-surface-900 dark:text-white placeholder-surface-500 dark:placeholder-slate-500 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all text-sm"
               aria-label="Search"
             />
           </div>
@@ -71,7 +71,7 @@ export function Header() {
           <div className="relative hidden sm:block">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 rounded-xl text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-slate-800/50 transition-colors"
+              className="relative p-2 rounded-xl text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:hover:text-surface-900 dark:text-white hover:bg-surface-100 dark:hover:bg-slate-800/50 transition-colors"
               aria-label="Notifications"
               aria-expanded={showNotifications}
             >
@@ -81,8 +81,8 @@ export function Header() {
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-surface-200 dark:border-slate-800 rounded-2xl shadow-2xl py-2 z-50">
                 <div className="px-4 py-3 border-b border-surface-200 dark:border-slate-800 flex items-center justify-between">
-                  <h3 className="font-semibold text-surface-900 dark:text-white">Notifications</h3>
-                  <button className="text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:hover:text-white text-sm">Mark all read</button>
+                  <h3 className="font-semibold text-surface-900 dark:text-surface-900 dark:text-white">Notifications</h3>
+                  <button className="text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:hover:text-surface-900 dark:text-white text-sm">Mark all read</button>
                 </div>
                 <div className="py-2">
                   <div className="px-4 py-3 text-surface-500 dark:text-slate-400 text-sm">No new notifications</div>
@@ -99,10 +99,10 @@ export function Header() {
               aria-expanded={showUserMenu}
             >
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
-                <span className="text-white text-sm font-semibold">AS</span>
+                <span className="text-surface-900 dark:text-white text-sm font-semibold">AS</span>
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-surface-900 dark:text-white font-medium text-sm">Arjun Sharma</p>
+                <p className="text-surface-900 dark:text-surface-900 dark:text-white font-medium text-sm">Arjun Sharma</p>
                 <p className="text-surface-500 dark:text-slate-500 text-xs capitalize">{currentPlan}</p>
               </div>
               <ChevronDown className="w-4 h-4 text-surface-500 dark:text-slate-400" />
@@ -113,22 +113,22 @@ export function Header() {
                 <div className="px-4 py-3 border-b border-surface-200 dark:border-slate-800">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
-                      <span className="text-white font-semibold">AS</span>
+                      <span className="text-surface-900 dark:text-white font-semibold">AS</span>
                     </div>
                     <div>
-                      <p className="font-semibold text-surface-900 dark:text-white">Arjun Sharma</p>
+                      <p className="font-semibold text-surface-900 dark:text-surface-900 dark:text-white">Arjun Sharma</p>
                       <p className="text-surface-500 dark:text-slate-500 text-sm">arjun.sharma@email.com</p>
                     </div>
                   </div>
                   <div className="mt-2 flex items-center gap-2">
                     <PlanIcon className={cn('w-5 h-5', planColors[currentPlan].replace('bg-', 'text-').replace('border-', ''))} />
-                    <span className="text-sm font-medium text-surface-900 dark:text-white capitalize">{currentPlan}</span>
+                    <span className="text-sm font-medium text-surface-900 dark:text-surface-900 dark:text-white capitalize">{currentPlan}</span>
                   </div>
                 </div>
                 <nav className="py-2" aria-label="User menu">
                   <Link
                     href="/dashboard/settings"
-                    className="flex items-center gap-3 px-4 py-2 text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-slate-800/50 transition-colors"
+                    className="flex items-center gap-3 px-4 py-2 text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:hover:text-surface-900 dark:text-white hover:bg-surface-100 dark:hover:bg-slate-800/50 transition-colors"
                     onClick={() => setShowUserMenu(false)}
                   >
                     <Settings className="w-5 h-5" />
@@ -136,7 +136,7 @@ export function Header() {
                   </Link>
                   <Link
                     href="/plans"
-                    className="flex items-center gap-3 px-4 py-2 text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-slate-800/50 transition-colors"
+                    className="flex items-center gap-3 px-4 py-2 text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:hover:text-surface-900 dark:text-white hover:bg-surface-100 dark:hover:bg-slate-800/50 transition-colors"
                     onClick={() => setShowUserMenu(false)}
                   >
                     <Sparkles className="w-5 h-5" />
@@ -144,7 +144,7 @@ export function Header() {
                   </Link>
                   <hr className="my-2 border-surface-200 dark:border-slate-800" />
                   <button
-                    className="flex items-center gap-3 px-4 py-2 text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-slate-800/50 transition-colors w-full text-left"
+                    className="flex items-center gap-3 px-4 py-2 text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:hover:text-surface-900 dark:text-white hover:bg-surface-100 dark:hover:bg-slate-800/50 transition-colors w-full text-left"
                     onClick={() => setShowUserMenu(false)}
                   >
                     <LogOut className="w-5 h-5" />
@@ -157,7 +157,7 @@ export function Header() {
 
           <button
             onClick={() => setCommandOpen(true)}
-            className="p-2 rounded-xl text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-slate-800/50 transition-colors md:hidden"
+            className="p-2 rounded-xl text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:hover:text-surface-900 dark:text-white hover:bg-surface-100 dark:hover:bg-slate-800/50 transition-colors md:hidden"
             aria-label="Command palette"
           >
             <Search className="w-5 h-5" />
@@ -176,7 +176,7 @@ export function Header() {
                   type="search"
                   placeholder="Search everything... (⌘K to close)"
                   autoFocus
-                  className="w-full pl-10 pr-4 py-3 bg-surface-100 dark:bg-slate-800 border border-surface-300 dark:border-slate-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-500 dark:placeholder-slate-500 focus:outline-none focus:border-primary-500 text-lg"
+                  className="w-full pl-10 pr-4 py-3 bg-surface-100 dark:bg-slate-800 border border-surface-300 dark:border-slate-700 rounded-xl text-surface-900 dark:text-surface-900 dark:text-white placeholder-surface-500 dark:placeholder-slate-500 focus:outline-none focus:border-primary-500 text-lg"
                 />
                 <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 text-xs bg-surface-100 dark:bg-slate-800 text-surface-500 dark:text-slate-500 rounded">⌘K</kbd>
               </div>
@@ -194,7 +194,7 @@ export function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center gap-3 px-4 py-3 text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-slate-800/50 transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:hover:text-surface-900 dark:text-white hover:bg-surface-100 dark:hover:bg-slate-800/50 transition-colors"
                   onClick={() => setCommandOpen(false)}
                 >
                   <span className="text-lg">{item.icon}</span>

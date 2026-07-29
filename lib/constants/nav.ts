@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, Target, Search, Map, Globe,
   Settings, Mail, Mic, Shield, Zap, Sparkles, Users, Award,
-  Scan, Wrench, Linkedin, FilePen,
+  Scan, Wrench, FilePen, FileSearch, Linkedin,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -12,8 +12,8 @@ export const NAV_ITEMS = [
       { href: '/dashboard/resumes', label: 'My Resumes', icon: FileText, plan: 'free' as const, badge: null },
       { href: '/dashboard/analyser', label: 'Resume Analyser', icon: Scan, plan: 'free' as const, badge: null },
       { href: '/dashboard/fixer', label: 'Resume Fixer', icon: Wrench, plan: 'pro' as const, badge: null },
-      { href: '/dashboard/linkedin', label: 'LinkedIn Analyser', icon: Linkedin, plan: 'pro' as const, badge: null },
       { href: '/dashboard/templates', label: 'Cover Letters', icon: FilePen, plan: 'pro' as const, badge: null },
+      { href: '/dashboard/linkedin', label: 'LinkedIn Analyser', icon: Linkedin, plan: 'pro' as const, badge: null },
     ],
   },
   {
@@ -21,6 +21,7 @@ export const NAV_ITEMS = [
     items: [
       { href: '/dashboard/jobs/matches', label: 'Job Matches', icon: Target, plan: 'pro' as const, badge: null },
       { href: '/dashboard/jobs', label: 'Job Search', icon: Search, plan: 'pro' as const, badge: null },
+      { href: '/dashboard/jobs/compare', label: 'Resume vs Job', icon: FileSearch, plan: 'pro' as const, badge: null },
     ],
   },
   {

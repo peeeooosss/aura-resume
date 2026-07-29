@@ -140,19 +140,15 @@ export async function generateATSPerfectResume(
 }> {
   const systemPrompt = `You are Aura, an elite ATS optimization AI. Your sole purpose is to rewrite candidate resumes to achieve a 100/100 ATS score.
 
-You will receive the candidate's raw resume and an ATS gap analysis. Whether the input is a sparse 50-word outline or a massive, multi-page document, you must clone the core facts and REWRITE them into a perfectly formatted ATS resume.
+You will receive the candidate's raw resume and an ATS gap analysis. You must clone the core facts and REWRITE them into a perfectly formatted ATS resume.
 
 <rules>
-  <rule>1. STRICT COMPLETENESS: Include EVERY section present in the original resume. Rewrite and expand experience bullet points, project descriptions, and the summary for maximum ATS impact. If the original resume does NOT contain a CERTIFICATIONS, PROJECTS, EDUCATION, or SKILLS section, do NOT fabricate one — only include what actually exists.</rule>
-  <rule>2. CONTENT SCALING: 
-    - If the input is extremely brief, logically expand the responsibilities into high-impact, professional bullets based on the job title.
-    - If the input is massive, distill it down to the most impactful points.
-    - Output exactly 4-6 bullet points per role/project.</rule>
-  <rule>3. MANDATORY QUANTIFICATION: Every single bullet point MUST begin with a strong action verb and contain at least one hard metric (percentages, user counts, time saved). Logically infer conservative scope if exact numbers are missing.</rule>
-  <rule>4. PARSER-STRICT FORMATTING: Your markdown is parsed by a strict regex engine. You MUST use exactly \`## \` for main section headers with exactly one space after the hashes. You MUST use exactly \`### \` for role sub-headers with exactly one space after the hashes. Never use bolding (\`**\`) for headers. Never add extra spaces or omit the space after ## or ###.</rule>
-  <rule>5. KEYWORDS: Seamlessly weave missing keywords from the analysis results into the Experience bullets and Summary.</rule>
-  <rule>6. IGNORE METADATA: Completely ignore any PDF parsing artifacts, page numbers, timestamps, or garbage text (e.g., "ATS Dot 2026").</rule>
-  <rule>7. OUTPUT FORMAT: Output ONLY the raw markdown. No explanations, no conversational text, no thinking tags. No personal pronouns (I, me, my), no passive voice. Use ONLY these standard headers: SUMMARY, EXPERIENCE, EDUCATION, SKILLS, PROJECTS, CERTIFICATIONS.</rule>
+  <rule>1. STRICT ORDER & NO DUPLICATES: You MUST output the sections in this EXACT order: SUMMARY, EXPERIENCE, EDUCATION, SKILLS, PROJECTS. You are absolutely FORBIDDEN from generating the same section twice. Once a section is written, move on.</rule>
+  <rule>2. STRICT COMPLETENESS: You MUST include every section from the original resume. Never skip EDUCATION or SKILLS.</rule>
+  <rule>3. CONTENT SCALING: Output exactly 4-6 bullet points per role/project. Expand brief inputs into high-impact bullets, and distill massive inputs down to the most impactful points.</rule>
+  <rule>4. MANDATORY QUANTIFICATION: Every single bullet point MUST begin with a strong action verb and contain at least one hard metric (percentages, user counts, time saved). Logically infer conservative scope if exact numbers are missing.</rule>
+  <rule>5. PARSER-STRICT FORMATTING: You MUST use exactly \`## \` for main sections and exactly \`### \` for role sub-headers. Never use bolding (\`**\`) for headers.</rule>
+  <rule>6. OUTPUT FORMAT: Output ONLY the raw markdown. No explanations, no XML tags in your output, no conversational text.</rule>
 </rules>
 
 <markdown_output_template>
@@ -165,15 +161,6 @@ You will receive the candidate's raw resume and an ATS gap analysis. Whether the
 ## EXPERIENCE
 
 ### [Exact Job Title] | [Company Name] | [Month YYYY] – [Month YYYY or Present]
-- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
-- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
-- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
-- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
-
-### [Exact Job Title] | [Company Name] | [Month YYYY] – [Month YYYY]
-- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
-- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
-- [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
 - [Action Verb] [Task/Project] using [Keywords], resulting in [Metric]
 
 ## EDUCATION
@@ -188,28 +175,7 @@ You will receive the candidate's raw resume and an ATS gap analysis. Whether the
 
 ### [Project Name] | [Technologies Used] | [Month YYYY] - [Month YYYY]
 - [Action Verb] [Task] resulting in [Metric]
-- [Action Verb] [Task] resulting in [Metric]
-- [Action Verb] [Task] resulting in [Metric]
-- [Action Verb] [Task] resulting in [Metric]
-
-### [Project Name] | [Technologies Used] | [Month YYYY] - [Month YYYY]
-- [Action Verb] [Task] resulting in [Metric]
-- [Action Verb] [Task] resulting in [Metric]
-- [Action Verb] [Task] resulting in [Metric]
-- [Action Verb] [Task] resulting in [Metric]
-
-## CERTIFICATIONS
-
-### [Certification Name] | [Issuing Organization] | [Year]
-- [Brief detail — credential ID, validity, or relevance with metric if applicable]
-
-### [Certification Name] | [Issuing Organization] | [Year]
-- [Brief detail — credential ID, validity, or relevance with metric if applicable]
 </markdown_output_template>
-
-<critical>
-Output the resume exactly ONCE. Do NOT prepend the original raw resume text. Do NOT echo the input. Do NOT include a "before" and "after" version. Do NOT repeat any section. Start directly with "# [Name]" and end naturally after the last section. The output must be a single, complete, non-duplicated resume.
-</critical>
 
 PROCESS THE INPUT NOW. OUTPUT ONLY THE FINAL MARKDOWN FOLLOWING THE TEMPLATE ABOVE.`;
 
@@ -274,7 +240,7 @@ ${resumeText}
   while (currentFinishReason === 'length' && retries < 3) {
     const continuationMessage = {
       role: 'user' as const,
-      content: 'You hit the length limit. Continue generating the exact markdown resume from exactly where you left off. DO NOT repeat any previous text. DO NOT add any introductory text like "Continuing..." or "Here is the rest". Output ONLY the raw markdown continuation.',
+      content: 'CRITICAL: You hit the length limit. Output ONLY the continuation of the markdown from exactly where you left off. DO NOT start from the beginning. DO NOT repeat the header or any previous sections. Output ONLY the remaining text.',
     };
 
     messages.push({ role: 'assistant', content: finalContent });
@@ -296,16 +262,15 @@ ${resumeText}
   }
 
   const missingSections: string[] = [];
-  for (const section of requiredSections) {
-    if (!finalContent.includes(section)) {
-      missingSections.push(section.replace('## ', ''));
-    }
-  }
+  if (!/##\s*EDUCATION/i.test(finalContent)) missingSections.push('EDUCATION');
+  if (!/##\s*SKILLS/i.test(finalContent)) missingSections.push('SKILLS');
+  if (!/##\s*PROJECTS/i.test(finalContent)) missingSections.push('PROJECTS');
+  if (!/##\s*CERTIFICATIONS/i.test(finalContent)) missingSections.push('CERTIFICATIONS');
 
   if (missingSections.length > 0) {
     const fallbackMessage = {
       role: 'user' as const,
-      content: `You failed to include the following mandatory sections: ${missingSections.join(', ')}. Generate ONLY these missing sections in strict markdown format using '## [SECTION NAME]' headers. Use the raw resume data provided earlier. Do not output anything else. Do not add introductory text.`,
+      content: `CRITICAL: You forgot to include these sections: ${missingSections.join(', ')}. Generate ONLY these specific missing sections in strict markdown format (using ## headers). DO NOT regenerate the entire resume. DO NOT include the Summary or Experience sections again. Output ONLY the missing sections.`,
     };
 
     messages.push(fallbackMessage);
@@ -320,6 +285,120 @@ ${resumeText}
       finalContent += '\n\n' + missingContent.trim();
       totalTokens += missingTokens;
     }
+  }
+
+  return { optimizedResume: finalContent, tokensUsed: totalTokens };
+}
+
+export async function generateTailoredResumeForJob(
+  resumeText: string,
+  analysis: any,
+  jobDescription: string,
+  jobTitle: string,
+  company: string
+): Promise<{ optimizedResume: string; tokensUsed: number }> {
+  const systemPrompt = `You are Aura, an elite ATS optimization AI. Your sole purpose is to tailor resumes for specific job descriptions to achieve maximum match scores.
+
+You will receive the candidate's resume, an ATS gap analysis, and a target job description. You must REWRITE the resume to specifically target this job, matching its keywords, requirements, and culture.
+
+<rules>
+  <rule>1. JOB-FIRST TAILORING: Study the job description first. Identify every required skill, keyword, and qualification. Ensure the tailored resume addresses ALL of them.</rule>
+  <rule>2. FILL THE GAPS: The analysis identifies gaps between the current resume and the job. Address every gap by rephrasing existing experience to highlight relevant work or by expanding bullet points to demonstrate equivalent skills.</rule>
+  <rule>3. NO FABRICATION: Never invent experience the candidate does not have. Rephrase and reframe existing experience to match the job requirements — do not create fake roles or skills.</rule>
+  <rule>4. STRICT FORMATTING: Use \`## \` for sections, \`### \` for role headers. Never bold headers. Output exactly 4-6 bullets per role with quantified metrics.</rule>
+  <rule>5. OUTPUT ONLY the raw markdown resume. No explanations, no conversational text.</rule>
+</rules>
+
+<markdown_output_template>
+# [First Name] [Last Name]
+[Email] | [Phone] | [LinkedIn URL] | [GitHub/Portfolio URL]
+
+## SUMMARY
+[A 3-4 sentence paragraph explicitly targeting the ${jobTitle} role at ${company}. Must mirror keywords from the job description.]
+
+## EXPERIENCE
+
+### [Exact Job Title] | [Company Name] | [Month YYYY] – [Month YYYY or Present]
+- [Action Verb] [Task] using [Job-Relevant Keywords], resulting in [Metric]
+
+## EDUCATION
+
+### [Degree Name] | [Institution Name] | [Start Year] – [End Year]
+- [Optional: GPA, Honors, or relevant coursework]
+
+## SKILLS
+[Category 1: skills matching the job description] • [Category 2] • [Category 3]
+
+## PROJECTS
+
+### [Project Name] | [Technologies Used] | [Month YYYY] - [Month YYYY]
+- [Action Verb] [Task] resulting in [Metric]
+</markdown_output_template>
+
+PROCESS THE INPUT NOW. OUTPUT ONLY THE TAILORED RESUME.`;
+
+  const userMessage = `<analysis_results>
+Score: ${analysis.score}/100
+
+Red Flags:
+${(analysis.redFlags || []).map((f: string) => `- ${f}`).join('\n') || '- None'}
+
+Strengths:
+${(analysis.strengths || []).map((s: string) => `- ${s}`).join('\n') || '- None'}
+
+Keyword Gaps:
+${(analysis.keywordGaps || []).map((g: string) => `- ${g}`).join('\n') || '- None'}
+</analysis_results>
+
+<target_job>
+Title: ${jobTitle}
+Company: ${company}
+Description: ${jobDescription}
+</target_job>
+
+<original_resume>
+${resumeText}
+</original_resume>`;
+
+  const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userMessage },
+  ];
+
+  const { content: firstContent, tokensUsed: firstTokens, finishReason } = await callOpenRouter(messages, {
+    temperature: 0.1,
+    maxTokens: 24000,
+    expectJson: false,
+  });
+
+  if (!firstContent || firstContent.length < 100) {
+    throw new Error('AI returned empty or too short response. Please try again.');
+  }
+
+  let finalContent = firstContent;
+  let totalTokens = firstTokens;
+  let currentFinishReason = finishReason;
+  let retries = 0;
+
+  while (currentFinishReason === 'length' && retries < 3) {
+    messages.push({ role: 'assistant', content: finalContent });
+    messages.push({
+      role: 'user',
+      content: 'CRITICAL: You hit the length limit. Continue from exactly where you left off. DO NOT repeat any previous text. Output ONLY the remaining markdown.',
+    });
+
+    const { content: contContent, tokensUsed: contTokens, finishReason: contReason } = await callOpenRouter(messages, {
+      temperature: 0.1,
+      maxTokens: 8000,
+      expectJson: false,
+    });
+
+    if (contContent && contContent.length > 20) {
+      finalContent += '\n' + contContent;
+      totalTokens += contTokens;
+    }
+    currentFinishReason = contReason;
+    retries++;
   }
 
   return { optimizedResume: finalContent, tokensUsed: totalTokens };

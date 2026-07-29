@@ -199,45 +199,45 @@ function FixCard({ fix, index, isExpanded, onToggle }: { fix: Fix; index: number
     <div className={cn('border rounded-2xl overflow-hidden transition-all', getSeverityColor(fix.severity))}>
       <button
         onClick={onToggle}
-        className="w-full p-5 flex items-start gap-4 text-left hover:bg-slate-800/50 transition-colors"
+        className="w-full p-5 flex items-start gap-4 text-left hover:bg-surface-100 dark:bg-slate-800/50 transition-colors"
       >
         <div className={cn('flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center', getSeverityColor(fix.severity).replace('text-', 'bg-').replace('border-', ''))}>
           {getSeverityIcon(fix.severity)}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-2">
-            <h4 className="font-semibold text-white">{fix.title}</h4>
+            <h4 className="font-semibold text-surface-900 dark:text-white">{fix.title}</h4>
             <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', getSeverityColor(fix.severity))}>
               {fix.severity.toUpperCase()}
             </span>
-            <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-xs font-medium">
+            <span className="px-2 py-0.5 rounded-full bg-surface-100 dark:bg-slate-800 text-surface-500 dark:text-slate-400 text-xs font-medium">
               {getCategoryLabel(fix.category)}
             </span>
           </div>
-          <p className="text-slate-400 text-sm line-clamp-2">{fix.description}</p>
+          <p className="text-surface-500 dark:text-slate-400 text-sm line-clamp-2">{fix.description}</p>
         </div>
-        <div className="flex items-center gap-2 text-slate-500">
+        <div className="flex items-center gap-2 text-surface-400 dark:text-slate-500">
           {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </div>
       </button>
 
       {isExpanded && (
-        <div className="border-t border-slate-800 p-5 space-y-4 bg-slate-900/50">
+        <div className="border-t border-surface-200 dark:border-slate-800 p-5 space-y-4 bg-slate-900/50">
           <div>
-            <h5 className="text-slate-400 text-sm font-medium mb-2">Section: {fix.section}</h5>
+            <h5 className="text-surface-500 dark:text-slate-400 text-sm font-medium mb-2">Section: {fix.section}</h5>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <h6 className="text-rose-400 text-sm font-medium mb-2 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" /> Current
               </h6>
-              <pre className="bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-300 text-sm whitespace-pre-wrap overflow-x-auto max-h-64">{fix.originalText}</pre>
+              <pre className="bg-white dark:bg-slate-950 border border-surface-200 dark:border-slate-800 rounded-xl p-4 text-surface-900 dark:text-slate-300 text-sm whitespace-pre-wrap overflow-x-auto max-h-64">{fix.originalText}</pre>
             </div>
             <div>
               <h6 className="text-emerald-400 text-sm font-medium mb-2 flex items-center gap-1">
                 <Check className="w-3 h-3" /> Fixed
               </h6>
-              <pre className="bg-slate-950 border border-emerald-500/20 rounded-xl p-4 text-slate-100 text-sm whitespace-pre-wrap overflow-x-auto max-h-64">{fix.fixedText}</pre>
+              <pre className="bg-white dark:bg-slate-950 border border-emerald-500/20 rounded-xl p-4 text-surface-900 dark:text-slate-100 text-sm whitespace-pre-wrap overflow-x-auto max-h-64">{fix.fixedText}</pre>
             </div>
           </div>
         </div>
@@ -361,8 +361,8 @@ export function FixerPage() {
     return (
       <div className="text-center py-20">
         <FileText className="w-16 h-16 text-slate-600 mx-auto mb-6" />
-        <h2 className="text-2xl font-bold text-white mb-3">No Resumes Found</h2>
-        <p className="text-slate-400 mb-8 max-w-md mx-auto">Upload a resume first to use the Resume Fixer. We'll analyze it and show you specific fixes to improve your ATS score.</p>
+        <h2 className="text-2xl font-bold text-surface-900 dark:text-white mb-3">No Resumes Found</h2>
+        <p className="text-surface-500 dark:text-slate-400 mb-8 max-w-md mx-auto">Upload a resume first to use the Resume Fixer. We'll analyze it and show you specific fixes to improve your ATS score.</p>
         <a
           href="/dashboard/resumes"
           className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl text-white font-semibold hover:shadow-2xl hover:shadow-indigo-500/50 transition-all"
@@ -378,8 +378,8 @@ export function FixerPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white">Resume Fixer</h1>
-          <p className="text-slate-400 mt-1">Select a resume to see specific fixes and download an improved version</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-surface-900 dark:text-white">Resume Fixer</h1>
+          <p className="text-surface-500 dark:text-slate-400 mt-1">Select a resume to see specific fixes and download an improved version</p>
         </div>
         <PlanGate requiredPlan="pro" featureName="Resume Fixer Download">
           <DownloadFixedResume resume={selectedResume!} fixes={fixes} />
@@ -388,12 +388,12 @@ export function FixerPage() {
 
       <div className="grid lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1">
-          <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-5 sticky top-24">
-            <h3 className="font-semibold text-white mb-4">Select Resume</h3>
+          <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-2xl p-5 sticky top-24">
+            <h3 className="font-semibold text-surface-900 dark:text-white mb-4">Select Resume</h3>
             <select
               value={selectedResumeId || ''}
               onChange={(e) => setSelectedResumeId(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 text-sm"
+              className="w-full bg-surface-100 dark:bg-slate-800 border border-surface-300 dark:border-slate-700 rounded-xl px-4 py-3 text-surface-900 dark:text-white focus:outline-none focus:border-indigo-500 text-sm"
             >
               {resumes.map(r => (
                 <option key={r.id} value={r.id}>
@@ -401,20 +401,20 @@ export function FixerPage() {
                 </option>
               ))}
             </select>
-            <div className="mt-4 p-4 bg-slate-950 rounded-xl border border-slate-800">
-              <p className="text-slate-400 text-sm mb-2">ATS Score: <span className="text-white font-semibold">{selectedResume?.atsScore || 0}/100</span></p>
-              <p className="text-slate-400 text-sm mb-2">Version: <span className="text-white font-semibold">v{selectedResume?.version || 1}</span></p>
-              <p className="text-slate-400 text-sm">Status: <span className="text-emerald-400 font-semibold capitalize">{selectedResume?.status?.toLowerCase() || 'parsed'}</span></p>
+            <div className="mt-4 p-4 bg-white dark:bg-slate-950 rounded-xl border border-surface-200 dark:border-slate-800">
+              <p className="text-surface-500 dark:text-slate-400 text-sm mb-2">ATS Score: <span className="text-surface-900 dark:text-white font-semibold">{selectedResume?.atsScore || 0}/100</span></p>
+              <p className="text-surface-500 dark:text-slate-400 text-sm mb-2">Version: <span className="text-surface-900 dark:text-white font-semibold">v{selectedResume?.version || 1}</span></p>
+              <p className="text-surface-500 dark:text-slate-400 text-sm">Status: <span className="text-emerald-400 font-semibold capitalize">{selectedResume?.status?.toLowerCase() || 'parsed'}</span></p>
             </div>
           </div>
         </div>
 
         <div className="lg:col-span-3 space-y-4">
           {fixes.length === 0 ? (
-            <div className="text-center py-16 bg-slate-900/50 border border-slate-800 rounded-2xl">
+            <div className="text-center py-16 bg-white border border-surface-200 dark:bg-slate-900/50 dark:border-surface-200 dark:border-slate-800 rounded-2xl">
               <Sparkles className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">No Fixes Needed!</h3>
-              <p className="text-slate-400">This resume looks great. No critical issues found.</p>
+              <h3 className="text-xl font-semibold text-surface-900 dark:text-white mb-2">No Fixes Needed!</h3>
+              <p className="text-surface-500 dark:text-slate-400">This resume looks great. No critical issues found.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -430,11 +430,11 @@ export function FixerPage() {
             </div>
           )}
 
-          <div className="pt-4 border-t border-slate-800">
+          <div className="pt-4 border-t border-surface-200 dark:border-slate-800">
             <PlanGate requiredPlan="pro" featureName="Resume Fixer Download">
               <DownloadFixedResume resume={selectedResume!} fixes={fixes} />
             </PlanGate>
-            <p className="text-slate-500 text-sm text-center mt-3">
+            <p className="text-surface-400 dark:text-slate-500 text-sm text-center mt-3">
               Downloads a formatted text file with all fixes applied. PDF generation coming soon.
             </p>
           </div>

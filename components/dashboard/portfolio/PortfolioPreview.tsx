@@ -122,10 +122,10 @@ export function PortfolioPreview({ slug }: { slug: string }) {
 
   return (
     <div
-      className="min-h-screen bg-slate-950 text-white"
+      className="min-h-screen bg-slate-950 text-surface-900 dark:text-white"
       style={{ fontFamily }}
     >
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-lg border-b border-slate-800">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-lg border-b border-surface-200 dark:border-slate-800">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="font-semibold text-lg" style={{ color: primaryColor }}>
             {portfolio.name}
@@ -136,7 +136,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                 href={portfolio.contact.social.github}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:text-white transition-colors"
               >
                 <Github className="w-5 h-5" />
               </a>
@@ -146,7 +146,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                 href={portfolio.contact.social.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:text-white transition-colors"
               >
                 <Linkedin className="w-5 h-5" />
               </a>
@@ -156,14 +156,14 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                 href={portfolio.contact.social.twitter}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:text-white transition-colors"
               >
                 <Twitter className="w-5 h-5" />
               </a>
             )}
             <a
               href={`mailto:${portfolio.contact?.email}`}
-              className="px-4 py-2 rounded-xl text-white text-sm font-medium transition-all"
+              className="px-4 py-2 rounded-xl text-surface-900 dark:text-white text-sm font-medium transition-all"
               style={{ backgroundColor: primaryColor }}
             >
               Contact
@@ -186,9 +186,9 @@ export function PortfolioPreview({ slug }: { slug: string }) {
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
               {portfolio.name}
             </h1>
-            <p className="text-xl text-slate-400 mb-4">{portfolio.headline}</p>
+            <p className="text-xl text-surface-500 dark:text-slate-400 mb-4">{portfolio.headline}</p>
             {portfolio.location && (
-              <div className="flex items-center justify-center gap-2 text-slate-500">
+              <div className="flex items-center justify-center gap-2 text-surface-400 dark:text-slate-500">
                 <MapPin className="w-4 h-4" />
                 <span>{portfolio.location}</span>
               </div>
@@ -196,7 +196,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
           </div>
         </section>
 
-        <section className="py-16 px-6 bg-slate-900/50">
+        <section className="py-16 px-6 bg-surface-100 dark:bg-slate-900/50">
           <div className="max-w-4xl mx-auto">
             <h2
               className="text-2xl font-bold mb-6"
@@ -204,7 +204,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
             >
               About
             </h2>
-            <p className="text-slate-300 leading-relaxed text-lg">
+            <p className="text-surface-600 dark:text-slate-300 leading-relaxed text-lg">
               {portfolio.about}
             </p>
           </div>
@@ -223,9 +223,9 @@ export function PortfolioPreview({ slug }: { slug: string }) {
               {portfolio.skills?.map((group, index) => (
                 <div
                   key={index}
-                  className="bg-slate-900/50 rounded-2xl p-5 border border-slate-800"
+                  className="bg-surface-100 dark:bg-slate-900/50 rounded-2xl p-5 border border-surface-200 dark:border-slate-800"
                 >
-                  <h3 className="font-semibold text-white mb-3">
+                  <h3 className="font-semibold text-surface-900 dark:text-white mb-3">
                     {group.category}
                   </h3>
                   <div className="flex flex-wrap gap-2">
@@ -248,7 +248,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
           </div>
         </section>
 
-        <section className="py-16 px-6 bg-slate-900/50">
+        <section className="py-16 px-6 bg-surface-100 dark:bg-slate-900/50">
           <div className="max-w-4xl mx-auto">
             <h2
               className="text-2xl font-bold mb-6 flex items-center gap-2"
@@ -269,29 +269,29 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                       className="absolute left-2.5 w-3 h-3 rounded-full border-2 bg-slate-950"
                       style={{ borderColor: primaryColor }}
                     />
-                    <div className="bg-slate-900/50 rounded-2xl p-5 border border-slate-800">
+                    <div className="bg-surface-100 dark:bg-slate-900/50 rounded-2xl p-5 border border-surface-200 dark:border-slate-800">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h3 className="font-semibold text-white text-lg">
+                          <h3 className="font-semibold text-surface-900 dark:text-white text-lg">
                             {exp.title}
                           </h3>
-                          <div className="flex items-center gap-2 text-slate-400">
+                          <div className="flex items-center gap-2 text-surface-500 dark:text-slate-400">
                             <Building2 className="w-4 h-4" />
                             <span>{exp.company}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 text-slate-500 text-sm">
+                        <div className="flex items-center gap-1 text-surface-400 dark:text-slate-500 text-sm">
                           <Calendar className="w-4 h-4" />
                           <span>{exp.period}</span>
                         </div>
                       </div>
-                      <p className="text-slate-300 mt-3">{exp.description}</p>
+                      <p className="text-surface-600 dark:text-slate-300 mt-3">{exp.description}</p>
                       {exp.highlights && exp.highlights.length > 0 && (
                         <ul className="mt-3 space-y-1">
                           {exp.highlights.map((highlight, i) => (
                             <li
                               key={i}
-                              className="text-sm text-slate-400 flex items-start gap-2"
+                              className="text-sm text-surface-500 dark:text-slate-400 flex items-start gap-2"
                             >
                               <span
                                 className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
@@ -323,10 +323,10 @@ export function PortfolioPreview({ slug }: { slug: string }) {
               {portfolio.projects?.map((project, index) => (
                 <div
                   key={index}
-                  className="bg-slate-900/50 rounded-2xl border border-slate-800 overflow-hidden group hover:border-slate-700 transition-colors"
+                  className="bg-surface-100 dark:bg-slate-900/50 rounded-2xl border border-surface-200 dark:border-slate-800 overflow-hidden group hover:border-surface-300 dark:border-slate-700 transition-colors"
                 >
                   {project.image && (
-                    <div className="h-40 bg-slate-800 overflow-hidden">
+                    <div className="h-40 bg-surface-100 dark:bg-slate-800 overflow-hidden">
                       <img
                         src={project.image}
                         alt={project.title}
@@ -335,10 +335,10 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                     </div>
                   )}
                   <div className="p-5">
-                    <h3 className="font-semibold text-white mb-2">
+                    <h3 className="font-semibold text-surface-900 dark:text-white mb-2">
                       {project.title}
                     </h3>
-                    <p className="text-sm text-slate-400 mb-3">
+                    <p className="text-sm text-surface-500 dark:text-slate-400 mb-3">
                       {project.description}
                     </p>
                     <div className="flex flex-wrap gap-2 mb-4">
@@ -361,7 +361,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                           href={project.liveUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
+                          className="flex items-center gap-1 text-sm text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:text-white transition-colors"
                         >
                           <ExternalLink className="w-4 h-4" />
                           Live
@@ -372,7 +372,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                           href={project.githubUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
+                          className="flex items-center gap-1 text-sm text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:text-white transition-colors"
                         >
                           <Github className="w-4 h-4" />
                           Code
@@ -388,7 +388,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
 
         {(portfolio.education?.length > 0 ||
           portfolio.certifications?.length > 0) && (
-          <section className="py-16 px-6 bg-slate-900/50">
+          <section className="py-16 px-6 bg-surface-100 dark:bg-slate-900/50">
             <div className="max-w-4xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {portfolio.education?.length > 0 && (
@@ -404,17 +404,17 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                       {portfolio.education.map((edu, index) => (
                         <div
                           key={index}
-                          className="bg-slate-800/50 rounded-xl p-4 border border-slate-700"
+                          className="bg-surface-100 dark:bg-slate-800/50 rounded-xl p-4 border border-surface-300 dark:border-slate-700"
                         >
-                          <h3 className="font-semibold text-white">
+                          <h3 className="font-semibold text-surface-900 dark:text-white">
                             {edu.degree}
                           </h3>
-                          <p className="text-slate-400">{edu.school}</p>
-                          <p className="text-sm text-slate-500 mt-1">
+                          <p className="text-surface-500 dark:text-slate-400">{edu.school}</p>
+                          <p className="text-sm text-surface-400 dark:text-slate-500 mt-1">
                             {edu.period}
                           </p>
                           {edu.description && (
-                            <p className="text-sm text-slate-400 mt-2">
+                            <p className="text-sm text-surface-500 dark:text-slate-400 mt-2">
                               {edu.description}
                             </p>
                           )}
@@ -436,13 +436,13 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                       {portfolio.certifications.map((cert, index) => (
                         <div
                           key={index}
-                          className="bg-slate-800/50 rounded-xl p-4 border border-slate-700"
+                          className="bg-surface-100 dark:bg-slate-800/50 rounded-xl p-4 border border-surface-300 dark:border-slate-700"
                         >
-                          <h3 className="font-semibold text-white">
+                          <h3 className="font-semibold text-surface-900 dark:text-white">
                             {cert.name}
                           </h3>
-                          <p className="text-slate-400">{cert.issuer}</p>
-                          <p className="text-sm text-slate-500 mt-1">
+                          <p className="text-surface-500 dark:text-slate-400">{cert.issuer}</p>
+                          <p className="text-sm text-surface-400 dark:text-slate-500 mt-1">
                             {cert.date}
                           </p>
                           {cert.url && (
@@ -477,12 +477,12 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                 <Quote className="w-6 h-6" />
                 Testimonials
               </h2>
-              <div className="relative bg-slate-900/50 rounded-2xl border border-slate-800 p-8">
+              <div className="relative bg-surface-100 dark:bg-slate-900/50 rounded-2xl border border-surface-200 dark:border-slate-800 p-8">
                 <Quote
                   className="w-10 h-10 mb-4 opacity-30"
                   style={{ color: primaryColor }}
                 />
-                <p className="text-lg text-slate-300 mb-6 leading-relaxed">
+                <p className="text-lg text-surface-600 dark:text-slate-300 mb-6 leading-relaxed">
                   "{portfolio.testimonials[currentTestimonial].content}"
                 </p>
                 <div className="flex items-center justify-between">
@@ -495,10 +495,10 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                       />
                     )}
                     <div>
-                      <div className="font-medium text-white">
+                      <div className="font-medium text-surface-900 dark:text-white">
                         {portfolio.testimonials[currentTestimonial].name}
                       </div>
-                      <div className="text-sm text-slate-400">
+                      <div className="text-sm text-surface-500 dark:text-slate-400">
                         {portfolio.testimonials[currentTestimonial].role}
                       </div>
                     </div>
@@ -532,7 +532,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                             : prev - 1
                         )
                       }
-                      className="p-2 rounded-full bg-slate-800 hover:bg-slate-700 transition-colors"
+                      className="p-2 rounded-full bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
@@ -557,7 +557,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                             : prev + 1
                         )
                       }
-                      className="p-2 rounded-full bg-slate-800 hover:bg-slate-700 transition-colors"
+                      className="p-2 rounded-full bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -568,7 +568,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
           </section>
         )}
 
-        <section className="py-16 px-6 bg-slate-900/50">
+        <section className="py-16 px-6 bg-surface-100 dark:bg-slate-900/50">
           <div className="max-w-4xl mx-auto text-center">
             <h2
               className="text-2xl font-bold mb-6"
@@ -580,7 +580,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
               {portfolio.contact?.email && (
                 <a
                   href={`mailto:${portfolio.contact.email}`}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors"
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
                 >
                   <Mail className="w-5 h-5" />
                   <span>Email</span>
@@ -589,7 +589,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
               {portfolio.contact?.phone && (
                 <a
                   href={`tel:${portfolio.contact.phone}`}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors"
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
                 >
                   <Phone className="w-5 h-5" />
                   <span>Phone</span>
@@ -600,7 +600,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                   href={portfolio.contact.social.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors"
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
                 >
                   <Globe className="w-5 h-5" />
                   <span>Website</span>
@@ -613,7 +613,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                   href={portfolio.contact.social.github}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors"
+                  className="p-3 rounded-xl bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
                 >
                   <Github className="w-6 h-6" />
                 </a>
@@ -623,7 +623,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                   href={portfolio.contact.social.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors"
+                  className="p-3 rounded-xl bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
                 >
                   <Linkedin className="w-6 h-6" />
                 </a>
@@ -633,7 +633,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                   href={portfolio.contact.social.twitter}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors"
+                  className="p-3 rounded-xl bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
                 >
                   <Twitter className="w-6 h-6" />
                 </a>
@@ -642,8 +642,8 @@ export function PortfolioPreview({ slug }: { slug: string }) {
           </div>
         </section>
 
-        <footer className="py-8 px-6 border-t border-slate-800">
-          <div className="max-w-4xl mx-auto text-center text-sm text-slate-500">
+        <footer className="py-8 px-6 border-t border-surface-200 dark:border-slate-800">
+          <div className="max-w-4xl mx-auto text-center text-sm text-surface-400 dark:text-slate-500">
             Built with Aura Resume
           </div>
         </footer>

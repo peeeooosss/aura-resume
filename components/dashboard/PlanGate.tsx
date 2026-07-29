@@ -58,18 +58,18 @@ export function PlanGate({
   const targetHref = upgradeHref || `/plans?plan=${requiredPlan}`;
 
   return (
-    <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 md:p-12 text-center">
+    <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-8 md:p-12 text-center">
       <div className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-600">
-        <RequiredPlanIcon className="w-8 h-8 text-white" />
+        <RequiredPlanIcon className="w-8 h-8 text-surface-900 dark:text-white" />
       </div>
 
-      <h3 className="text-xl md:text-2xl font-bold text-white mb-3">
+      <h3 className="text-xl md:text-2xl font-bold text-surface-900 dark:text-white mb-3">
         {featureName ? `"${featureName}" requires ${planLabels[requiredPlan]}` : `${planLabels[requiredPlan]} feature`}
       </h3>
 
-      <p className="text-slate-400 mb-6 max-w-md mx-auto">
-        You're on the <span className="font-semibold text-white">{planLabels[currentPlan]}</span> plan. 
-        Upgrade to <span className="font-semibold text-white">{planLabels[requiredPlan]}</span> to unlock this feature.
+      <p className="text-surface-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
+        You're on the <span className="font-semibold text-surface-900 dark:text-white">{planLabels[currentPlan]}</span> plan. 
+        Upgrade to <span className="font-semibold text-surface-900 dark:text-white">{planLabels[requiredPlan]}</span> to unlock this feature.
       </p>
 
       {showUpgrade && (
@@ -83,7 +83,7 @@ export function PlanGate({
             <ArrowRight className="w-4 h-4" />
           </Link>
 
-          <p className="text-slate-500 text-sm">
+          <p className="text-surface-400 dark:text-slate-500 text-sm">
             {currentPlan === 'free' 
               ? 'Start with Quick Fix (₹49) for instant access, or unlock all Pro features.'
               : currentPlan === 'quick'
@@ -93,8 +93,8 @@ export function PlanGate({
         </div>
       )}
 
-      <div className="mt-8 pt-8 border-t border-slate-800">
-        <h4 className="text-sm font-medium text-slate-500 mb-4">Plan Comparison</h4>
+      <div className="mt-8 pt-8 border-t border-surface-200 dark:border-slate-800">
+        <h4 className="text-sm font-medium text-surface-400 dark:text-slate-500 mb-4">Plan Comparison</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           {(['free', 'quick', 'pro', 'vip'] as const).map((plan) => {
             const def = PLAN_DEFINITIONS[plan];
@@ -105,16 +105,16 @@ export function PlanGate({
                 plan === requiredPlan 
                   ? 'bg-indigo-500/10 border-indigo-500/30 ring-2 ring-indigo-500/20'
                   : plan === currentPlan
-                  ? 'bg-slate-800/50 border-slate-700'
-                  : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                  ? 'bg-surface-100 dark:bg-slate-800/50 border-surface-300 dark:border-slate-700'
+                  : 'bg-slate-900/50 border-surface-200 dark:border-slate-800 hover:border-surface-300 dark:border-slate-700'
               )}>
                 <div className="w-8 h-8 rounded-xl mx-auto mb-2 flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-600">
-                  <Shield className="w-4 h-4 text-white" />
+                  <Shield className="w-4 h-4 text-surface-900 dark:text-white" />
                 </div>
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-surface-500 dark:text-slate-400 uppercase tracking-wider">
                   {plan === 'free' ? 'FREE' : plan === 'quick' ? '₹49' : plan === 'pro' ? '₹499' : '₹1,499'}
                 </span>
-                <span className="text-xs text-slate-500 block mt-1">{planLabels[plan]}</span>
+                <span className="text-xs text-surface-400 dark:text-slate-500 block mt-1">{planLabels[plan]}</span>
               </div>
             );
           })}
@@ -139,14 +139,14 @@ export function FeatureLock({
   if (hasAccess) return null;
 
   return (
-    <div className="relative bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
+    <div className="relative bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-2xl p-6">
       <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/10 to-purple-600/10 rounded-2xl" />
       <div className="relative z-10 text-center">
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center mx-auto mb-4">
-          <Lock className="w-6 h-6 text-white" />
+          <Lock className="w-6 h-6 text-surface-900 dark:text-white" />
         </div>
-        <h4 className="font-semibold text-white mb-2">{featureName}</h4>
-        <p className="text-slate-400 text-sm mb-4 max-w-xs mx-auto">
+        <h4 className="font-semibold text-surface-900 dark:text-white mb-2">{featureName}</h4>
+        <p className="text-surface-500 dark:text-slate-400 text-sm mb-4 max-w-xs mx-auto">
           {description || `This feature requires ${PLAN_DEFINITIONS[requiredPlan].name} plan or higher.`}
         </p>
         <button

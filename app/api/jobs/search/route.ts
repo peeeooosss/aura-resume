@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scrapeJobs, SupportedSiteName } from 'ts-jobspy';
-import { prisma } from '@/lib/db';
-import { CREDIT_COSTS } from '@/lib/constants/credits';
 
 interface JobSearchParams {
   searchTerm: string;
@@ -23,56 +21,49 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Search term required' }, { status: 400 });
     }
 
-    const userId = 'demo-user';
-
-    const creditBalance = await prisma.creditBalance.findUnique({ where: { userId } });
-    if (!creditBalance || creditBalance.balance < CREDIT_COSTS.job_search) {
-      return NextResponse.json({ error: 'Insufficient credits' }, { status: 402 });
-    }
-
     const sites = (params.siteName || ['linkedin', 'indeed']) as SupportedSiteName[];
 
     const jobs = await scrapeJobs({
       siteName: sites,
       searchTerm,
-      location: location || 'United States',
+      location: location || 'India',
       resultsWanted: params.resultsWanted || 20,
-      hoursOld: params.hoursOld || 168,
-      countryIndeed: params.countryIndeed || 'USA',
+      hoursOld: params.hoursOld || 72,
+      countryIndeed: params.countryIndeed || 'India',
       linkedinFetchDescription: true,
       ...params,
     });
 
     const jobMatches = jobs.map((job, index) => ({
+      id: job.id || `job-${Date.now()}-${index}`,
       title: job.title || 'Unknown Title',
       company: job.company || 'Unknown Company',
-      location: job.location || 'Unknown Location',
-      url: job.jobUrl,
+      location: job.location || 'India',
+      salaryMin: job.minAmount ?? undefined,
+      salaryMax: job.maxAmount ?? undefined,
+      salaryCurrency: job.currency || 'INR',
+      applyUrl: job.jobUrl || '',
       source: job.site || 'unknown',
+      sourceJobId: job.id || `job-${index}`,
       description: job.description || '',
-      matchedSkills: [],
-      matchScore: Math.max(50, 100 - index * 2),
+      requirements: job.description || '',
+      benefits: [] as string[],
+      jobType: job.jobType || 'full-time',
+      experienceLevel: '',
       remoteType: job.isRemote ? 'remote' : 'onsite',
+      postedAt: job.datePosted || new Date().toISOString(),
+      matchScore: 0,
+      matchedSkills: [] as string[],
+      missingSkills: [] as string[],
+      matchBreakdown: {} as Record<string, number>,
+      matchReasoning: '',
+      status: 'NEW' as const,
+      isSaved: false,
     }));
-
-    await prisma.creditBalance.update({
-      where: { userId },
-      data: { balance: { decrement: CREDIT_COSTS.job_search } },
-    });
-
-    await prisma.usageRecord.create({
-      data: {
-        userId,
-        type: 'job_search',
-        count: 1,
-      },
-    });
 
     return NextResponse.json({
       jobs: jobMatches,
       totalFound: jobMatches.length,
-      creditsUsed: CREDIT_COSTS.job_search,
-      creditsRemaining: creditBalance.balance - CREDIT_COSTS.job_search,
     });
   } catch (error) {
     console.error('Job search error:', error);

@@ -73,7 +73,7 @@ export function PlanBadge({ planId, variant = 'default', showUpgrade = false, on
             <Icon className="w-4 h-4" />
           </div>
           <div>
-            <p className="font-bold text-white">{PlanNames[planId]}</p>
+            <p className="font-bold text-surface-900 dark:text-white">{PlanNames[planId]}</p>
             <p className="text-xs opacity-80">₹{plan.price}{plan.period !== 'one-time' ? ` / ${plan.period}` : ''}</p>
           </div>
         </div>

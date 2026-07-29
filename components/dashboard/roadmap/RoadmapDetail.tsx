@@ -37,8 +37,8 @@ export function RoadmapDetail() {
     return (
       <div className="max-w-6xl mx-auto text-center py-16">
         <Map className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-white mb-2">Roadmap Not Found</h2>
-        <p className="text-slate-400">This roadmap doesn't exist or has been deleted.</p>
+        <h2 className="text-2xl font-bold text-surface-900 dark:text-white mb-2">Roadmap Not Found</h2>
+        <p className="text-surface-500 dark:text-slate-400">This roadmap doesn't exist or has been deleted.</p>
       </div>
     );
   }
@@ -53,39 +53,39 @@ export function RoadmapDetail() {
     <div className="max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+        <h1 className="text-3xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
           <Map className="w-8 h-8 text-indigo-400" />
           {currentRoadmap.targetRole}
         </h1>
         {currentRoadmap.targetCompany && (
-          <p className="text-slate-400 mt-1">Target: {currentRoadmap.targetCompany}</p>
+          <p className="text-surface-500 dark:text-slate-400 mt-1">Target: {currentRoadmap.targetCompany}</p>
         )}
       </div>
 
       {/* Overview Card */}
-      <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 mb-8">
+      <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6 mb-8">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <p className="text-slate-300 text-sm mb-4">{currentRoadmap.overview}</p>
+            <p className="text-surface-600 dark:text-slate-300 text-sm mb-4">{currentRoadmap.overview}</p>
             <div className="flex items-center gap-4 text-sm">
-              <span className="text-slate-400">
+              <span className="text-surface-500 dark:text-slate-400">
                 <Calendar className="w-4 h-4 inline mr-1" />
                 {new Date(currentRoadmap.startDate).toLocaleDateString()} - {new Date(currentRoadmap.endDate).toLocaleDateString()}
               </span>
-              <span className="text-slate-400">
+              <span className="text-surface-500 dark:text-slate-400">
                 <Clock className="w-4 h-4 inline mr-1" />
                 {progress?.completed || 0}/{progress?.total || 0} tasks
               </span>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-4xl font-bold text-white mb-1">{progress?.overall || 0}%</div>
-            <p className="text-slate-500 text-sm">Complete</p>
+            <div className="text-4xl font-bold text-surface-900 dark:text-white mb-1">{progress?.overall || 0}%</div>
+            <p className="text-surface-400 dark:text-slate-500 text-sm">Complete</p>
           </div>
         </div>
 
         {/* Progress Bar */}
-        <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
+        <div className="h-3 bg-surface-200 dark:bg-surface-100 dark:bg-slate-800 rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
             style={{ width: `${currentRoadmap.progress}%` }}
@@ -94,8 +94,8 @@ export function RoadmapDetail() {
       </div>
 
       {/* Milestones */}
-      <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 mb-8">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6 mb-8">
+        <h3 className="text-lg font-semibold text-surface-900 dark:text-white mb-4 flex items-center gap-2">
           <Map className="w-5 h-5 text-indigo-400" />
           Milestones
         </h3>
@@ -113,7 +113,7 @@ export function RoadmapDetail() {
                     ? "bg-indigo-500/10 border-indigo-500/30"
                     : isCompleted
                     ? "bg-emerald-500/5 border-emerald-500/20"
-                    : "bg-slate-800/50 border-slate-800"
+                    : "bg-surface-100 dark:bg-slate-800/50 border-surface-200 dark:border-slate-800"
                 )}
               >
                 <div className="flex items-start gap-4">
@@ -123,24 +123,24 @@ export function RoadmapDetail() {
                       ? "bg-indigo-500 text-white"
                       : isCompleted
                       ? "bg-emerald-500/20 text-emerald-400"
-                      : "bg-slate-700 text-slate-400"
+                      : "bg-slate-700 text-surface-500 dark:text-slate-400"
                   )}>
                     {isCompleted ? "✓" : milestone.week}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-white">{milestone.theme}</h4>
+                      <h4 className="font-medium text-surface-900 dark:text-white">{milestone.theme}</h4>
                       {isCurrent && <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 text-xs rounded-full">Current</span>}
                     </div>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {milestone.focus.map((f: string, i: number) => (
-                        <span key={i} className="px-2 py-0.5 bg-slate-800 text-slate-400 text-xs rounded-full">
+                        <span key={i} className="px-2 py-0.5 bg-surface-100 dark:bg-slate-800 text-surface-500 dark:text-slate-400 text-xs rounded-full">
                           {f}
                         </span>
                       ))}
                     </div>
                     {milestone.deliverables.length > 0 && (
-                      <div className="mt-2 text-xs text-slate-500">
+                      <div className="mt-2 text-xs text-surface-400 dark:text-slate-500">
                         Deliverables: {milestone.deliverables.join(', ')}
                       </div>
                     )}
@@ -153,15 +153,15 @@ export function RoadmapDetail() {
       </div>
 
       {/* View Toggle and Tasks */}
-      <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6">
+      <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-white">Tasks</h3>
-          <div className="flex items-center gap-2 bg-slate-800 rounded-xl p-1">
+          <h3 className="text-lg font-semibold text-surface-900 dark:text-white">Tasks</h3>
+          <div className="flex items-center gap-2 bg-surface-100 dark:bg-surface-100 dark:bg-slate-800 rounded-xl p-1">
             <button
               onClick={() => setViewMode('day')}
               className={cn(
                 "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-                viewMode === 'day' ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"
+                viewMode === 'day' ? "bg-indigo-600 text-white" : "text-surface-500 dark:text-slate-400 hover:text-white"
               )}
             >
               Day View
@@ -170,7 +170,7 @@ export function RoadmapDetail() {
               onClick={() => setViewMode('week')}
               className={cn(
                 "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-                viewMode === 'week' ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"
+                viewMode === 'week' ? "bg-indigo-600 text-white" : "text-surface-500 dark:text-slate-400 hover:text-white"
               )}
             >
               Week View
@@ -180,7 +180,7 @@ export function RoadmapDetail() {
 
         {/* Day/Week Selector */}
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
-          <Filter className="w-4 h-4 text-slate-500 flex-shrink-0" />
+          <Filter className="w-4 h-4 text-surface-400 dark:text-slate-500 flex-shrink-0" />
           {viewMode === 'day' ? (
             <div className="flex gap-2">
               {Array.from({ length: 7 }, (_: unknown, i: number) => {
@@ -194,7 +194,7 @@ export function RoadmapDetail() {
                       "px-3 py-1.5 text-sm rounded-lg transition-colors flex-shrink-0",
                       selectedDay === day
                         ? "bg-indigo-600 text-white"
-                        : "bg-slate-800 text-slate-400 hover:text-white"
+                        : "bg-surface-100 dark:bg-slate-800 text-surface-500 dark:text-slate-400 hover:text-white"
                     )}
                   >
                     Day {day}
@@ -212,7 +212,7 @@ export function RoadmapDetail() {
                     "px-3 py-1.5 text-sm rounded-lg transition-colors flex-shrink-0",
                     selectedWeek === week
                       ? "bg-indigo-600 text-white"
-                      : "bg-slate-800 text-slate-400 hover:text-white"
+                      : "bg-surface-100 dark:bg-slate-800 text-surface-500 dark:text-slate-400 hover:text-white"
                   )}
                 >
                   Week {week}
@@ -236,7 +236,7 @@ export function RoadmapDetail() {
                     "rounded-2xl border transition-all",
                     task.isCompleted
                       ? "bg-emerald-500/5 border-emerald-500/20"
-                      : "bg-slate-800/50 border-slate-800"
+                      : "bg-surface-100 dark:bg-slate-800/50 border-surface-200 dark:border-slate-800"
                   )}
                 >
                   <div
@@ -256,7 +256,7 @@ export function RoadmapDetail() {
                           : "border-slate-600 hover:border-indigo-500"
                       )}
                     >
-                      {task.isCompleted && <CheckCircle2 className="w-4 h-4 text-white" />}
+                      {task.isCompleted && <CheckCircle2 className="w-4 h-4 text-surface-900 dark:text-white" />}
                     </button>
 
                     {/* Task Info */}
@@ -264,12 +264,12 @@ export function RoadmapDetail() {
                       <div className="flex items-center gap-2">
                         <p className={cn(
                           "font-medium truncate",
-                          task.isCompleted ? "text-slate-400 line-through" : "text-white"
+                          task.isCompleted ? "text-surface-500 dark:text-slate-400 line-through" : "text-white"
                         )}>
                           {task.title}
                         </p>
                       </div>
-                      <p className="text-slate-500 text-sm">{task.duration} min</p>
+                      <p className="text-surface-400 dark:text-slate-500 text-sm">{task.duration} min</p>
                     </div>
 
                     {/* Type Badge */}
@@ -282,23 +282,23 @@ export function RoadmapDetail() {
 
                     {/* Expand Icon */}
                     {isExpanded ? (
-                      <ChevronUp className="w-4 h-4 text-slate-500" />
+                      <ChevronUp className="w-4 h-4 text-surface-400 dark:text-slate-500" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-500" />
+                      <ChevronDown className="w-4 h-4 text-surface-400 dark:text-slate-500" />
                     )}
                   </div>
 
                   {/* Expanded Content */}
                   {isExpanded && (
-                    <div className="px-4 pb-4 border-t border-slate-800">
+                    <div className="px-4 pb-4 border-t border-surface-200 dark:border-slate-800">
                       {task.description && (
-                        <p className="text-slate-300 text-sm mt-3">{task.description}</p>
+                        <p className="text-surface-600 dark:text-slate-300 text-sm mt-3">{task.description}</p>
                       )}
 
                       {/* Affiliate Links */}
                       {task.affiliateLinks && task.affiliateLinks.length > 0 && (
                         <div className="mt-4">
-                          <p className="text-slate-400 text-xs font-medium mb-2">Recommended Resources</p>
+                          <p className="text-surface-500 dark:text-slate-400 text-xs font-medium mb-2">Recommended Resources</p>
                           <div className="space-y-2">
                             {task.affiliateLinks.map((link: any, i: number) => (
                               <a
@@ -306,13 +306,13 @@ export function RoadmapDetail() {
                                 href={link.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl hover:bg-slate-800 transition-colors group"
+                                className="flex items-center justify-between p-3 bg-surface-100 dark:bg-slate-800/50 rounded-xl hover:bg-surface-200 dark:hover:bg-slate-800 transition-colors group"
                               >
                                 <div className="flex items-center gap-3">
                                   <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 text-xs rounded-full">
                                     {link.platform}
                                   </span>
-                                  <span className="text-sm text-slate-300 group-hover:text-white transition-colors">
+                                  <span className="text-sm text-surface-600 dark:text-slate-300 group-hover:text-surface-900 dark:text-white transition-colors">
                                     {link.title}
                                   </span>
                                 </div>
@@ -320,7 +320,7 @@ export function RoadmapDetail() {
                                   <span className="text-emerald-400 text-xs font-medium">
                                     {Math.round(link.commission * 100)}% off
                                   </span>
-                                  <ExternalLink className="w-4 h-4 text-slate-500" />
+                                  <ExternalLink className="w-4 h-4 text-surface-400 dark:text-slate-500" />
                                 </div>
                               </a>
                             ))}
@@ -336,7 +336,7 @@ export function RoadmapDetail() {
         ) : (
           <div className="text-center py-8">
             <CheckCircle2 className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-400">No tasks for this {viewMode}</p>
+            <p className="text-surface-500 dark:text-slate-400">No tasks for this {viewMode}</p>
           </div>
         )}
       </div>

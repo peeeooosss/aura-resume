@@ -288,6 +288,8 @@ function parseMarkdownResume(text: string): ResumeSection[] {
   let currentSection: ResumeSection = { title: 'HEADER', lines: [], isBulletList: false, subsections: [] };
   let currentSubHeader: string | null = null;
   let currentSubLines: string[] = [];
+  const multiEntrySections = new Set(['EXPERIENCE', 'PROJECTS', 'CERTIFICATIONS']);
+  const seenSectionTitles = new Set<string>();
 
   function flushSubHeader() {
     if (currentSubHeader && currentSubLines.length > 0) {
@@ -300,6 +302,11 @@ function parseMarkdownResume(text: string): ResumeSection[] {
   function pushCurrentSection() {
     flushSubHeader();
     if (currentSection.lines.length > 0 || currentSection.subsections.length > 0) {
+      const normalized = currentSection.title;
+      if (!multiEntrySections.has(normalized) && seenSectionTitles.has(normalized)) {
+        return;
+      }
+      seenSectionTitles.add(normalized);
       sections.push(currentSection);
     }
   }
@@ -433,27 +440,7 @@ function parseMarkdownResume(text: string): ResumeSection[] {
     }
   }
 
-  return dedupeSections(
-    sections.filter(s => s.lines.length > 0 || s.subsections.length > 0)
-  );
-}
-
-function dedupeSections(sections: ResumeSection[]): ResumeSection[] {
-  const singleton = new Set(['CONTACT', 'SUMMARY', 'EDUCATION', 'SKILLS']);
-  const seen = new Set<string>();
-  const result: ResumeSection[] = [];
-  for (let i = sections.length - 1; i >= 0; i--) {
-    const s = sections[i];
-    if (singleton.has(s.title)) {
-      if (!seen.has(s.title)) {
-        seen.add(s.title);
-        result.unshift(s);
-      }
-    } else {
-      result.unshift(s);
-    }
-  }
-  return result;
+  return sections.filter(s => s.lines.length > 0 || s.subsections.length > 0);
 }
 
 export function generateOptimizedResumePDF(resumeText: string, metadata: { candidateName?: string; generatedAt: string }): jsPDF {

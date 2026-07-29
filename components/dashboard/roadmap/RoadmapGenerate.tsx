@@ -48,24 +48,24 @@ export function RoadmapGenerate() {
     }
   };
 
-  const inputClass = "w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors";
+  const inputClass = "w-full bg-surface-100 dark:bg-slate-800/50 border border-surface-300 dark:border-slate-700 rounded-xl px-4 py-3 text-white placeholder-surface-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors";
 
   if (generating) {
     return (
       <div className="max-w-3xl mx-auto">
-        <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-12 text-center">
+        <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-12 text-center">
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-r from-indigo-500/20 to-purple-500/20 flex items-center justify-center mx-auto mb-6">
             <Loader2 className="w-10 h-10 text-indigo-400 animate-spin" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-3">Generating Your Roadmap</h2>
-          <p className="text-slate-400 max-w-md mx-auto">
+          <h2 className="text-2xl font-bold text-surface-900 dark:text-white mb-3">Generating Your Roadmap</h2>
+          <p className="text-surface-500 dark:text-slate-400 max-w-md mx-auto">
             Our AI is analyzing your goals and creating a personalized 90-day career transformation plan...
           </p>
           <div className="mt-8 space-y-3 max-w-xs mx-auto">
-            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+            <div className="h-2 bg-surface-200 dark:bg-slate-800 rounded-full overflow-hidden">
               <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full animate-pulse" style={{ width: '60%' }} />
             </div>
-            <p className="text-slate-500 text-sm">This usually takes 2-3 seconds</p>
+            <p className="text-surface-400 dark:text-slate-500 text-sm">This usually takes 2-3 seconds</p>
           </div>
         </div>
       </div>
@@ -75,18 +75,18 @@ export function RoadmapGenerate() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+        <h1 className="text-3xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
           <Wand2 className="w-8 h-8 text-indigo-400" />
           Generate Roadmap
         </h1>
-        <p className="text-slate-400 mt-1">Create your personalized 90-day career transformation plan</p>
+        <p className="text-surface-500 dark:text-slate-400 mt-1">Create your personalized 90-day career transformation plan</p>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 space-y-6">
+        <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6 space-y-6">
           {/* Target Role */}
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-slate-300 mb-2">
               <Target className="w-4 h-4 text-indigo-400" />
               Target Role *
             </label>
@@ -102,7 +102,7 @@ export function RoadmapGenerate() {
 
           {/* Target Company */}
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-slate-300 mb-2">
               <Building2 className="w-4 h-4 text-indigo-400" />
               Target Company (Optional)
             </label>
@@ -117,7 +117,7 @@ export function RoadmapGenerate() {
 
           {/* Current Skills */}
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-slate-300 mb-2">
               <Code2 className="w-4 h-4 text-indigo-400" />
               Current Skills *
             </label>
@@ -128,13 +128,13 @@ export function RoadmapGenerate() {
               rows={3}
               className={cn(inputClass, "resize-none")}
             />
-            <p className="text-slate-500 text-xs mt-1">Separate skills with commas</p>
+            <p className="text-surface-400 dark:text-slate-500 text-xs mt-1">Separate skills with commas</p>
             {errors.currentSkills && <p className="text-rose-400 text-sm mt-1">{errors.currentSkills}</p>}
           </div>
 
           {/* Hours per Week */}
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-slate-300 mb-2">
               <Clock className="w-4 h-4 text-indigo-400" />
               Hours per Week: {formData.hoursPerWeek}h
             </label>
@@ -145,9 +145,9 @@ export function RoadmapGenerate() {
               step={5}
               value={formData.hoursPerWeek}
               onChange={(e) => setFormData(prev => ({ ...prev, hoursPerWeek: parseInt(e.target.value) }))}
-              className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+              className="w-full h-2 bg-surface-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
             />
-            <div className="flex justify-between text-xs text-slate-500 mt-1">
+            <div className="flex justify-between text-xs text-surface-400 dark:text-slate-500 mt-1">
               <span>5h (Part-time)</span>
               <span>20h (Half-time)</span>
               <span>40h (Full-time)</span>
@@ -157,7 +157,7 @@ export function RoadmapGenerate() {
 
           {/* Focus Areas */}
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-slate-300 mb-2">
               <Focus className="w-4 h-4 text-indigo-400" />
               Focus Areas *
             </label>
@@ -168,7 +168,7 @@ export function RoadmapGenerate() {
               rows={3}
               className={cn(inputClass, "resize-none")}
             />
-            <p className="text-slate-500 text-xs mt-1">Separate areas with commas</p>
+            <p className="text-surface-400 dark:text-slate-500 text-xs mt-1">Separate areas with commas</p>
             {errors.focusAreas && <p className="text-rose-400 text-sm mt-1">{errors.focusAreas}</p>}
           </div>
         </div>
@@ -177,7 +177,7 @@ export function RoadmapGenerate() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl transition-colors"
+            className="px-6 py-3 bg-surface-100 hover:bg-surface-200 text-surface-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white font-semibold rounded-xl transition-colors"
           >
             Cancel
           </button>

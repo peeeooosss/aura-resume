@@ -97,18 +97,18 @@ export function PortfolioBuilder() {
   if (!currentPortfolio) {
     return (
       <div className="space-y-6">
-        <div className="text-center py-12 bg-slate-900/50 rounded-3xl border border-slate-800">
+        <div className="text-center py-12 bg-surface-100 dark:bg-slate-900/50 rounded-3xl border border-surface-200 dark:border-slate-800">
           <Sparkles className="w-12 h-12 text-indigo-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-white mb-2">
+          <h2 className="text-xl font-semibold text-surface-900 dark:text-white mb-2">
             Create Your Portfolio
           </h2>
-          <p className="text-slate-400 mb-6">
+          <p className="text-surface-500 dark:text-slate-400 mb-6">
             Build a stunning portfolio to showcase your skills and experience
           </p>
 
           <div className="max-w-2xl mx-auto text-left space-y-6">
             <div>
-              <h3 className="text-sm font-medium text-slate-300 mb-3">Choose a Template</h3>
+              <h3 className="text-sm font-medium text-surface-600 dark:text-slate-300 mb-3">Choose a Template</h3>
               <div className="grid grid-cols-3 gap-3">
                 {templates.map((template) => (
                   <button
@@ -118,18 +118,18 @@ export function PortfolioBuilder() {
                       'p-4 rounded-xl border-2 transition-all',
                       selectedTemplate === template.id
                         ? 'border-indigo-500 bg-indigo-500/10'
-                        : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                        : 'border-surface-300 dark:border-slate-700 bg-surface-100 dark:bg-slate-800/50 hover:border-slate-600'
                     )}
                   >
-                    <div className="font-medium text-white">{template.name}</div>
-                    <div className="text-xs text-slate-400 mt-1">{template.description}</div>
+                    <div className="font-medium text-surface-900 dark:text-white">{template.name}</div>
+                    <div className="text-xs text-surface-500 dark:text-slate-400 mt-1">{template.description}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-slate-300 mb-3">Primary Color</h3>
+              <h3 className="text-sm font-medium text-surface-600 dark:text-slate-300 mb-3">Primary Color</h3>
               <div className="flex gap-2 flex-wrap">
                 {colors.map((color) => (
                   <button
@@ -148,7 +148,7 @@ export function PortfolioBuilder() {
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-slate-300 mb-3">Font</h3>
+              <h3 className="text-sm font-medium text-surface-600 dark:text-slate-300 mb-3">Font</h3>
               <div className="grid grid-cols-2 gap-2">
                 {fonts.map((font) => (
                   <button
@@ -158,10 +158,10 @@ export function PortfolioBuilder() {
                       'p-3 rounded-xl border-2 transition-all',
                       selectedFont === font.id
                         ? 'border-indigo-500 bg-indigo-500/10'
-                        : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                        : 'border-surface-300 dark:border-slate-700 bg-surface-100 dark:bg-slate-800/50 hover:border-slate-600'
                     )}
                   >
-                    <span className="text-white">{font.name}</span>
+                    <span className="text-surface-900 dark:text-white">{font.name}</span>
                   </button>
                 ))}
               </div>
@@ -183,8 +183,8 @@ export function PortfolioBuilder() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Portfolio Builder</h1>
-          <p className="text-slate-400 mt-1">Customize and manage your portfolio</p>
+          <h1 className="text-2xl font-bold text-surface-900 dark:text-white">Portfolio Builder</h1>
+          <p className="text-surface-500 dark:text-slate-400 mt-1">Customize and manage your portfolio</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -193,7 +193,7 @@ export function PortfolioBuilder() {
               'flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all',
               currentPortfolio.isPublished
                 ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                : 'bg-slate-700 text-surface-600 dark:text-slate-300 hover:bg-slate-600'
             )}
           >
             {currentPortfolio.isPublished ? (
@@ -206,7 +206,7 @@ export function PortfolioBuilder() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleCopyLink}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-slate-300 rounded-xl hover:bg-slate-600 transition-all"
+                className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-surface-600 dark:text-slate-300 rounded-xl hover:bg-slate-600 transition-all"
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 Copy Link
@@ -226,21 +226,21 @@ export function PortfolioBuilder() {
 
       {currentPortfolio.isPublished && (
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-4">
-            <p className="text-2xl font-bold text-white">{currentPortfolio.views}</p>
-            <p className="text-slate-500 text-sm">Total Views</p>
+          <div className="bg-surface-100 dark:bg-slate-900/50 rounded-2xl border border-surface-200 dark:border-slate-800 p-4">
+            <p className="text-2xl font-bold text-surface-900 dark:text-white">{currentPortfolio.views}</p>
+            <p className="text-surface-400 dark:text-slate-500 text-sm">Total Views</p>
           </div>
-          <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-4">
-            <p className="text-2xl font-bold text-white">{currentPortfolio.uniqueVisitors}</p>
-            <p className="text-slate-500 text-sm">Unique Visitors</p>
+          <div className="bg-surface-100 dark:bg-slate-900/50 rounded-2xl border border-surface-200 dark:border-slate-800 p-4">
+            <p className="text-2xl font-bold text-surface-900 dark:text-white">{currentPortfolio.uniqueVisitors}</p>
+            <p className="text-surface-400 dark:text-slate-500 text-sm">Unique Visitors</p>
           </div>
         </div>
       )}
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
+            <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4 flex items-center gap-2">
               <Layout className="w-5 h-5 text-indigo-400" />
               Sections
             </h2>
@@ -248,7 +248,7 @@ export function PortfolioBuilder() {
               {sections.map((section) => (
                 <div
                   key={section.id}
-                  className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl"
+                  className="flex items-center justify-between p-3 bg-surface-100 dark:bg-slate-800/50 rounded-xl"
                 >
                   <div className="flex items-center gap-3">
                     <input
@@ -258,8 +258,8 @@ export function PortfolioBuilder() {
                       className="w-4 h-4 rounded border-slate-600 text-indigo-500 focus:ring-indigo-500"
                     />
                     <div>
-                      <p className="text-sm font-medium text-white">{section.label}</p>
-                      <p className="text-xs text-slate-500">{section.description}</p>
+                      <p className="text-sm font-medium text-surface-900 dark:text-white">{section.label}</p>
+                      <p className="text-xs text-surface-400 dark:text-slate-500">{section.description}</p>
                     </div>
                   </div>
                 </div>
@@ -267,14 +267,14 @@ export function PortfolioBuilder() {
             </div>
           </div>
 
-          <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
+            <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4 flex items-center gap-2">
               <Palette className="w-5 h-5 text-indigo-400" />
               Theme
             </h2>
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-slate-400 mb-2">Primary Color</p>
+                <p className="text-sm text-surface-500 dark:text-slate-400 mb-2">Primary Color</p>
                 <div className="flex gap-2 flex-wrap">
                   {colors.map((color) => (
                     <button
@@ -295,7 +295,7 @@ export function PortfolioBuilder() {
                 </div>
               </div>
               <div>
-                <p className="text-sm text-slate-400 mb-2">Template</p>
+                <p className="text-sm text-surface-500 dark:text-slate-400 mb-2">Template</p>
                 <div className="grid grid-cols-3 gap-3">
                   {templates.map((template) => (
                     <button
@@ -308,10 +308,10 @@ export function PortfolioBuilder() {
                         'p-3 rounded-xl border-2 transition-all text-center',
                         selectedTemplate === template.id
                           ? 'border-indigo-500 bg-indigo-500/10'
-                          : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                          : 'border-surface-300 dark:border-slate-700 bg-surface-100 dark:bg-slate-800/50 hover:border-slate-600'
                       )}
                     >
-                      <span className="text-sm font-medium text-white">{template.name}</span>
+                      <span className="text-sm font-medium text-surface-900 dark:text-white">{template.name}</span>
                     </button>
                   ))}
                 </div>
@@ -321,30 +321,30 @@ export function PortfolioBuilder() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
+            <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4 flex items-center gap-2">
               <Settings className="w-5 h-5 text-indigo-400" />
               Settings
             </h2>
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-slate-400 mb-2">Portfolio URL</p>
+                <p className="text-sm text-surface-500 dark:text-slate-400 mb-2">Portfolio URL</p>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-500">aura.dev/</span>
+                  <span className="text-sm text-surface-400 dark:text-slate-500">aura.dev/</span>
                   <input
                     type="text"
                     value={slug}
                     onChange={(e) => setSlug(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500"
+                    className="flex-1 px-3 py-2 bg-surface-100 dark:bg-slate-800/50 border border-surface-300 dark:border-slate-700 rounded-lg text-surface-900 dark:text-white text-sm focus:outline-none focus:border-indigo-500"
                   />
                 </div>
               </div>
-              <div className="pt-4 border-t border-slate-800">
-                <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
+              <div className="pt-4 border-t border-surface-200 dark:border-slate-800">
+                <div className="flex items-center gap-2 text-sm text-surface-400 dark:text-slate-500 mb-2">
                   <Layers className="w-4 h-4" />
                   {enabledSections.length} sections enabled
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-500">
+                <div className="flex items-center gap-2 text-sm text-surface-400 dark:text-slate-500">
                   <Eye className="w-4 h-4" />
                   {currentPortfolio.views} total views
                 </div>
@@ -353,18 +353,18 @@ export function PortfolioBuilder() {
           </div>
 
           <div className="bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 rounded-3xl p-6">
-            <h3 className="font-semibold text-white mb-2">Quick Actions</h3>
+            <h3 className="font-semibold text-surface-900 dark:text-white mb-2">Quick Actions</h3>
             <div className="space-y-2">
               <Link
                 href={`/portfolio/${currentPortfolio.slug}`}
                 target="_blank"
-                className="block w-full px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-xl transition-colors text-center"
+                className="block w-full px-4 py-2.5 bg-surface-100 hover:bg-surface-200 text-surface-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white text-sm font-medium rounded-xl transition-colors text-center"
               >
                 View Live Portfolio
               </Link>
               <button
                 onClick={handleCopyLink}
-                className="block w-full px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-xl transition-colors text-center"
+                className="block w-full px-4 py-2.5 bg-surface-100 hover:bg-surface-200 text-surface-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white text-sm font-medium rounded-xl transition-colors text-center"
               >
                 {copied ? 'Link Copied!' : 'Copy Portfolio Link'}
               </button>

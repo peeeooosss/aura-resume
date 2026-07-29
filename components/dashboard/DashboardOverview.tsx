@@ -41,8 +41,8 @@ export function DashboardOverview() {
       {/* Welcome Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white">Welcome back, Arjun 👋</h1>
-          <p className="text-slate-400 mt-1">Here's your career progress at a glance</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-surface-900 dark:text-white">Welcome back, Arjun 👋</h1>
+          <p className="text-surface-500 dark:text-slate-400 mt-1">Here's your career progress at a glance</p>
         </div>
         <div className="flex items-center gap-3">
           <PlanBadge plan={currentPlan as any} size="lg" />
@@ -60,7 +60,7 @@ export function DashboardOverview() {
           color="indigo"
           href="/dashboard/resumes"
         >
-          <span className="text-xs text-slate-500">{primaryResume?.atsScore ? `${primaryResume.atsScore}/100 ATS` : 'Upload to analyze'}</span>
+          <span className="text-xs text-surface-400 dark:text-slate-500">{primaryResume?.atsScore ? `${primaryResume.atsScore}/100 ATS` : 'Upload to analyze'}</span>
         </StatCard>
 
         <StatCard
@@ -72,7 +72,7 @@ export function DashboardOverview() {
           color="emerald"
           href="/dashboard/jobs/matches"
         >
-          <span className="text-xs text-slate-500">{stats.saved} saved · {stats.applied} applied</span>
+          <span className="text-xs text-surface-400 dark:text-slate-500">{stats.saved} saved · {stats.applied} applied</span>
         </StatCard>
 
         <StatCard
@@ -84,7 +84,7 @@ export function DashboardOverview() {
           color="amber"
           href="/dashboard/resumes"
         >
-          <span className="text-xs text-slate-500">{limits.tailoredResumes === 999 ? 'Unlimited' : `${usage.tailoredResumes}/${limits.tailoredResumes} this month`}</span>
+          <span className="text-xs text-surface-400 dark:text-slate-500">{limits.tailoredResumes === 999 ? 'Unlimited' : `${usage.tailoredResumes}/${limits.tailoredResumes} this month`}</span>
         </StatCard>
 
         <StatCard
@@ -96,7 +96,7 @@ export function DashboardOverview() {
           color="purple"
           href="/dashboard/roadmap"
         >
-          <span className="text-xs text-slate-500">{currentRoadmap ? `${currentRoadmap.progress}% complete` : 'Generate your first roadmap'}</span>
+          <span className="text-xs text-surface-400 dark:text-slate-500">{currentRoadmap ? `${currentRoadmap.progress}% complete` : 'Generate your first roadmap'}</span>
         </StatCard>
       </div>
 
@@ -154,22 +154,22 @@ export function DashboardOverview() {
         {/* Left Column - Resume & Matches */}
         <div className="lg:col-span-2 space-y-6">
           {/* Primary Resume Status */}
-          <section className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6">
+          <section className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
             <div className="flex items-start justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
                   <FileText className="w-6 h-6 text-indigo-400" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-white">Primary Resume</h2>
-                  <p className="text-slate-400 text-sm">{primaryResume?.fileName || 'No resume uploaded'}</p>
+                  <h2 className="text-xl font-bold text-surface-900 dark:text-white">Primary Resume</h2>
+                  <p className="text-surface-500 dark:text-slate-400 text-sm">{primaryResume?.fileName || 'No resume uploaded'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Link href={`/dashboard/resumes/${primaryResume?.id}`} className="text-indigo-400 hover:text-indigo-300 text-sm font-medium flex items-center gap-1">
                   View Details <ArrowRight className="w-4 h-4" />
                 </Link>
-                <Link href="/dashboard/resumes" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-xl transition-colors">
+                <Link href="/dashboard/resumes" className="px-4 py-2 bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-surface-900 dark:text-surface-900 dark:text-white text-sm font-medium rounded-xl transition-colors">
                   Manage All
                 </Link>
               </div>
@@ -209,7 +209,7 @@ export function DashboardOverview() {
           {/* Top Job Matches */}
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">Top Job Matches</h2>
+              <h2 className="text-xl font-bold text-surface-900 dark:text-white">Top Job Matches</h2>
               <Link href="/dashboard/jobs/matches" className="text-indigo-400 hover:text-indigo-300 text-sm font-medium flex items-center gap-1">
                 View All <ArrowRight className="w-4 h-4" />
               </Link>
@@ -221,7 +221,7 @@ export function DashboardOverview() {
                 ))
               ) : (
                 <PlanGate requiredPlan="pro" featureName="Job Match Analyzer">
-                  <div className="text-center py-8 text-slate-500">Upgrade to Pro to see job matches</div>
+                  <div className="text-center py-8 text-surface-400 dark:text-slate-500">Upgrade to Pro to see job matches</div>
                 </PlanGate>
               )}
             </div>
@@ -231,9 +231,9 @@ export function DashboardOverview() {
         {/* Right Column - Progress & Quick Links */}
         <div className="space-y-6">
           {/* Plan Progress */}
-          <section className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6">
+          <section className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-white">Plan Progress</h2>
+              <h2 className="text-xl font-bold text-surface-900 dark:text-white">Plan Progress</h2>
               <PlanBadge plan={currentPlan as any} size="md" />
             </div>
 
@@ -266,19 +266,19 @@ export function DashboardOverview() {
 
           {/* Active Roadmap Progress */}
           {currentRoadmap && (
-            <section className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6">
+            <section className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-white">Active Roadmap</h2>
+                <h2 className="text-xl font-bold text-surface-900 dark:text-white">Active Roadmap</h2>
                 <Link href={`/dashboard/roadmap/${currentRoadmap.id}`} className="text-indigo-400 hover:text-indigo-300 text-sm font-medium">
                   View Details <ArrowRight className="w-4 h-4 inline" />
                 </Link>
               </div>
               <div className="mb-4">
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-slate-400">{currentRoadmap.targetRole}</span>
-                  <span className="font-bold text-white">{currentRoadmap.progress}%</span>
+                  <span className="text-surface-500 dark:text-slate-400">{currentRoadmap.targetRole}</span>
+                  <span className="font-bold text-surface-900 dark:text-white">{currentRoadmap.progress}%</span>
                 </div>
-                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-2 bg-surface-200 dark:bg-slate-800 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
                     style={{ width: `${currentRoadmap.progress}%` }}
@@ -303,25 +303,25 @@ export function DashboardOverview() {
 
           {/* Portfolio Status */}
           {currentPortfolio && (
-            <section className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6">
+            <section className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-white">Your Portfolio</h2>
+                <h2 className="text-xl font-bold text-surface-900 dark:text-white">Your Portfolio</h2>
                 <span className="px-2 py-1 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded-full">Published</span>
               </div>
               <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="bg-slate-800/50 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-white">{currentPortfolio.views}</p>
-                  <p className="text-slate-500 text-xs">Total Views</p>
+                <div className="bg-surface-100 dark:bg-slate-800/50 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-surface-900 dark:text-white">{currentPortfolio.views}</p>
+                  <p className="text-surface-400 dark:text-slate-500 text-xs">Total Views</p>
                 </div>
-                <div className="bg-slate-800/50 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-white">{currentPortfolio.uniqueVisitors}</p>
-                  <p className="text-slate-500 text-xs">Unique Visitors</p>
+                <div className="bg-surface-100 dark:bg-slate-800/50 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-surface-900 dark:text-white">{currentPortfolio.uniqueVisitors}</p>
+                  <p className="text-surface-400 dark:text-slate-500 text-xs">Unique Visitors</p>
                 </div>
               </div>
               <Link
                 href={`/portfolio/${currentPortfolio.slug}`}
                 target="_blank"
-                className="block w-full px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+                className="block w-full px-4 py-2 bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-surface-900 dark:text-surface-900 dark:text-white text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
               >
                 <ExternalLink className="w-4 h-4" />
                 View Live Portfolio
@@ -371,7 +371,7 @@ function StatCard({
   return (
     <Link
       href={href}
-      className="group bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-5 hover:border-slate-700 transition-all"
+      className="group bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-5 hover:border-surface-300 dark:border-slate-700 transition-all"
     >
       <div className="flex items-start justify-between mb-4">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorStyles[color]}`}>
@@ -380,18 +380,18 @@ function StatCard({
         <div className="w-2 h-2 rounded-full bg-gradient-to-r bg-gradient-to-r" style={{ background: `linear-gradient(to right, ${color === 'indigo' ? '#6366f1' : color === 'emerald' ? '#10b981' : color === 'amber' ? '#f59e0b' : '#a855f7'}, ${color === 'indigo' ? '#8b5cf6' : color === 'emerald' ? '#34d399' : color === 'amber' ? '#fbbf24' : '#c084fc'})` }} />
       </div>
       <div className="mb-2">
-        <p className="text-2xl font-bold text-white">{value}</p>
-        <p className="text-slate-500 text-xs">{label}</p>
+        <p className="text-2xl font-bold text-surface-900 dark:text-white">{value}</p>
+        <p className="text-surface-400 dark:text-slate-500 text-xs">{label}</p>
       </div>
       {max !== 999 && (
-        <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div className="h-1.5 bg-surface-200 dark:bg-slate-800 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 bg-gradient-to-r ${gradientStyles[color as keyof typeof gradientStyles]}`}
             style={{ width: `${Math.min(100, percent)}%` }}
           />
         </div>
       )}
-      {children && <div className="mt-3 pt-3 border-t border-slate-800">{children}</div>}
+      {children && <div className="mt-3 pt-3 border-t border-surface-200 dark:border-slate-800">{children}</div>}
     </Link>
   );
 }
@@ -404,12 +404,12 @@ function MetricCard({ label, value, max, color, icon: Icon }: { label: string; v
     rose: 'bg-rose-500/20 text-rose-400',
   };
   return (
-    <div className="bg-slate-800/50 rounded-2xl p-4">
+    <div className="bg-surface-100 dark:bg-slate-800/50 rounded-2xl p-4">
       <div className="flex items-center justify-between mb-2">
         <Icon className={`w-5 h-5 ${colorMap[color as keyof typeof colorMap]}`} />
       </div>
-      <p className="text-2xl font-bold text-white">{value}{max ? `/${max}` : ''}</p>
-      <p className="text-slate-500 text-xs">{label}</p>
+      <p className="text-2xl font-bold text-surface-900 dark:text-white">{value}{max ? `/${max}` : ''}</p>
+      <p className="text-surface-400 dark:text-slate-500 text-xs">{label}</p>
     </div>
   );
 }
@@ -426,13 +426,13 @@ function UsageBar({ label, icon: Icon, used, limit, color }: { label: string; ic
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-sm">
-        <span className="flex items-center gap-2 text-slate-300">
-          <Icon className="w-4 h-4 text-slate-500" />
+        <span className="flex items-center gap-2 text-surface-600 dark:text-slate-300">
+          <Icon className="w-4 h-4 text-surface-400 dark:text-slate-500" />
           {label}
         </span>
-        <span className="font-semibold text-white">{limit === 999 ? 'Unlimited' : `${used}/${limit}`}</span>
+        <span className="font-semibold text-surface-900 dark:text-white">{limit === 999 ? 'Unlimited' : `${used}/${limit}`}</span>
       </div>
-      <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+      <div className="h-1.5 bg-surface-200 dark:bg-slate-800 rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{ width: `${percent}%`, backgroundColor: colorMap[color as keyof typeof colorMap] }}
@@ -449,7 +449,7 @@ function QuickActionCard({ icon: Icon, title, description, href, primary }: { ic
       className={`group relative overflow-hidden rounded-2xl p-5 transition-all ${
         primary
           ? 'bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 hover:border-indigo-500/50'
-          : 'bg-slate-900/80 border border-slate-800 hover:border-slate-700'
+          : 'bg-white border border-surface-200 dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 hover:border-surface-300 dark:border-slate-700'
       }`}
     >
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -457,8 +457,8 @@ function QuickActionCard({ icon: Icon, title, description, href, primary }: { ic
         <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
           <Icon className="w-5 h-5 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
         </div>
-        <h3 className="text-lg font-bold text-white mb-1">{title}</h3>
-        <p className="text-slate-400 text-sm flex-1">{description}</p>
+        <h3 className="text-lg font-bold text-surface-900 dark:text-white mb-1">{title}</h3>
+        <p className="text-surface-500 dark:text-slate-400 text-sm flex-1">{description}</p>
         <div className="flex items-center gap-1 text-indigo-400 font-medium text-sm mt-auto">
           Get Started <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </div>
@@ -477,17 +477,17 @@ function JobMatchCard({ match }: { match: any }) {
   return (
     <Link
       href={`/dashboard/jobs/${match.id}`}
-      className="group block bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-4 hover:border-slate-700 transition-all"
+      className="group block bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-2xl p-4 hover:border-surface-300 dark:border-slate-700 transition-all"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-semibold text-white group-hover:text-indigo-400 transition-colors">{match.title}</h3>
-            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[match.status as keyof typeof statusColors] || 'bg-slate-500/20 text-slate-400'}`}>
+            <h3 className="font-semibold text-surface-900 dark:text-surface-900 dark:text-white group-hover:text-indigo-400 transition-colors">{match.title}</h3>
+            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[match.status as keyof typeof statusColors] || 'bg-slate-500/20 text-surface-500 dark:text-slate-400'}`}>
               {match.status}
             </span>
           </div>
-          <p className="text-slate-400 text-sm mb-2 flex items-center gap-2">
+          <p className="text-surface-500 dark:text-slate-400 text-sm mb-2 flex items-center gap-2">
             <span>{match.company}</span>
             <span>·</span>
             <span>{match.location}</span>
@@ -498,9 +498,9 @@ function JobMatchCard({ match }: { match: any }) {
             <div className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-indigo-500" />
               <span className="text-xs font-bold text-indigo-400">{match.matchScore}%</span>
-              <span className="text-slate-500 text-xs">Match</span>
+              <span className="text-surface-400 dark:text-slate-500 text-xs">Match</span>
             </div>
-            <div className="flex items-center gap-1 text-slate-500 text-xs">
+            <div className="flex items-center gap-1 text-surface-400 dark:text-slate-500 text-xs">
               <span className="text-emerald-400">{match.matchedSkills.length} matched</span>
               <span>·</span>
               <span className="text-rose-400">{match.missingSkills.length} missing</span>
@@ -508,10 +508,10 @@ function JobMatchCard({ match }: { match: any }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors">
+          <button className="p-2 rounded-xl bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:text-white transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
           </button>
-          <ArrowRight className="w-5 h-5 text-slate-500 group-hover:text-indigo-400 transition-colors" />
+          <ArrowRight className="w-5 h-5 text-surface-400 dark:text-slate-500 group-hover:text-indigo-400 transition-colors" />
         </div>
       </div>
     </Link>
@@ -534,11 +534,11 @@ function TaskPreviewCard({ task }: { task: any }) {
     INTERVIEW_PREP: '🎯',
   };
   return (
-    <div className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl">
+    <div className="flex items-center gap-3 p-3 bg-surface-100 dark:bg-slate-800/50 rounded-xl">
       <span className="text-lg">{typeIcons[task.type as keyof typeof typeIcons]}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-white text-sm font-medium truncate">{task.title}</p>
-        <p className="text-slate-500 text-xs">{task.duration} min</p>
+        <p className="text-surface-900 dark:text-surface-900 dark:text-white text-sm font-medium truncate">{task.title}</p>
+        <p className="text-surface-400 dark:text-slate-500 text-xs">{task.duration} min</p>
       </div>
       <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${typeStyles[task.type as keyof typeof typeStyles]}`}>
         {task.type}

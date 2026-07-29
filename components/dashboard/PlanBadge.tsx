@@ -13,7 +13,7 @@ interface PlanBadgeProps {
 const planStyles = {
   free: {
     icon: Shield,
-    colors: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+    colors: 'bg-slate-500/20 text-surface-500 dark:text-slate-400 border-slate-500/30',
     dotColor: 'bg-slate-400',
     label: 'Free',
   },
@@ -52,14 +52,14 @@ export function PlanBadge({ plan = 'pro', size = 'md', showLabel = true, variant
     return (
       <span className={cn('inline-flex items-center', sizes.gap)} aria-label={style.label}>
         <span className={cn('rounded-full', style.dotColor, 'w-2 h-2', size === 'sm' && 'w-1.5 h-1.5', size === 'lg' && 'w-2.5 h-2.5')} />
-        {showLabel && <span className="text-xs font-medium text-slate-300">{style.label}</span>}
+        {showLabel && <span className="text-xs font-medium text-surface-600 dark:text-slate-300">{style.label}</span>}
       </span>
     );
   }
 
   if (variant === 'outline') {
     return (
-      <span className={cn('inline-flex items-center', sizes.gap, 'border', 'border-slate-700', 'rounded-full')}>
+      <span className={cn('inline-flex items-center', sizes.gap, 'border', 'border-surface-300 dark:border-slate-700', 'rounded-full')}>
         <Icon className={cn(sizes.icon, style.colors.replace('bg-', 'text-').replace('border-', ''))} aria-hidden="true" />
         {showLabel && <span className={cn(sizes.text, 'font-medium', style.colors.replace('bg-', 'text-').replace('border-', ''))}>{style.label}</span>}
       </span>

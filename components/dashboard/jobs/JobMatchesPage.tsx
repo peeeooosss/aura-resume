@@ -1,14 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useJobMatches } from '@/lib/hooks/useJobMatches';
-import { Target, Heart, ExternalLink, MapPin, Briefcase, DollarSign, ArrowRight, CheckCircle, Clock, Star, Filter } from 'lucide-react';
+import { Target, Heart, ExternalLink, MapPin, Briefcase, ArrowRight, CheckCircle, Clock, Star, Loader2, AlertCircle, IndianRupee } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import Link from 'next/link';
 
 export function JobMatchesPage() {
-  const { matches, savedOnly, setSavedOnly, toggleSave, stats } = useJobMatches();
+  const { matches, savedOnly, setSavedOnly, toggleSave, stats, isLoading, error, searchRealJobs, setFilters } = useJobMatches();
   const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, minMatchScore: 20 }));
+  }, []);
 
   const statusOptions = [
     { value: 'all', label: 'All Matches', count: stats.total },
@@ -27,11 +31,11 @@ export function JobMatchesPage() {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
-            <Target className="w-6 h-6 text-white" />
+            <Target className="w-6 h-6 text-surface-900 dark:text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white">Job Matches</h1>
-            <p className="text-slate-400">AI-powered matches for your resume</p>
+            <h1 className="text-3xl font-bold text-surface-900 dark:text-white">Job Matches</h1>
+            <p className="text-surface-500 dark:text-slate-400">AI-powered matches for your resume</p>
           </div>
         </div>
       </div>
@@ -45,7 +49,7 @@ export function JobMatchesPage() {
               'p-4 rounded-2xl border transition-all',
               statusFilter === option.value
                 ? 'bg-indigo-600/20 border-indigo-500/30 text-white'
-                : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
+                : 'bg-slate-900/80 border-surface-200 dark:border-slate-800 text-surface-500 dark:text-slate-400 hover:border-surface-300 dark:border-slate-700 hover:text-white'
             )}
           >
             <p className="text-2xl font-bold">{option.count}</p>
@@ -54,19 +58,47 @@ export function JobMatchesPage() {
         ))}
       </div>
 
+      {error && (
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-6 text-center mb-6">
+          <AlertCircle className="w-8 h-8 text-rose-400 mx-auto mb-3" />
+          <p className="text-rose-300 font-medium">{error}</p>
+          <button
+            onClick={() => searchRealJobs('software engineer', 'India')}
+            className="mt-3 px-4 py-2 bg-rose-500/20 text-rose-300 rounded-xl text-sm hover:bg-rose-500/30 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin mx-auto mb-4" />
+            <p className="text-surface-900 dark:text-white font-medium">Analyzing job matches...</p>
+            <p className="text-surface-400 dark:text-slate-500 text-sm mt-1">Matching your skills with live jobs</p>
+          </div>
+        </div>
+      )}
+
+      {!isLoading && !error && (
       <div className="space-y-4">
         {filteredMatches.map((job) => (
           <JobMatchCard key={job.id} job={job} onToggleSave={toggleSave} />
         ))}
 
         {filteredMatches.length === 0 && (
-          <div className="text-center py-16 bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl">
+          <div className="text-center py-16 bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl">
             <Target className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">No matches found</h3>
-            <p className="text-slate-400">Try adjusting your filters</p>
+            <h3 className="text-xl font-semibold text-surface-900 dark:text-white mb-2">No matching jobs found</h3>
+            <p className="text-surface-500 dark:text-slate-400 mb-4">Upload your resume first to see skill-matched job listings</p>
+            <Link href="/dashboard/resumes" className="text-indigo-400 hover:text-indigo-300 underline text-sm">
+              Upload Resume →
+            </Link>
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
@@ -74,7 +106,7 @@ export function JobMatchesPage() {
 function JobMatchCard({ job, onToggleSave }: { job: any; onToggleSave: (id: string) => void }) {
   const [showBreakdown, setShowBreakdown] = useState(false);
 
-  const scoreColor = job.matchScore >= 80 ? 'text-emerald-400' : job.matchScore >= 60 ? 'text-amber-400' : 'text-slate-400';
+  const scoreColor = job.matchScore >= 80 ? 'text-emerald-400' : job.matchScore >= 60 ? 'text-amber-400' : 'text-surface-500 dark:text-slate-400';
   const scoreBg = job.matchScore >= 80 ? 'bg-emerald-500/20 border-emerald-500/30' : job.matchScore >= 60 ? 'bg-amber-500/20 border-amber-500/30' : 'bg-slate-500/20 border-slate-500/30';
 
   const statusStyles: Record<string, { bg: string; text: string }> = {
@@ -85,12 +117,12 @@ function JobMatchCard({ job, onToggleSave }: { job: any; onToggleSave: (id: stri
   };
 
   return (
-    <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden hover:border-slate-700 transition-all">
+    <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-2xl overflow-hidden hover:border-surface-300 dark:border-slate-700 transition-all">
       <div className="p-6">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <Link href={`/dashboard/jobs/${job.id}`} className="text-xl font-semibold text-white hover:text-indigo-400 transition-colors">
+              <Link href={`/dashboard/jobs/${job.id}`} className="text-xl font-semibold text-surface-900 dark:text-white hover:text-indigo-400 transition-colors">
                 {job.title}
               </Link>
               <span className={cn('px-2.5 py-1 text-xs font-semibold rounded-full border', scoreBg, scoreColor)}>
@@ -101,7 +133,7 @@ function JobMatchCard({ job, onToggleSave }: { job: any; onToggleSave: (id: stri
               </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400 mb-4">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-surface-500 dark:text-slate-400 mb-4">
               <span className="flex items-center gap-1.5">
                 <Briefcase className="w-4 h-4" />
                 {job.company}
@@ -111,14 +143,14 @@ function JobMatchCard({ job, onToggleSave }: { job: any; onToggleSave: (id: stri
                 {job.location}
               </span>
               <span className="flex items-center gap-1.5">
-                <DollarSign className="w-4 h-4" />
-                ₹{(job.salaryMin / 100000).toFixed(1)}L - ₹{(job.salaryMax / 100000).toFixed(1)}L
+                <IndianRupee className="w-4 h-4" />
+                {job.salaryMin ? `₹${(job.salaryMin / 100000).toFixed(1)}L - ₹{(job.salaryMax / 100000).toFixed(1)}L` : 'Salary not listed'}
               </span>
             </div>
 
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-500">Skills:</span>
+                <span className="text-sm text-surface-400 dark:text-slate-500">Skills:</span>
                 <span className="text-sm font-medium text-emerald-400">{job.matchedSkills.length} matched</span>
                 <span className="text-slate-600">·</span>
                 <span className="text-sm font-medium text-rose-400">{job.missingSkills.length} missing</span>
@@ -132,7 +164,7 @@ function JobMatchCard({ job, onToggleSave }: { job: any; onToggleSave: (id: stri
                 </span>
               ))}
               {job.matchedSkills.length > 5 && (
-                <span className="px-2.5 py-1 text-xs font-medium bg-slate-800 text-slate-400 rounded-lg">
+                <span className="px-2.5 py-1 text-xs font-medium bg-slate-800 text-surface-500 dark:text-slate-400 rounded-lg">
                   +{job.matchedSkills.length - 5} more
                 </span>
               )}
@@ -142,7 +174,7 @@ function JobMatchCard({ job, onToggleSave }: { job: any; onToggleSave: (id: stri
           <div className="flex flex-col gap-2">
             <Link
               href={`/dashboard/jobs/${job.id}`}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              className="p-2 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-500 hover:text-surface-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:hover:text-white transition-colors"
             >
               <ArrowRight className="w-5 h-5" />
             </Link>
@@ -150,7 +182,7 @@ function JobMatchCard({ job, onToggleSave }: { job: any; onToggleSave: (id: stri
               onClick={() => onToggleSave(job.id)}
               className={cn(
                 'p-2 rounded-xl transition-colors',
-                job.isSaved ? 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/30' : 'bg-slate-800 text-slate-400 hover:text-rose-400 hover:bg-slate-700'
+                job.isSaved ? 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/30' : 'bg-slate-800 text-surface-500 dark:text-slate-400 hover:text-rose-400 hover:bg-slate-700'
               )}
             >
               <Heart className={cn('w-5 h-5', job.isSaved && 'fill-current')} />
@@ -160,13 +192,13 @@ function JobMatchCard({ job, onToggleSave }: { job: any; onToggleSave: (id: stri
 
         <button
           onClick={() => setShowBreakdown(!showBreakdown)}
-          className="text-sm text-slate-500 hover:text-slate-300 transition-colors"
+          className="text-sm text-surface-400 dark:text-slate-500 hover:text-surface-600 dark:text-slate-300 transition-colors"
         >
           {showBreakdown ? 'Hide breakdown' : 'Show match breakdown'}
         </button>
 
         {showBreakdown && (
-          <div className="mt-4 pt-4 border-t border-slate-800">
+          <div className="mt-4 pt-4 border-t border-surface-200 dark:border-slate-800">
             <div className="grid grid-cols-5 gap-4">
               {Object.entries(job.matchBreakdown).map(([key, value]) => {
                 const num = Number(value);
@@ -187,11 +219,11 @@ function JobMatchCard({ job, onToggleSave }: { job: any; onToggleSave: (id: stri
                           className={strokeColor}
                         />
                       </svg>
-                      <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold text-white">
+                      <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold text-surface-900 dark:text-white">
                         {num}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 capitalize">{key}</p>
+                    <p className="text-xs text-surface-400 dark:text-slate-500 capitalize">{key}</p>
                   </div>
                 );
               })}
@@ -200,14 +232,14 @@ function JobMatchCard({ job, onToggleSave }: { job: any; onToggleSave: (id: stri
         )}
       </div>
 
-      <div className="px-6 py-4 bg-slate-800/30 border-t border-slate-800 flex items-center justify-between">
-        <p className="text-sm text-slate-500 line-clamp-1 flex-1">{job.matchReasoning}</p>
+      <div className="px-6 py-4 bg-surface-100 dark:bg-slate-800/30 border-t border-surface-200 dark:border-slate-800 flex items-center justify-between">
+        <p className="text-sm text-surface-400 dark:text-slate-500 line-clamp-1 flex-1">{job.matchReasoning}</p>
         <div className="flex items-center gap-2 ml-4">
           <a
             href={job.applyUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-surface-900 dark:text-white text-sm font-medium rounded-xl transition-colors flex items-center gap-2"
           >
             Apply <ExternalLink className="w-4 h-4" />
           </a>

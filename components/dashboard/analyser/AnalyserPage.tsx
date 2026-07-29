@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Linkedin, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, RotateCcw, History } from 'lucide-react';
+import { Upload, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, History, Repeat, Linkedin } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 
 interface SingleAnalysis {
@@ -45,7 +45,8 @@ function ScoreCircle({ score, size = 120 }: { score: number; size?: number }) {
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="rgba(148, 163, 184, 0.1)"
+          stroke="currentColor"
+          className="text-surface-200 dark:text-slate-400/10"
           strokeWidth={8}
         />
         <circle
@@ -70,14 +71,14 @@ function ScoreCircle({ score, size = 120 }: { score: number; size?: number }) {
 
 function AnalysisColumn({ analysis, label, icon: Icon, color }: { analysis: SingleAnalysis; label: string; icon: React.ComponentType<{ className?: string }>; color: string }) {
   return (
-    <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
+    <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-2xl p-6">
       <div className="flex items-center gap-3 mb-6">
         <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', color)}>
-          <Icon className="w-5 h-5 text-white" />
+          <Icon className="w-5 h-5 text-surface-900 dark:text-white" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-white">{label}</h3>
-          <p className="text-slate-500 text-sm">ATS Compatibility Score</p>
+          <h3 className="text-lg font-semibold text-surface-900 dark:text-white">{label}</h3>
+          <p className="text-surface-400 dark:text-slate-500 text-sm">ATS Compatibility Score</p>
         </div>
       </div>
 
@@ -94,7 +95,7 @@ function AnalysisColumn({ analysis, label, icon: Icon, color }: { analysis: Sing
           {analysis.strengths.map((strength, i) => (
             <div key={i} className="flex items-start gap-3 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
               <Check className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-              <p className="text-slate-300 text-sm">{strength}</p>
+              <p className="text-surface-600 dark:text-slate-300 text-sm">{strength}</p>
             </div>
           ))}
         </div>
@@ -109,12 +110,12 @@ function AnalysisColumn({ analysis, label, icon: Icon, color }: { analysis: Sing
           {analysis.redFlags.map((flag, i) => (
             <div key={i} className="flex items-start gap-3 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl">
               <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
-              <p className="text-slate-300 text-sm">{flag}</p>
+              <p className="text-surface-600 dark:text-slate-300 text-sm">{flag}</p>
             </div>
           ))}
         </div>
         {analysis.overlappingFlags && analysis.overlappingFlags.length > 0 && (
-          <div className="space-y-2 pt-4 border-t border-slate-800">
+          <div className="space-y-2 pt-4 border-t border-surface-200 dark:border-slate-800">
             <h5 className="flex items-center gap-2 text-amber-400 font-semibold text-sm">
               <History className="w-4 h-4" />
               Also Found in Other Source
@@ -123,51 +124,12 @@ function AnalysisColumn({ analysis, label, icon: Icon, color }: { analysis: Sing
               {analysis.overlappingFlags.map((flag, i) => (
                 <div key={i} className="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
                   <History className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-slate-300 text-sm">{flag}</p>
+                  <p className="text-surface-600 dark:text-slate-300 text-sm">{flag}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-function HistoryItem({ analysis, onAnalyzeAgain }: { analysis: DualAnalysisResult; onAnalyzeAgain: () => void }) {
-  const date = new Date(analysis.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  const hasResume = !!analysis.resume;
-  const hasLinkedIn = !!analysis.linkedin;
-
-  return (
-    <div className="flex items-center justify-between p-4 bg-slate-900/50 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors">
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
-          <FileText className="w-5 h-5 text-indigo-400" />
-        </div>
-        <div>
-          <p className="font-medium text-white">Analysis {analysis.id.slice(0, 8)}</p>
-          <p className="text-slate-500 text-sm">{date} {hasResume && 'Resume'}{hasResume && hasLinkedIn && ' + '}{hasLinkedIn && 'LinkedIn'}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        {hasResume && (
-          <span className={cn('px-3 py-1 rounded-full text-xs font-semibold', getScoreColor(analysis.resume!.score))}>
-            {analysis.resume!.score}
-          </span>
-        )}
-        {hasLinkedIn && (
-          <span className={cn('px-3 py-1 rounded-full text-xs font-semibold', getScoreColor(analysis.linkedin!.score))}>
-            {analysis.linkedin!.score}
-          </span>
-        )}
-        <button
-          onClick={onAnalyzeAgain}
-          className="p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
-          title="Analyze again"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
       </div>
     </div>
   );
@@ -181,15 +143,6 @@ export function AnalyserPage() {
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<DualAnalysisResult | null>(null);
-  const [history, setHistory] = useState<DualAnalysisResult[]>([]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('aura-analyses');
-    if (stored) {
-      const analyses = Object.values(JSON.parse(stored)) as DualAnalysisResult[];
-      setHistory(analyses.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-    }
-  }, []);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -220,7 +173,7 @@ export function AnalyserPage() {
       analyses[data.id] = data;
       localStorage.setItem('aura-analyses', JSON.stringify(analyses));
       setResults(data);
-      setHistory([data, ...history]);
+      setLinkedinUrl('');
       setSelectedFile(null);
       setLinkedinUrl('');
     } catch {
@@ -238,14 +191,14 @@ export function AnalyserPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white">Resume Analyser</h1>
-          <p className="text-slate-400 mt-1">Upload your resume and get an instant ATS compatibility score with detailed insights</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-surface-900 dark:text-white">Resume Analyser</h1>
+          <p className="text-surface-500 dark:text-slate-400 mt-1">Upload your resume and get an instant ATS compatibility score with detailed insights</p>
         </div>
       </div>
 
       {!results ? (
         <>
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="max-w-xl mx-auto">          
             <div
               onDrop={handleDrop}
               onDragOver={handleDragOver}
@@ -257,7 +210,7 @@ export function AnalyserPage() {
                   ? 'border-indigo-500 bg-indigo-500/10'
                   : selectedFile
                   ? 'border-emerald-500 bg-emerald-500/5'
-                  : 'border-slate-700 hover:border-indigo-500 bg-slate-900/80'
+                  : 'border-surface-300 dark:border-slate-700 hover:border-indigo-500 bg-white dark:bg-slate-900/80'
               )}
             >
               <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20">
@@ -268,19 +221,19 @@ export function AnalyserPage() {
                   <>
                     <FileText className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
                     <p className="text-emerald-400 font-semibold mb-1">{selectedFile.name}</p>
-                    <p className="text-slate-500 text-sm">Click or drop to replace</p>
+                    <p className="text-surface-400 dark:text-slate-500 text-sm">Click or drop to replace</p>
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
-                      className="mt-3 text-sm text-slate-500 hover:text-white underline"
+                      className="mt-3 text-sm text-surface-400 dark:text-slate-500 hover:text-surface-900 dark:text-white underline"
                     >
                       Remove
                     </button>
                   </>
                 ) : (
                   <>
-                    <Upload className="w-12 h-12 text-slate-500 group-hover:text-indigo-400 transition-colors mx-auto mb-4" />
-                    <p className="text-white font-semibold mb-1">Drop your resume here</p>
-                    <p className="text-slate-500 text-sm">PDF, DOCX up to 10MB</p>
+                    <Upload className="w-12 h-12 text-surface-400 dark:text-slate-500 group-hover:text-indigo-400 transition-colors mx-auto mb-4" />
+                    <p className="text-surface-900 dark:text-white font-semibold mb-1">Drop your resume here</p>
+                    <p className="text-surface-400 dark:text-slate-500 text-sm">PDF, DOCX up to 10MB</p>
                   </>
                 )}
               </div>
@@ -291,23 +244,6 @@ export function AnalyserPage() {
                 accept=".pdf,.docx"
                 onChange={(e) => e.target.files?.[0] && setSelectedFile(e.target.files[0])}
               />
-            </div>
-
-            <div className="rounded-2xl border border-slate-700 hover:border-blue-500 bg-slate-900/80 p-8 transition-all relative">
-              <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
-                <span className="text-xs font-semibold text-blue-400">LinkedIn</span>
-              </div>
-              <div className="mt-6">
-                <Linkedin className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-                <p className="text-white font-semibold mb-4 text-center">Paste LinkedIn URL</p>
-                <input
-                  type="url"
-                  value={linkedinUrl}
-                  onChange={(e) => setLinkedinUrl(e.target.value)}
-                  placeholder="linkedin.com/in/yourprofile"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors text-sm text-center"
-                />
-              </div>
             </div>
           </div>
 
@@ -322,7 +258,7 @@ export function AnalyserPage() {
               ) : (
                 <>
                   <Zap className="w-5 h-5 group-hover:animate-pulse" />
-                  {selectedFile && linkedinUrl ? 'Analyze Both' : 'Analyze My Profile'}
+                  {selectedFile && linkedinUrl ? 'Analyze Both' : 'Analyze My Resume'}
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
@@ -334,12 +270,12 @@ export function AnalyserPage() {
         <div className="space-y-6 animate-fade-in">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-white">Analysis Complete</h2>
-              <p className="text-slate-400">Your resume has been analyzed against ATS criteria</p>
+              <h2 className="text-2xl font-bold text-surface-900 dark:text-white">Analysis Complete</h2>
+              <p className="text-surface-500 dark:text-slate-400">Your resume has been analyzed against ATS criteria</p>
             </div>
             <button
               onClick={clearResults}
-              className="p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
+              className="p-2 text-surface-400 dark:text-slate-500 hover:text-surface-900 dark:text-white hover:bg-surface-200 dark:hover:bg-slate-800 rounded-xl transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -363,14 +299,14 @@ export function AnalyserPage() {
               />
             )}
             {!results.resume && !results.linkedin && (
-              <div className="md:col-span-2 text-center py-12 text-slate-500">No analysis data available</div>
+              <div className="md:col-span-2 text-center py-12 text-surface-400 dark:text-slate-500">No analysis data available</div>
             )}
           </div>
 
           <div className="flex items-center gap-4">
             <button
               onClick={clearResults}
-              className="flex items-center gap-2 px-6 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white hover:bg-slate-700 transition-colors"
+              className="flex items-center gap-2 px-6 py-3 bg-slate-800 border border-surface-300 dark:border-slate-700 rounded-xl text-surface-900 dark:text-white hover:bg-slate-700 transition-colors"
             >
               <RotateCcw className="w-5 h-5" />
               Analyze Another
@@ -381,20 +317,6 @@ export function AnalyserPage() {
               <Download className="w-5 h-5" />
               Download Report
             </button>
-          </div>
-        </div>
-      )}
-
-      {history.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white">Analysis History</h2>
-            <span className="text-slate-500 text-sm">{history.length} total</span>
-          </div>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {history.slice(0, 10).map((analysis) => (
-              <HistoryItem key={analysis.id} analysis={analysis} onAnalyzeAgain={clearResults} />
-            ))}
           </div>
         </div>
       )}

@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { generateATSPerfectResume } from '@/lib/ai/openrouter';
+import { generateATSPerfectResume, generateTailoredResumeForJob } from '@/lib/ai/openrouter';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { resumeText, analysis } = body;
+    const { resumeText, analysis, jobDescription, jobTitle, company } = body;
 
     if (!resumeText || typeof resumeText !== 'string' || resumeText.trim().length < 50) {
       return NextResponse.json(
@@ -20,10 +20,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const { optimizedResume, tokensUsed } = await generateATSPerfectResume(
-      resumeText.trim(),
-      analysis
-    );
+    const { optimizedResume, tokensUsed } = jobDescription
+      ? await generateTailoredResumeForJob(resumeText.trim(), analysis, jobDescription, jobTitle || '', company || '')
+      : await generateATSPerfectResume(resumeText.trim(), analysis);
 
     return NextResponse.json({
       success: true,

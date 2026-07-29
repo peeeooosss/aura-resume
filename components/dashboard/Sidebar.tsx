@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -21,21 +21,10 @@ export function Sidebar() {
   const pathname = usePathname();
   const currentPlan = usePlan(s => s.currentPlan);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sidebarCollapsed');
-      if (saved !== null) setCollapsed(saved === 'true');
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('sidebarCollapsed', collapsed.toString());
-  }, [collapsed]);
-
   return (
     <>
       <button
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-surface-100 dark:bg-slate-900/80 backdrop-blur-xl border border-surface-200 dark:border-slate-700 rounded-xl text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:hover:text-white transition-colors"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-surface-100 dark:bg-slate-900/80 backdrop-blur-xl border border-surface-200 dark:border-slate-700 rounded-xl text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:hover:text-surface-900 dark:text-white transition-colors"
         onClick={() => setMobileOpen(true)}
         aria-label="Open menu"
       >
@@ -60,10 +49,10 @@ export function Sidebar() {
         <div className="flex h-16 items-center justify-between px-4 border-b border-surface-200 dark:border-slate-800">
           <Link href="/dashboard" className="flex items-center gap-2" aria-label="Aura Resume Dashboard">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-600 to-purple-600 flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
+              <Zap className="w-5 h-5 text-surface-900 dark:text-white" />
             </div>
             {!collapsed && (
-              <span className="font-bold text-surface-900 dark:text-white text-lg">Aura</span>
+              <span className="font-bold text-surface-900 dark:text-surface-900 dark:text-white text-lg">Aura</span>
             )}
           </Link>
           <button
@@ -154,7 +143,7 @@ export function Sidebar() {
               {!collapsed && (
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-surface-500 dark:text-slate-500 truncate">Current Plan</p>
-                  <p className="font-semibold text-surface-900 dark:text-white truncate capitalize">
+                  <p className="font-semibold text-surface-900 dark:text-surface-900 dark:text-white truncate capitalize">
                     {currentPlan === 'free' ? 'Free' :
                      currentPlan === 'quick' ? 'Quick Fix' :
                      currentPlan === 'pro' ? 'Pro Bundle' : 'VIP Mentorship'}
