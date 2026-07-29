@@ -2,13 +2,21 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, RotateCcw, Wrench, Eye, Loader2, Briefcase, IndianRupee, Target, TrendingUp } from 'lucide-react';
+import { Upload, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, Eye, Loader2, Target, TrendingUp, IndianRupee } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import { generateAnalysisPDF, getPDFBlobURL, generateOptimizedResumePDF } from '@/lib/pdf/generateReport';
 import type { JobRolePotential } from '@/lib/types';
-import { usePlan } from '@/lib/hooks/usePlan';
 import { PlanGate } from '@/components/dashboard/PlanGate';
 import { useToast } from '@/components/ui/Toast';
+
+function isAllowedFile(file: File): boolean {
+  const name = file.name.toLowerCase();
+  const ext = name.split('.').pop();
+  if (ext === 'pdf' || ext === 'doc' || ext === 'docx') return true;
+  if (file.type === 'application/pdf') return true;
+  if (file.type.includes('word')) return true;
+  return false;
+}
 
 interface AnalysisData {
   id: string;
@@ -66,13 +74,38 @@ export function FixerPage() {
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file && (file.type === 'application/pdf' || file.type.includes('word'))) setSelectedFile(file);
-  }, []);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    if (isAllowedFile(file)) {
+      setSelectedFile(file);
+    } else {
+      toast('error', `Invalid file type "${file.name.split('.').pop()}". Please upload a PDF or Word document.`);
+    }
+  }, [toast]);
 
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragging(true); };
-  const handleDragLeave = () => setDragging(false);
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) setDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (isAllowedFile(file)) {
+      setSelectedFile(file);
+    } else {
+      toast('error', `Invalid file type "${file.name.split('.').pop()}". Please upload a PDF or Word document.`);
+    }
+    e.target.value = '';
+  };
 
   const handleAnalyze = async () => {
     if (!selectedFile) return;
@@ -81,11 +114,13 @@ export function FixerPage() {
     setReportPdfUrl(null);
     setSavedResumeId(null);
 
-    const formData = new FormData();
-    formData.append('resume', selectedFile);
-    formData.append('userId', 'user_1');
+    const fileName = selectedFile.name;
 
     try {
+      const formData = new FormData();
+      formData.append('resume', selectedFile);
+      formData.append('userId', 'user_1');
+
       const res = await fetch('/api/analyze', { method: 'POST', body: formData });
       if (!res.ok) {
         const err = await res.json();
@@ -117,7 +152,7 @@ export function FixerPage() {
           keywordGaps: analysisData.keywordGaps,
           jobRolePotential: analysisData.jobRolePotential,
         },
-        fileName: selectedFile.name,
+        fileName: fileName,
         analyzedAt: new Date().toLocaleString(),
       });
       setReportPdfUrl(getPDFBlobURL(doc));
@@ -250,7 +285,7 @@ export function FixerPage() {
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
-              onClick={() => !loading && fileInputRef.current?.click()}
+              onClick={() => { if (!loading) fileInputRef.current?.click(); }}
               className={cn(
                 'relative group cursor-pointer rounded-2xl p-8 text-center border-2 border-dashed transition-all',
                 dragging
@@ -266,7 +301,11 @@ export function FixerPage() {
                     <FileText className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
                     <p className="text-emerald-400 font-semibold mb-1">{selectedFile.name}</p>
                     <p className="text-surface-400 dark:text-slate-500 text-sm">Click or drop to replace</p>
-                    <button onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }} className="mt-3 text-sm text-surface-400 dark:text-slate-500 hover:text-surface-900 dark:text-white underline">Remove</button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedFile(null); }}
+                      className="mt-3 text-sm text-surface-400 dark:text-slate-500 hover:text-surface-900 dark:text-white underline"
+                    >Remove</button>
                   </>
                 ) : (
                   <>
@@ -276,7 +315,13 @@ export function FixerPage() {
                   </>
                 )}
               </div>
-              <input ref={fileInputRef} type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept=".pdf,.docx" onChange={(e) => e.target.files?.[0] && setSelectedFile(e.target.files[0])} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                accept=".pdf,.doc,.docx"
+                onChange={handleFileInput}
+              />
             </div>
           </div>
 
