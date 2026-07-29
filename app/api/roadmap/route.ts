@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateRoadmap } from '@/lib/ai/openrouter';
 import { CREDIT_COSTS } from '@/lib/constants/credits';
+import { requireSessionUserId } from '@/lib/auth/getSessionUser';
 
 export async function POST(req: NextRequest) {
   try {
+    const userId = await requireSessionUserId();
     const body = await req.json();
-    const { currentRole, goalRole, skills, userId = 'demo-user' } = body;
+    const { currentRole, goalRole, skills } = body;
 
     if (!currentRole || !goalRole) {
       return NextResponse.json({ error: 'Current role and goal role required' }, { status: 400 });

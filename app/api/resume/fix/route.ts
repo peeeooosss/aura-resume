@@ -2,15 +2,17 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { fixResumeToPerfectATS } from '@/lib/ai/openrouter';
 import { generateOptimizedResumePDF, getPDFBlobURL } from '@/lib/pdf/generateReport';
+import { requireSessionUserId } from '@/lib/auth/getSessionUser';
 
 export async function POST(request: Request) {
   try {
+    const userId = await requireSessionUserId();
     const body = await request.json();
-    const { resumeId, userId } = body;
+    const { resumeId } = body;
 
-    if (!resumeId || !userId) {
+    if (!resumeId) {
       return NextResponse.json(
-        { error: 'resumeId and userId are required' },
+        { error: 'resumeId is required' },
         { status: 400 }
       );
     }

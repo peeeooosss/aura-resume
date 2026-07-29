@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRoadmap } from '@/lib/hooks/useRoadmap';
-import { ROADMAP_TASK_TYPES } from '@/lib/mock/roadmapData';
+import { ROADMAP_TASK_TYPES } from '@/lib/constants/roadmap';
 import { useParams } from 'next/navigation';
 import { Calendar, CheckCircle2, Clock, ExternalLink, Map, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';

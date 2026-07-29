@@ -4,25 +4,19 @@ import { parseResumeFile, validateResumeText, cleanResumeText } from '@/lib/ai/p
 import { analyzeResume, analyzeLinkedIn, generateCoverLetter } from '@/lib/ai/openrouter';
 import { uploadFile, getResumeKey } from '@/lib/storage/r2';
 import { CREDIT_COSTS } from '@/lib/constants/credits';
+import { requireSessionUserId } from '@/lib/auth/getSessionUser';
 
 export async function POST(req: NextRequest) {
   try {
+    const userId = await requireSessionUserId();
     const formData = await req.formData();
     const resumeFile = formData.get('resume') as File | null;
     const linkedinUrl = formData.get('linkedin') as string | null;
-    const userId = formData.get('userId') as string | null;
     const generateCoverLetterForJob = formData.get('jobDescription') as string | null;
 
     if (!resumeFile && !linkedinUrl) {
       return NextResponse.json(
         { error: 'Provide resume or LinkedIn URL' },
-        { status: 400 }
-      );
-    }
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID required' },
         { status: 400 }
       );
     }

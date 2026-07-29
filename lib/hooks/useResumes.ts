@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { MOCK_RESUMES } from '@/lib/mock/resumeData';
 
 export function useResumes() {
   const [resumes, setResumes] = useState<any[]>([]);
@@ -14,24 +13,20 @@ export function useResumes() {
   const fetchResumes = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/resumes?userId=user_1');
+      const res = await fetch('/api/resumes');
       if (res.ok) {
         const data = await res.json();
-        if (data.resumes && data.resumes.length > 0) {
-          setResumes(data.resumes);
-          setLoading(false);
-          return;
-        }
+        setResumes(data.resumes || []);
       }
-    } catch {}
-    setResumes(MOCK_RESUMES);
+    } catch {
+      setResumes([]);
+    }
     setLoading(false);
   };
 
   const createResume = useCallback(async (file: File): Promise<any> => {
     const formData = new FormData();
     formData.append('resume', file);
-    formData.append('userId', 'user_1');
 
     try {
       const res = await fetch('/api/analyze', {
@@ -43,34 +38,12 @@ export function useResumes() {
         await fetchResumes();
         return data;
       }
-    } catch {}
-
-    const newResume = {
-      id: `res_${Date.now()}`,
-      userId: 'user_1',
-      fileName: file.name,
-      fileSize: file.size,
-      mimeType: file.type,
-      status: 'PARSED',
-      isPrimary: resumes.length === 0,
-      version: 1,
-      atsScore: Math.floor(Math.random() * 30) + 60,
-      skills: ['React', 'TypeScript', 'Next.js'],
-      experience: [],
-      education: [],
-      certifications: [],
-      languages: [],
-      projects: [],
-      redFlags: [],
-      strengths: [],
-      rawText: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setResumes(prev => [...prev, newResume]);
-    return newResume;
-  }, [resumes.length]);
+      const err = await res.json();
+      throw new Error(err.error || 'Analysis failed');
+    } catch (err) {
+      throw err;
+    }
+  }, []);
 
   const updateResume = useCallback((id: string, updates: Partial<any>) => {
     setResumes(prev => prev.map(r => r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r));

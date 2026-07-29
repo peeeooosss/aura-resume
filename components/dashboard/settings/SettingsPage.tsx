@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { usePlan } from '@/lib/hooks/usePlan';
 import { useResumes } from '@/lib/hooks/useResumes';
-import { MOCK_USER } from '@/lib/mock/resumeData';
+import { useAuth } from '@/lib/hooks/useAuth';
 import { PLAN_DEFINITIONS, type PlanId } from '@/lib/constants/plans';
 import { formatDate, getInitials } from '@/lib/utils/helpers';
 import {
@@ -17,6 +17,7 @@ import Link from 'next/link';
 export function SettingsPage() {
   const { currentPlan, usage, getUsagePercent } = usePlan();
   const { resumes } = useResumes();
+  const { user } = useAuth();
   const planDef = PLAN_DEFINITIONS[currentPlan];
 
   const [notifications, setNotifications] = useState({
@@ -58,10 +59,10 @@ export function SettingsPage() {
         <div className="flex flex-col sm:flex-row items-start gap-6">
           <div className="relative group">
             <div className="w-20 h-20 rounded-2xl bg-surface-100 dark:bg-slate-800 border border-surface-300 dark:border-slate-700 flex items-center justify-center overflow-hidden">
-              {MOCK_USER.image ? (
-                <img src={MOCK_USER.image} alt={MOCK_USER.name} className="w-full h-full object-cover" />
+              {user?.image ? (
+                <img src={user.image} alt={user.name || 'User'} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-2xl font-bold text-surface-500 dark:text-slate-400">{getInitials(MOCK_USER.name)}</span>
+                <span className="text-2xl font-bold text-surface-500 dark:text-slate-400">{getInitials(user?.name || 'User')}</span>
               )}
             </div>
             <button className="absolute inset-0 rounded-2xl bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -75,7 +76,7 @@ export function SettingsPage() {
                 <label className="block text-sm font-medium text-surface-500 dark:text-slate-400 mb-1.5">Full Name</label>
                 <input
                   type="text"
-                  defaultValue={MOCK_USER.name}
+                  defaultValue={user?.name || ''}
                   className="w-full px-4 py-2.5 bg-surface-100 dark:bg-slate-800/50 border border-surface-300 dark:border-slate-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40 transition-all"
                 />
               </div>
@@ -83,12 +84,12 @@ export function SettingsPage() {
                 <label className="block text-sm font-medium text-surface-500 dark:text-slate-400 mb-1.5">Email</label>
                 <input
                   type="email"
-                  defaultValue={MOCK_USER.email}
+                  defaultValue={user?.email || ''}
                   className="w-full px-4 py-2.5 bg-surface-100 dark:bg-slate-800/50 border border-surface-300 dark:border-slate-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40 transition-all"
                 />
               </div>
             </div>
-            <p className="text-surface-400 dark:text-slate-500 text-sm">Member since {formatDate(MOCK_USER.createdAt)}</p>
+            <p className="text-surface-400 dark:text-slate-500 text-sm">Member since {user?.id ? 'Recently' : 'Unknown'}</p>
           </div>
         </div>
       </section>

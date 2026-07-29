@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { MOCK_PORTFOLIOS } from '@/lib/mock/portfolioData';
 import { PORTFOLIO_TEMPLATES, DEFAULT_PORTFOLIO_CONTENT, type TemplateId } from '@/lib/constants/templates';
 
 export interface Portfolio {
@@ -51,29 +50,22 @@ export interface Portfolio {
 }
 
 export function usePortfolio() {
-  const [portfolios, setPortfolios] = useState<Portfolio[]>(MOCK_PORTFOLIOS as Portfolio[]);
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [currentPortfolio, setCurrentPortfolio] = useState<Portfolio | null>(null);
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
-    if (portfolios.length > 0) {
+    if (portfolios.length > 0 && !currentPortfolio) {
       setCurrentPortfolio(portfolios[0]);
     }
-  }, [portfolios]);
+  }, [portfolios, currentPortfolio]);
 
   const createPortfolio = useCallback(async (resumeId?: string) => {
     const baseContent = { ...DEFAULT_PORTFOLIO_CONTENT };
-    
-    if (resumeId) {
-      const resume = MOCK_PORTFOLIOS[0]; // Would fetch from resume hook
-      baseContent.hero.headline = 'Arjun Sharma';
-      baseContent.hero.subheadline = 'Senior Frontend Engineer';
-      baseContent.about = 'Senior Frontend Engineer with 4+ years...';
-    }
 
     const newPortfolio: Portfolio = {
       id: `port_${Date.now()}`,
-      userId: 'user_1',
+      userId: '',
       resumeId,
       slug: `user-${Date.now()}`,
       template: 'modern',
@@ -100,7 +92,7 @@ export function usePortfolio() {
   }, []);
 
   const updatePortfolio = useCallback((updates: Partial<Portfolio>) => {
-    setPortfolios(prev => prev.map(p => 
+    setPortfolios(prev => prev.map(p =>
       p.id === currentPortfolio?.id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p
     ));
     setCurrentPortfolio(prev => prev ? { ...prev, ...updates, updatedAt: new Date().toISOString() } : null);
@@ -108,9 +100,7 @@ export function usePortfolio() {
 
   const publishPortfolio = useCallback(async (slug: string) => {
     if (!currentPortfolio) return;
-    
-    await new Promise(r => setTimeout(r, 1000));
-    
+
     updatePortfolio({
       slug,
       isPublished: true,
@@ -129,14 +119,16 @@ export function usePortfolio() {
   }, [updatePortfolio]);
 
   const updateTheme = useCallback((theme: Partial<Portfolio['theme']>) => {
-    updatePortfolio({ theme: { 
-      primaryColor: '#6366f1',
-      font: 'Inter',
-      borderRadius: 'rounded-xl',
-      spacing: 'normal',
-      ...currentPortfolio?.theme, 
-      ...theme 
-    } });
+    updatePortfolio({
+      theme: {
+        primaryColor: '#6366f1',
+        font: 'Inter',
+        borderRadius: 'rounded-xl',
+        spacing: 'normal',
+        ...currentPortfolio?.theme,
+        ...theme,
+      },
+    });
   }, [currentPortfolio, updatePortfolio]);
 
   return {

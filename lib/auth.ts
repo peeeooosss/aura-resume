@@ -40,7 +40,12 @@ export const authOptions = {
           throw new Error("Invalid credentials");
         }
 
-        return user;
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+        };
       },
     }),
   ],
@@ -49,6 +54,28 @@ export const authOptions = {
   },
   session: {
     strategy: "jwt" as const,
+  },
+  callbacks: {
+    async jwt({ token, user }: { token: any; user: any }) {
+      if (user) {
+        token.id = user.id;
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { username: true, onboarded: true },
+        });
+        token.username = dbUser?.username ?? null;
+        token.onboarded = dbUser?.onboarded ?? false;
+      }
+      return token;
+    },
+    async session({ session, token }: { session: any; token: any }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.username = token.username as string | null;
+        session.user.onboarded = token.onboarded as boolean;
+      }
+      return session;
+    },
   },
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === "development",

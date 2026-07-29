@@ -3,11 +3,13 @@ import { prisma } from '@/lib/db';
 import { scrapeLinkedInProfile } from '@/lib/apify/linkedin';
 import { analyzeLinkedIn } from '@/lib/ai/openrouter';
 import { CREDIT_COSTS } from '@/lib/constants/credits';
+import { requireSessionUserId } from '@/lib/auth/getSessionUser';
 
 export async function POST(req: NextRequest) {
   try {
+    const userId = await requireSessionUserId();
     const body = await req.json();
-    const { linkedinUrl, userId = 'demo-user' } = body;
+    const { linkedinUrl } = body;
 
     if (!linkedinUrl) {
       return NextResponse.json({ error: 'LinkedIn URL required' }, { status: 400 });

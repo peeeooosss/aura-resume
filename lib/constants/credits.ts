@@ -57,13 +57,13 @@ export async function addCredits(userId: string, amount: number): Promise<number
 export function getInitialCredits(plan: string): number {
   switch (plan) {
     case 'free':
-      return 20;
+      return 50;
     case 'quick':
       return 200;
     case 'pro':
-      return 500;
+      return 900;
     case 'vip':
-      return 2000;
+      return 1800;
     default:
       return 100;
   }

@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateCoverLetter } from '@/lib/ai/openrouter';
 import { CREDIT_COSTS } from '@/lib/constants/credits';
+import { requireSessionUserId, getSessionUserId } from '@/lib/auth/getSessionUser';
 
 export async function POST(req: NextRequest) {
   try {
+    const userId = await requireSessionUserId();
     const body = await req.json();
-    const { jobDescription, jobUrl, userId, resumeId } = body;
+    const { jobDescription, jobUrl, resumeId } = body;
 
-    if (!jobDescription || !userId) {
+    if (!jobDescription) {
       return NextResponse.json(
-        { error: 'jobDescription and userId are required' },
+        { error: 'jobDescription is required' },
         { status: 400 }
       );
     }
@@ -94,11 +96,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const userId = searchParams.get('userId');
-
+  const userId = await getSessionUserId();
   if (!userId) {
-    return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const templates = await prisma.linkedInTemplate.findMany({

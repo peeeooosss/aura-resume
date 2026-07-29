@@ -14,6 +14,7 @@ interface PlanState {
     roadmaps: number;
   };
   setPlan: (plan: PlanId) => void;
+  setUsage: (usage: Partial<PlanState['usage']>) => void;
   incrementUsage: (key: keyof PlanState['usage']) => void;
   resetMonthlyUsage: () => void;
   canAccess: (feature: keyof PlanState['usage']) => boolean;
@@ -23,15 +24,16 @@ interface PlanState {
 export const usePlan = create<PlanState>()(
   persist(
     (set, get) => ({
-      currentPlan: 'pro',
+      currentPlan: 'free',
       usage: {
-        resumes: 3,
-        scansThisMonth: 12,
-        jobMatches: 8,
-        tailoredResumes: 2,
-        roadmaps: 1,
+        resumes: 0,
+        scansThisMonth: 0,
+        jobMatches: 0,
+        tailoredResumes: 0,
+        roadmaps: 0,
       },
       setPlan: (plan) => set({ currentPlan: plan }),
+      setUsage: (usage) => set((state) => ({ usage: { ...state.usage, ...usage } })),
       incrementUsage: (key) => set((state) => ({
         usage: { ...state.usage, [key]: state.usage[key] + 1 },
       })),

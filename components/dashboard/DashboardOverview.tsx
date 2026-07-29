@@ -15,8 +15,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatRelativeTime } from '@/lib/utils/helpers';
+import { useSession } from 'next-auth/react';
 
 export function DashboardOverview() {
+  const { data: session } = useSession();
   const currentPlan = usePlan(s => s.currentPlan);
   const usage = usePlan(s => s.usage);
   const getUsagePercent = usePlan(s => s.getUsagePercent);
@@ -24,6 +26,8 @@ export function DashboardOverview() {
   const { matches, stats } = useJobMatches();
   const { currentRoadmap, progress } = useRoadmap();
   const { currentPortfolio } = usePortfolio();
+
+  const userName = (session?.user as any)?.name || (session?.user as any)?.email?.split('@')[0] || 'User';
 
   const primaryResume = getPrimary();
   const activeMatches = matches.filter(m => m.status === 'NEW' || m.status === 'SAVED').slice(0, 3);
@@ -41,7 +45,7 @@ export function DashboardOverview() {
       {/* Welcome Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-surface-900 dark:text-white">Welcome back, Arjun 👋</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-surface-900 dark:text-white">Welcome back, {userName} 👋</h1>
           <p className="text-surface-500 dark:text-slate-400 mt-1">Here's your career progress at a glance</p>
         </div>
         <div className="flex items-center gap-3">

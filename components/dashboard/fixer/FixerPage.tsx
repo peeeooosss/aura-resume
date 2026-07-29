@@ -119,7 +119,6 @@ export function FixerPage() {
     try {
       const formData = new FormData();
       formData.append('resume', selectedFile);
-      formData.append('userId', 'user_1');
 
       const res = await fetch('/api/analyze', { method: 'POST', body: formData });
       if (!res.ok) {
@@ -173,7 +172,6 @@ export function FixerPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: 'user_1',
           title: selectedFile ? selectedFile.name.replace(/\.[^/.]+$/, '') : 'My Resume',
           rawText: analysis.originalText,
           status: 'analyzed',
@@ -225,7 +223,6 @@ export function FixerPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: 'user_1',
           title: 'Perfect ATS Resume',
           rawText: data.optimizedResume,
           status: 'fixed',

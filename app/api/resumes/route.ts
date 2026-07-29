@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { requireSessionUserId, getSessionUserId } from '@/lib/auth/getSessionUser';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
-    const status = searchParams.get('status');
-
+    const userId = await getSessionUserId();
     if (!userId) {
-      return NextResponse.json({ error: 'userId required' }, { status: 400 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get('status');
 
     const where: any = { userId };
     if (status) {
@@ -57,11 +58,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const userId = await requireSessionUserId();
     const body = await req.json();
-    const { userId, title, rawText, status, atsScore, strengths, redFlags, suggestions, keywordGaps, parentId } = body;
+    const { title, rawText, status, atsScore, strengths, redFlags, suggestions, keywordGaps, parentId } = body;
 
-    if (!userId || !title) {
-      return NextResponse.json({ error: 'userId and title required' }, { status: 400 });
+    if (!title) {
+      return NextResponse.json({ error: 'title is required' }, { status: 400 });
     }
 
     const resume = await prisma.$transaction(async tx => {
