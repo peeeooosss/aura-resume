@@ -145,7 +145,7 @@ export function DashboardOverview() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <QuickActionCard
           icon={Plus}
           title="Upload Resume"
@@ -153,13 +153,12 @@ export function DashboardOverview() {
           href="/dashboard/resumes"
           primary
         />
-        <QuickActionCard
-          icon={Scan}
-          title="Resume Analyser"
-          description="Instant ATS score & analysis"
-          href="/dashboard/analyser"
-        />
-        <PlanGate requiredPlan="pro" featureName="Resume Fixer">
+        <PlanGate
+          requiredPlan="pro"
+          featureName="Resume Fixer"
+          showUpgrade={false}
+          fallback={<LockedQuickAction icon={Wrench} title="Resume Fixer" description="Pro plan required" requiredPlan="pro" />}
+        >
           <QuickActionCard
             icon={Wrench}
             title="Resume Fixer"
@@ -167,7 +166,12 @@ export function DashboardOverview() {
             href="/dashboard/fixer"
           />
         </PlanGate>
-        <PlanGate requiredPlan="pro" featureName="Job Match Analyzer">
+        <PlanGate
+          requiredPlan="pro"
+          featureName="Job Match Analyzer"
+          showUpgrade={false}
+          fallback={<LockedQuickAction icon={Target} title="Find Job Matches" description="Pro plan required" requiredPlan="pro" />}
+        >
           <QuickActionCard
             icon={Target}
             title="Find Job Matches"
@@ -175,7 +179,12 @@ export function DashboardOverview() {
             href="/dashboard/jobs/matches"
           />
         </PlanGate>
-        <PlanGate requiredPlan="pro" featureName="90-Day Roadmap">
+        <PlanGate
+          requiredPlan="pro"
+          featureName="90-Day Roadmap"
+          showUpgrade={false}
+          fallback={<LockedQuickAction icon={Map} title="Generate Roadmap" description="Pro plan required" requiredPlan="pro" />}
+        >
           <QuickActionCard
             icon={Map}
             title="Generate Roadmap"
@@ -183,7 +192,12 @@ export function DashboardOverview() {
             href="/dashboard/roadmap/generate"
           />
         </PlanGate>
-        <PlanGate requiredPlan="pro" featureName="Portfolio Builder">
+        <PlanGate
+          requiredPlan="pro"
+          featureName="Portfolio Builder"
+          showUpgrade={false}
+          fallback={<LockedQuickAction icon={Globe} title="Build Portfolio" description="Pro plan required" requiredPlan="pro" />}
+        >
           <QuickActionCard
             icon={Globe}
             title="Build Portfolio"
@@ -606,6 +620,26 @@ function TaskPreviewCard({ task }: { task: any }) {
         {task.type}
       </span>
     </div>
+  );
+}
+
+function LockedQuickAction({ icon: Icon, title, description, requiredPlan }: { icon: React.ComponentType<{ className?: string }>; title: string; description: string; requiredPlan: string }) {
+  return (
+    <Link
+      href={`/plans?plan=${requiredPlan}`}
+      className="group relative overflow-hidden rounded-2xl p-5 bg-white border border-surface-200 dark:bg-slate-900/80 dark:border-slate-800 opacity-75 hover:opacity-100 transition-all"
+    >
+      <div className="flex flex-col h-full">
+        <div className="w-10 h-10 rounded-xl bg-surface-200 dark:bg-slate-800 flex items-center justify-center mb-4">
+          <Icon className="w-5 h-5 text-surface-400 dark:text-slate-500" />
+        </div>
+        <h3 className="text-lg font-bold text-surface-900 dark:text-white mb-1">{title}</h3>
+        <p className="text-surface-500 dark:text-slate-400 text-sm flex-1">{description}</p>
+        <div className="flex items-center gap-1 text-indigo-400 font-medium text-sm mt-auto">
+          Upgrade <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        </div>
+      </div>
+    </Link>
   );
 }
 
