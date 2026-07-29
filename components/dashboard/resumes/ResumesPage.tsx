@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useResumes } from '@/lib/hooks/useResumes';
-import { FileText, Upload, Trash2, Star, Shield, Sparkles, Eye, Upload as UploadIcon, Download, Wrench, MoreHorizontal, FilePen, ExternalLink } from 'lucide-react';
+import { FileText, Trash2, Star, Shield, Sparkles, Eye, Wrench, MoreHorizontal, FilePen, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import { formatDate } from '@/lib/utils/helpers';
 
@@ -12,13 +12,9 @@ type FilterTab = 'all' | 'uploaded' | 'analyzed' | 'fixed';
 
 export function ResumesPage() {
   const router = useRouter();
-  const { resumes, createResume, setPrimary, deleteResume, loading } = useResumes();
-  const [showUploader, setShowUploader] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [dragging, setDragging] = useState(false);
+  const { resumes, setPrimary, deleteResume, loading } = useResumes();
   const [filter, setFilter] = useState<FilterTab>('all');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredResumes = filter === 'all'
     ? resumes
@@ -31,28 +27,6 @@ export function ResumesPage() {
     fixed: resumes.filter(r => r.status?.toLowerCase() === 'fixed').length,
   };
 
-  const handleFileSelect = async (file: File) => {
-    await createResume(file);
-    setSelectedFile(null);
-    setShowUploader(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file && (file.type === 'application/pdf' || file.type.includes('word'))) {
-      setSelectedFile(file);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(true);
-  };
-
-  const handleDragLeave = () => setDragging(false);
-
   const tabs: { key: FilterTab; label: string }[] = [
     { key: 'all', label: `All (${counts.all})` },
     { key: 'uploaded', label: `Uploaded (${counts.uploaded})` },
@@ -60,7 +34,7 @@ export function ResumesPage() {
     { key: 'fixed', label: `Fixed (${counts.fixed})` },
   ];
 
-  if (resumes.length === 0 && !showUploader && !loading) {
+  if (resumes.length === 0 && !loading) {
     return (
       <div className="max-w-3xl mx-auto">
         <div className="text-center py-16">
@@ -69,15 +43,15 @@ export function ResumesPage() {
           </div>
           <h1 className="text-3xl font-bold text-surface-900 dark:text-white mb-3">No Resumes Yet</h1>
           <p className="text-surface-500 dark:text-slate-400 mb-8 max-w-md mx-auto">
-            Upload your first resume to get ATS analysis, tailored versions, and job matches.
+            Upload and analyze your first resume in the Resume Fixer.
           </p>
-          <button
-            onClick={() => setShowUploader(true)}
+          <Link
+            href="/dashboard/fixer"
             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
           >
-            <UploadIcon className="w-5 h-5" />
-            Upload Resume
-          </button>
+            <Wrench className="w-5 h-5" />
+            Go to Resume Fixer
+          </Link>
         </div>
       </div>
     );
@@ -85,20 +59,9 @@ export function ResumesPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-surface-900 dark:text-white">My Resumes</h1>
-          <p className="text-surface-500 dark:text-slate-400 mt-1">Manage, analyze, and optimize your resumes</p>
-        </div>
-        {!showUploader && (
-          <button
-            onClick={() => setShowUploader(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
-          >
-            <UploadIcon className="w-5 h-5" />
-            Upload Resume
-          </button>
-        )}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-surface-900 dark:text-white">My Resumes</h1>
+        <p className="text-surface-500 dark:text-slate-400 mt-1">Manage, analyze, and optimize your resumes</p>
       </div>
 
       <div className="flex gap-1 mb-6 p-1 bg-surface-100 dark:bg-slate-800/50 rounded-xl w-fit">
@@ -118,61 +81,11 @@ export function ResumesPage() {
         ))}
       </div>
 
-      {showUploader && (
-        <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          className={cn(
-            'mb-8 bg-white border-2 border-dashed rounded-3xl p-8 text-center transition-colors',
-            dragging
-              ? 'border-indigo-500 bg-indigo-500/10'
-              : selectedFile
-              ? 'border-emerald-500 bg-emerald-500/5'
-              : 'border-surface-300 dark:border-slate-700 hover:border-indigo-500 bg-surface-100 dark:bg-slate-800/50'
-          )}
-        >
-          <div className="relative">
-            <UploadIcon className={cn('w-12 h-12 mx-auto mb-4 transition-colors', selectedFile ? 'text-emerald-400' : 'text-surface-400 dark:text-slate-500')} />
-            {selectedFile ? (
-              <>
-                <p className="text-emerald-400 font-semibold mb-1">{selectedFile.name}</p>
-                <p className="text-surface-400 dark:text-slate-500 text-sm">Click or drop to replace</p>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleFileSelect(selectedFile); }}
-                  className="mt-3 px-6 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-medium rounded-xl hover:shadow-lg transition-all"
-                >
-                  Upload
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-surface-900 dark:text-white font-semibold mb-1">Drop your resume here</p>
-                <p className="text-surface-400 dark:text-slate-500 text-sm">PDF, DOCX up to 10MB</p>
-              </>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="absolute inset-0 opacity-0 cursor-pointer"
-              accept=".pdf,.docx"
-              onChange={(e) => e.target.files?.[0] && setSelectedFile(e.target.files[0])}
-            />
-          </div>
-          <button
-            onClick={() => { setShowUploader(false); setSelectedFile(null); }}
-            className="mt-4 text-sm text-surface-400 dark:text-slate-500 hover:text-surface-900 dark:text-white underline"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-
       {filteredResumes.length === 0 ? (
         <div className="text-center py-16 bg-white dark:bg-slate-900/50 rounded-2xl border border-surface-200 dark:border-slate-800">
           <FileText className="w-12 h-12 text-surface-400 dark:text-slate-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-surface-900 dark:text-white mb-2">No {filter !== 'all' ? filter : ''} resumes</h3>
-          <p className="text-surface-500 dark:text-slate-400 text-sm">Upload a resume or change the filter.</p>
+          <p className="text-surface-500 dark:text-slate-400 text-sm">Upload a resume in the Fixer or change the filter.</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -205,11 +118,6 @@ function getStatusBadge(status: string) {
 function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete, isMenuOpen, onToggleMenu, router }: any) {
   const badge = getStatusBadge(resume.status);
   const hasAnalysis = resume.atsScore !== null && resume.atsScore !== undefined;
-
-  const handleDownloadReport = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onToggleMenu(null);
-  };
 
   return (
     <div className={cn(

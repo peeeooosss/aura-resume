@@ -30,6 +30,8 @@ export interface JobMatch {
   benefits: string[];
 }
 
+const SEARCH_SOURCES = ['indeed', 'linkedin'] as const;
+
 function enrichJobsWithMatching(jobs: any[], resumeSkills: string[]): JobMatch[] {
   if (!resumeSkills.length) return jobs as JobMatch[];
 
@@ -68,6 +70,7 @@ export function useJobMatches(initialResumeSkills: string[] = []) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loadingSources, setLoadingSources] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     location: '',
     remoteType: '',
@@ -82,31 +85,61 @@ export function useJobMatches(initialResumeSkills: string[] = []) {
 
   const searchRealJobs = useCallback(async (term: string, loc?: string, skills?: string[]) => {
     const skillList = skills || initialResumeSkills;
-    if (!skillList.length) return;
+    const searchTerm = term || 'software engineer developer';
+    const searchLocation = loc || 'India';
 
     setIsLoading(true);
     setError(null);
-    try {
-      const res = await fetch('/api/jobs/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          searchTerm: term || 'software engineer developer',
-          location: loc || 'India',
-          resultsWanted: 20,
-          hoursOld: 72,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Search failed');
+    setMatches([]);
+    setLoadingSources([...SEARCH_SOURCES]);
 
-      const enriched = enrichJobsWithMatching(data.jobs, skillList);
-      setMatches(enriched);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Job search failed');
-    } finally {
-      setIsLoading(false);
-    }
+    const seenIds = new Set<string>();
+    const allJobs: JobMatch[] = [];
+
+    const fetchSource = async (source: string) => {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+
+        const res = await fetch('/api/jobs/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            searchTerm,
+            location: searchLocation,
+            source,
+            resultsWanted: 20,
+            hoursOld: 48,
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const newJobs = (data.jobs || []).filter((job: any) => {
+          if (seenIds.has(job.id)) return false;
+          seenIds.add(job.id);
+          return true;
+        });
+
+        if (newJobs.length > 0) {
+          const enriched = enrichJobsWithMatching(newJobs, skillList);
+          allJobs.push(...enriched);
+          setMatches([...allJobs]);
+        }
+      } catch {
+        // Skip failed sources silently
+      } finally {
+        setLoadingSources(prev => prev.filter(s => s !== source));
+      }
+    };
+
+    await Promise.allSettled(SEARCH_SOURCES.map(s => fetchSource(s)));
+
+    setIsLoading(false);
+    setLoadingSources([]);
   }, [initialResumeSkills]);
 
   const filteredMatches = useMemo(() => {
@@ -164,6 +197,7 @@ export function useJobMatches(initialResumeSkills: string[] = []) {
     savedOnly,
     setSavedOnly,
     isLoading,
+    loadingSources,
     error,
     hasResumeSkills,
     searchRealJobs,

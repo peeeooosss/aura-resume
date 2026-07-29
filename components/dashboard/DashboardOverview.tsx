@@ -166,6 +166,12 @@ export function DashboardOverview() {
             href="/dashboard/fixer"
           />
         </PlanGate>
+        <QuickActionCard
+          icon={Target}
+          title="Job Browser"
+          description="Browse & search real jobs"
+          href="/dashboard/jobs"
+        />
         <PlanGate
           requiredPlan="pro"
           featureName="Job Match Analyzer"

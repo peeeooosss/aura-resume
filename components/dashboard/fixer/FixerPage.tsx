@@ -2,12 +2,13 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, Eye, Loader2, Target, TrendingUp, IndianRupee } from 'lucide-react';
+import { Upload, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, Eye, Loader2, Target, TrendingUp, IndianRupee, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import { generateAnalysisPDF, getPDFBlobURL, generateOptimizedResumePDF } from '@/lib/pdf/generateReport';
 import type { JobRolePotential } from '@/lib/types';
-import { PlanGate } from '@/components/dashboard/PlanGate';
 import { useToast } from '@/components/ui/Toast';
+import { usePlan } from '@/lib/hooks/usePlan';
+import Link from 'next/link';
 
 function isAllowedFile(file: File): boolean {
   const name = file.name.toLowerCase();
@@ -58,19 +59,40 @@ function ScoreCircle({ score, size = 140 }: { score: number; size?: number }) {
   );
 }
 
+const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };
+
+function BlurGate({ children, hasProAccess }: { children: React.ReactNode; hasProAccess: boolean }) {
+  if (hasProAccess) return <>{children}</>;
+  return (
+    <div className="relative">
+      <div className="select-none pointer-events-none blur-[3px] opacity-50">{children}</div>
+      <div className="absolute inset-0 flex items-center justify-center z-10">
+        <Link href="/plans?plan=pro" className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all">
+          <Lock className="w-4 h-4" />
+          Upgrade to Pro to unlock
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export function FixerPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const currentPlan = usePlan(s => s.currentPlan);
+  const hasProAccess = (PLAN_TIER[currentPlan] ?? 0) >= (PLAN_TIER['pro'] ?? 0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
+  const [fixedResume, setFixedResume] = useState<string | null>(null);
   const [reportPdfUrl, setReportPdfUrl] = useState<string | null>(null);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isGeneratingPerfect, setIsGeneratingPerfect] = useState(false);
   const [savedResumeId, setSavedResumeId] = useState<string | null>(null);
+  const [showFixedResume, setShowFixedResume] = useState(false);
+  const [loadingStep, setLoadingStep] = useState('');
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -111,8 +133,10 @@ export function FixerPage() {
     if (!selectedFile) return;
     setLoading(true);
     setAnalysis(null);
+    setFixedResume(null);
     setReportPdfUrl(null);
     setSavedResumeId(null);
+    setLoadingStep('Parsing resume text...');
 
     const fileName = selectedFile.name;
 
@@ -120,6 +144,7 @@ export function FixerPage() {
       const formData = new FormData();
       formData.append('resume', selectedFile);
 
+      setLoadingStep('Evaluating ATS compatibility...');
       const res = await fetch('/api/analyze', { method: 'POST', body: formData });
       if (!res.ok) {
         const err = await res.json();
@@ -128,6 +153,7 @@ export function FixerPage() {
       const data = await res.json();
       if (!data.resume) throw new Error('No analysis data returned');
 
+      setLoadingStep('Identifying keyword gaps...');
       const analysisData: AnalysisData = {
         id: data.id,
         score: data.resume.score,
@@ -156,11 +182,38 @@ export function FixerPage() {
       });
       setReportPdfUrl(getPDFBlobURL(doc));
 
-      toast('success', 'Resume analyzed successfully! Save it to My Resumes for later use.');
+      setLoadingStep('Generating ATS-optimized resume...');
+      try {
+        const genRes = await fetch('/api/generate-resume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            resumeText: analysisData.originalText,
+            analysis: {
+              score: analysisData.score,
+              strengths: analysisData.strengths,
+              redFlags: analysisData.redFlags,
+              suggestions: analysisData.suggestions,
+              keywordGaps: analysisData.keywordGaps,
+            },
+          }),
+        });
+        const genData = await genRes.json();
+        if (genRes.ok && genData.optimizedResume) {
+          setFixedResume(genData.optimizedResume);
+          setShowFixedResume(true);
+          toast('success', 'Resume analyzed and ATS-optimized version generated!');
+        } else {
+          toast('success', 'Resume analyzed successfully!');
+        }
+      } catch {
+        toast('success', 'Resume analyzed successfully!');
+      }
     } catch (err) {
       toast('error', err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setLoading(false);
+      setLoadingStep('');
     }
   };
 
@@ -174,8 +227,8 @@ export function FixerPage() {
         body: JSON.stringify({
           title: selectedFile ? selectedFile.name.replace(/\.[^/.]+$/, '') : 'My Resume',
           rawText: analysis.originalText,
-          status: 'analyzed',
-          atsScore: analysis.score,
+          status: fixedResume ? 'fixed' : 'analyzed',
+          atsScore: fixedResume ? 95 : analysis.score,
           strengths: analysis.strengths,
           redFlags: analysis.redFlags,
           suggestions: analysis.suggestions,
@@ -193,52 +246,12 @@ export function FixerPage() {
     }
   };
 
-  const handleGeneratePerfect = async () => {
-    if (!analysis) return;
-    setIsGeneratingPerfect(true);
-    try {
-      const res = await fetch('/api/generate-resume', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          resumeText: analysis.originalText,
-          analysis: {
-            score: analysis.score,
-            strengths: analysis.strengths,
-            redFlags: analysis.redFlags,
-            suggestions: analysis.suggestions,
-            keywordGaps: analysis.keywordGaps,
-          },
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Generation failed');
-
-      const doc = generateOptimizedResumePDF(data.optimizedResume, {
-        generatedAt: new Date().toLocaleString(),
-      });
-      doc.save(`Perfect-ATS-Resume-${Date.now()}.pdf`);
-
-      const saveRes = await fetch('/api/resumes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: 'Perfect ATS Resume',
-          rawText: data.optimizedResume,
-          status: 'fixed',
-          parentId: analysis.id,
-          atsScore: 95,
-        }),
-      });
-      const saveData = await saveRes.json();
-      if (saveRes.ok) setSavedResumeId(saveData.resumeId);
-
-      toast('success', 'Perfect ATS resume generated and saved!');
-    } catch (err) {
-      toast('error', err instanceof Error ? err.message : 'Generation failed');
-    } finally {
-      setIsGeneratingPerfect(false);
-    }
+  const handleDownloadFixedResume = () => {
+    if (!fixedResume) return;
+    const doc = generateOptimizedResumePDF(fixedResume, {
+      generatedAt: new Date().toLocaleString(),
+    });
+    doc.save(`ATS-Optimized-Resume-${Date.now()}.pdf`);
   };
 
   const handleDownloadReport = () => {
@@ -260,8 +273,10 @@ export function FixerPage() {
 
   const clearAnalysis = () => {
     setAnalysis(null);
+    setFixedResume(null);
     setReportPdfUrl(null);
     setSavedResumeId(null);
+    setShowFixedResume(false);
   };
 
   const jrp = analysis?.jobRolePotential;
@@ -271,7 +286,7 @@ export function FixerPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-surface-900 dark:text-white">Resume Fixer</h1>
-          <p className="text-surface-500 dark:text-slate-400 mt-1">Upload your resume and get a detailed ATS analysis with job potential insights</p>
+          <p className="text-surface-500 dark:text-slate-400 mt-1">Upload your resume, get a detailed ATS analysis, and receive an optimized version</p>
         </div>
       </div>
 
@@ -315,7 +330,7 @@ export function FixerPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                className="absolute inset-0 opacity-0 cursor-pointer"
+                className="absolute inset-0 opacity-0 pointer-events-none"
                 accept=".pdf,.doc,.docx"
                 onChange={handleFileInput}
               />
@@ -334,16 +349,16 @@ export function FixerPage() {
                 <><Zap className="w-5 h-5 group-hover:animate-pulse" /> Analyze My Resume <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>
               )}
             </button>
-            <p className="text-slate-600 text-sm mt-4">Get your ATS score, keyword gaps, and job potential in under 60 seconds</p>
+            <p className="text-slate-600 text-sm mt-4">Get your ATS score, keyword gaps, and an optimized version in under 60 seconds</p>
 
             {loading && (
               <div className="mt-8 max-w-md mx-auto">
                 <div className="bg-white dark:bg-slate-900/80 border border-surface-200 dark:border-slate-800 rounded-2xl p-6">
                   <div className="space-y-3 text-left">
-                    <p className="flex items-center gap-3 text-surface-600 dark:text-slate-300 text-sm"><Loader2 className="w-4 h-4 text-indigo-400 animate-spin" /> Parsing resume text...</p>
-                    <p className="flex items-center gap-3 text-surface-500 dark:text-slate-400 text-sm"><Loader2 className="w-4 h-4 text-indigo-400 animate-spin" /> Evaluating ATS compatibility...</p>
-                    <p className="flex items-center gap-3 text-surface-500 dark:text-slate-400 text-sm"><Loader2 className="w-4 h-4 text-indigo-400 animate-spin" /> Identifying keyword gaps...</p>
-                    <p className="flex items-center gap-3 text-surface-500 dark:text-slate-400 text-sm"><Loader2 className="w-4 h-4 text-indigo-400 animate-spin" /> Analyzing job role potential...</p>
+                    <p className={cn('flex items-center gap-3 text-sm', loadingStep === 'Parsing resume text...' ? 'text-surface-600 dark:text-slate-300' : 'text-surface-400 dark:text-slate-500')}><Loader2 className={cn('w-4 h-4 text-indigo-400', loadingStep === 'Parsing resume text...' && 'animate-spin')} /> Parsing resume text...</p>
+                    <p className={cn('flex items-center gap-3 text-sm', loadingStep === 'Evaluating ATS compatibility...' ? 'text-surface-600 dark:text-slate-300' : 'text-surface-400 dark:text-slate-500')}><Loader2 className={cn('w-4 h-4 text-indigo-400', loadingStep === 'Evaluating ATS compatibility...' && 'animate-spin')} /> Evaluating ATS compatibility...</p>
+                    <p className={cn('flex items-center gap-3 text-sm', loadingStep === 'Identifying keyword gaps...' ? 'text-surface-600 dark:text-slate-300' : 'text-surface-400 dark:text-slate-500')}><Loader2 className={cn('w-4 h-4 text-indigo-400', loadingStep === 'Identifying keyword gaps...' && 'animate-spin')} /> Identifying keyword gaps...</p>
+                    <p className={cn('flex items-center gap-3 text-sm', loadingStep === 'Generating ATS-optimized resume...' ? 'text-surface-600 dark:text-slate-300' : 'text-surface-400 dark:text-slate-500')}><Loader2 className={cn('w-4 h-4 text-indigo-400', loadingStep === 'Generating ATS-optimized resume...' && 'animate-spin')} /> Generating ATS-optimized resume...</p>
                   </div>
                 </div>
               </div>
@@ -375,73 +390,77 @@ export function FixerPage() {
                 </div>
               </div>
 
-              {jrp && jrp.potentialRoles.length > 0 && (
-                <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
-                  <h3 className="font-semibold text-surface-900 dark:text-white flex items-center gap-2 mb-4">
-                    <Target className="w-5 h-5 text-indigo-400" />
-                    Job Role Potential
-                  </h3>
-                  <div className="space-y-3">
-                    {jrp.potentialRoles.slice(0, 4).map((role, i) => (
-                      <div key={i} className="p-3 bg-surface-100 dark:bg-slate-800 rounded-xl border border-surface-200 dark:border-slate-700">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="font-medium text-surface-900 dark:text-white text-sm">{role.title}</p>
-                          <span className={cn('text-xs font-bold', role.matchScore >= 80 ? 'text-emerald-400' : role.matchScore >= 60 ? 'text-amber-400' : 'text-rose-400')}>{role.matchScore}%</span>
+              <BlurGate hasProAccess={hasProAccess}>
+                {jrp && jrp.potentialRoles.length > 0 && (
+                  <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
+                    <h3 className="font-semibold text-surface-900 dark:text-white flex items-center gap-2 mb-4">
+                      <Target className="w-5 h-5 text-indigo-400" />
+                      Job Role Potential
+                    </h3>
+                    <div className="space-y-3">
+                      {jrp.potentialRoles.slice(0, 4).map((role, i) => (
+                        <div key={i} className="p-3 bg-surface-100 dark:bg-slate-800 rounded-xl border border-surface-200 dark:border-slate-700">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="font-medium text-surface-900 dark:text-white text-sm">{role.title}</p>
+                            <span className={cn('text-xs font-bold', role.matchScore >= 80 ? 'text-emerald-400' : role.matchScore >= 60 ? 'text-amber-400' : 'text-rose-400')}>{role.matchScore}%</span>
+                          </div>
+                          <p className="text-surface-500 dark:text-slate-400 text-xs mb-1">{role.company} · {role.salaryRange}</p>
+                          <div className="flex flex-wrap gap-1">
+                            {role.requiredSkills.slice(0, 3).map((s, j) => (
+                              <span key={j} className="px-1.5 py-0.5 text-[10px] bg-indigo-500/10 text-indigo-400 rounded">{s}</span>
+                            ))}
+                            {role.requiredSkills.length > 3 && <span className="text-[10px] text-surface-400">+{role.requiredSkills.length - 3}</span>}
+                          </div>
                         </div>
-                        <p className="text-surface-500 dark:text-slate-400 text-xs mb-1">{role.company} · {role.salaryRange}</p>
-                        <div className="flex flex-wrap gap-1">
-                          {role.requiredSkills.slice(0, 3).map((s, j) => (
-                            <span key={j} className="px-1.5 py-0.5 text-[10px] bg-indigo-500/10 text-indigo-400 rounded">{s}</span>
-                          ))}
-                          {role.requiredSkills.length > 3 && <span className="text-[10px] text-surface-400">+{role.requiredSkills.length - 3}</span>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {jrp.salaryRange && (
-                    <div className="mt-3 pt-3 border-t border-surface-200 dark:border-slate-800">
-                      <p className="text-xs text-surface-500 dark:text-slate-400 flex items-center gap-1">
-                        <IndianRupee className="w-3 h-3" />
-                        Salary Range: <span className="text-emerald-400 font-medium">{jrp.salaryRange.average}</span> ({jrp.salaryRange.minimum} – {jrp.salaryRange.maximum})
-                      </p>
+                      ))}
                     </div>
+                    {jrp.salaryRange && (
+                      <div className="mt-3 pt-3 border-t border-surface-200 dark:border-slate-800">
+                        <p className="text-xs text-surface-500 dark:text-slate-400 flex items-center gap-1">
+                          <IndianRupee className="w-3 h-3" />
+                          Salary Range: <span className="text-emerald-400 font-medium">{jrp.salaryRange.average}</span> ({jrp.salaryRange.minimum} – {jrp.salaryRange.maximum})
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </BlurGate>
+
+              <BlurGate hasProAccess={hasProAccess}>
+                <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6 space-y-3">
+                  {savedResumeId ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-emerald-400 font-medium"><Check className="w-5 h-5" /> Saved to My Resumes</div>
+                      <button onClick={() => router.push('/dashboard/resumes')} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white font-semibold hover:shadow-lg hover:shadow-indigo-500/30 transition-all">
+                        <FileText className="w-5 h-5" /> View in My Resumes
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button onClick={handleSaveToResumes} disabled={isSaving} className="w-full flex items-center justify-center gap-2 px-5 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl text-white font-semibold hover:shadow-lg hover:shadow-emerald-500/30 transition-all disabled:opacity-40">
+                        {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
+                        {isSaving ? 'Saving...' : 'Save to My Resumes'}
+                      </button>
+                      {fixedResume && (
+                        <button onClick={handleDownloadFixedResume} className="w-full flex items-center justify-center gap-2 px-5 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white font-semibold hover:shadow-lg hover:shadow-indigo-500/30 transition-all">
+                          <Sparkles className="w-5 h-5" />
+                          Download Optimized Resume
+                        </button>
+                      )}
+                      <button onClick={handleDownloadReport} className="w-full flex items-center justify-center gap-2 px-5 py-4 bg-surface-100 dark:bg-slate-800 border border-surface-200 dark:border-slate-700 rounded-xl text-surface-700 dark:text-slate-300 font-semibold hover:bg-surface-200 dark:hover:bg-slate-700 transition-all">
+                        <Download className="w-5 h-5" /> Download Report PDF
+                      </button>
+                      <button onClick={() => setShowPdfPreview(!showPdfPreview)} className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-surface-100 dark:bg-slate-800 border border-surface-200 dark:border-slate-700 rounded-xl text-surface-600 dark:text-slate-400 font-medium hover:bg-surface-200 dark:hover:bg-slate-700 transition-all text-sm">
+                        <Eye className="w-4 h-4" /> {showPdfPreview ? 'Hide Preview' : 'Preview Report PDF'}
+                      </button>
+                    </>
                   )}
                 </div>
-              )}
-
-              <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6 space-y-3">
-                {savedResumeId ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-emerald-400 font-medium"><Check className="w-5 h-5" /> Saved to My Resumes</div>
-                    <button onClick={() => router.push('/dashboard/resumes')} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white font-semibold hover:shadow-lg hover:shadow-indigo-500/30 transition-all">
-                      <FileText className="w-5 h-5" /> View in My Resumes
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <button onClick={handleSaveToResumes} disabled={isSaving} className="w-full flex items-center justify-center gap-2 px-5 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl text-white font-semibold hover:shadow-lg hover:shadow-emerald-500/30 transition-all disabled:opacity-40">
-                      {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
-                      {isSaving ? 'Saving...' : 'Save to My Resumes'}
-                    </button>
-                    <PlanGate requiredPlan="pro" featureName="Perfect Resume Generation">
-                      <button onClick={handleGeneratePerfect} disabled={isGeneratingPerfect} className="w-full flex items-center justify-center gap-2 px-5 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white font-semibold hover:shadow-lg hover:shadow-indigo-500/30 transition-all disabled:opacity-40">
-                        {isGeneratingPerfect ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-                        {isGeneratingPerfect ? 'Generating...' : 'Generate Perfect Resume'}
-                      </button>
-                    </PlanGate>
-                    <button onClick={handleDownloadReport} className="w-full flex items-center justify-center gap-2 px-5 py-4 bg-surface-100 dark:bg-slate-800 border border-surface-200 dark:border-slate-700 rounded-xl text-surface-700 dark:text-slate-300 font-semibold hover:bg-surface-200 dark:hover:bg-slate-700 transition-all">
-                      <Download className="w-5 h-5" /> Download Report PDF
-                    </button>
-                    <button onClick={() => setShowPdfPreview(!showPdfPreview)} className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-surface-100 dark:bg-slate-800 border border-surface-200 dark:border-slate-700 rounded-xl text-surface-600 dark:text-slate-400 font-medium hover:bg-surface-200 dark:hover:bg-slate-700 transition-all text-sm">
-                      <Eye className="w-4 h-4" /> {showPdfPreview ? 'Hide Preview' : 'Preview Report PDF'}
-                    </button>
-                  </>
-                )}
-              </div>
+              </BlurGate>
             </div>
 
             <div className="lg:col-span-2 space-y-6">
-              {showPdfPreview && reportPdfUrl && (
+              {hasProAccess && showPdfPreview && reportPdfUrl && (
                 <div className="bg-white border border-surface-200 dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl overflow-hidden">
                   <div className="p-3 border-b border-surface-200 dark:border-slate-800 flex items-center justify-between">
                     <span className="text-sm font-medium text-surface-600 dark:text-slate-300">Report Preview</span>
@@ -451,19 +470,21 @@ export function FixerPage() {
                 </div>
               )}
 
-              {analysis.redFlags.length > 0 && (
-                <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
-                  <h3 className="flex items-center gap-2 text-rose-400 font-semibold mb-4"><AlertTriangle className="w-5 h-5" /> Red Flags ({analysis.redFlags.length})</h3>
-                  <div className="space-y-2">
-                    {analysis.redFlags.map((flag, i) => (
-                      <div key={i} className="flex items-start gap-3 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl">
-                        <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
-                        <p className="text-surface-600 dark:text-slate-300 text-sm">{flag}</p>
-                      </div>
-                    ))}
+              <BlurGate hasProAccess={hasProAccess}>
+                {analysis.redFlags.length > 0 && (
+                  <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
+                    <h3 className="flex items-center gap-2 text-rose-400 font-semibold mb-4"><AlertTriangle className="w-5 h-5" /> Red Flags ({analysis.redFlags.length})</h3>
+                    <div className="space-y-2">
+                      {analysis.redFlags.map((flag, i) => (
+                        <div key={i} className="flex items-start gap-3 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl">
+                          <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+                          <p className="text-surface-600 dark:text-slate-300 text-sm">{flag}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </BlurGate>
 
               {analysis.strengths.length > 0 && (
                 <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
@@ -479,28 +500,72 @@ export function FixerPage() {
                 </div>
               )}
 
-              {analysis.keywordGaps.length > 0 && (
-                <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
-                  <h3 className="flex items-center gap-2 text-amber-400 font-semibold mb-4"><TrendingUp className="w-5 h-5" /> Keyword Gaps</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {analysis.keywordGaps.map((kw, i) => (
-                      <span key={i} className="px-3 py-1.5 text-sm bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl">{kw}</span>
-                    ))}
+              <BlurGate hasProAccess={hasProAccess}>
+                {analysis.keywordGaps.length > 0 && (
+                  <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
+                    <h3 className="flex items-center gap-2 text-amber-400 font-semibold mb-4"><TrendingUp className="w-5 h-5" /> Keyword Gaps</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {analysis.keywordGaps.map((kw, i) => (
+                        <span key={i} className="px-3 py-1.5 text-sm bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl">{kw}</span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </BlurGate>
 
-              {analysis.suggestions.length > 0 && (
-                <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
-                  <h3 className="flex items-center gap-2 text-blue-400 font-semibold mb-4"><Sparkles className="w-5 h-5" /> Suggestions</h3>
-                  <div className="space-y-2">
-                    {analysis.suggestions.map((sg, i) => (
-                      <div key={i} className="flex items-start gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-                        <Sparkles className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                        <p className="text-surface-600 dark:text-slate-300 text-sm">{sg}</p>
-                      </div>
-                    ))}
+              <BlurGate hasProAccess={hasProAccess}>
+                {analysis.suggestions.length > 0 && (
+                  <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
+                    <h3 className="flex items-center gap-2 text-blue-400 font-semibold mb-4"><Sparkles className="w-5 h-5" /> Suggestions</h3>
+                    <div className="space-y-2">
+                      {analysis.suggestions.map((sg, i) => (
+                        <div key={i} className="flex items-start gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                          <Sparkles className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                          <p className="text-surface-600 dark:text-slate-300 text-sm">{sg}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+                )}
+              </BlurGate>
+
+              {hasProAccess && fixedResume && (
+                <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl overflow-hidden">
+                  <button
+                    onClick={() => setShowFixedResume(!showFixedResume)}
+                    className="w-full flex items-center justify-between p-6 text-left hover:bg-surface-50 dark:hover:bg-slate-800/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-surface-900 dark:text-white">ATS-Optimized Resume</h3>
+                        <p className="text-surface-500 dark:text-slate-400 text-sm">AI-fixed version with improved ATS score</p>
+                      </div>
+                    </div>
+                    {showFixedResume ? <ChevronUp className="w-5 h-5 text-surface-400" /> : <ChevronDown className="w-5 h-5 text-surface-400" />}
+                  </button>
+                  {showFixedResume && (
+                    <div className="px-6 pb-6">
+                      <div className="bg-surface-50 dark:bg-slate-800/50 rounded-xl p-6 max-h-[600px] overflow-y-auto">
+                        <pre className="whitespace-pre-wrap text-sm text-surface-700 dark:text-slate-300 font-mono leading-relaxed">
+                          {fixedResume}
+                        </pre>
+                      </div>
+                      <div className="mt-4 flex gap-3">
+                        <button onClick={handleDownloadFixedResume} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white font-semibold hover:shadow-lg hover:shadow-indigo-500/30 transition-all">
+                          <Download className="w-4 h-4" /> Download as PDF
+                        </button>
+                        <button onClick={() => {
+                          navigator.clipboard.writeText(fixedResume);
+                          toast('success', 'Resume copied to clipboard!');
+                        }} className="flex items-center justify-center gap-2 px-4 py-3 bg-surface-100 dark:bg-slate-800 border border-surface-200 dark:border-slate-700 rounded-xl text-surface-700 dark:text-slate-300 font-semibold hover:bg-surface-200 dark:hover:bg-slate-700 transition-all">
+                          Copy Text
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

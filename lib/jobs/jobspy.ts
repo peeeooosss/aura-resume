@@ -35,7 +35,7 @@ export async function searchJobs(params: JobSearchParams): Promise<JobResult[]> 
     siteName: params.siteName || ['linkedin', 'indeed'],
     searchTerm: params.searchTerm,
     location: params.location || 'India',
-    resultsWanted: params.resultsWanted || 20,
+    resultsWanted: params.resultsWanted || 50,
     hoursOld: params.hoursOld || 48,
     countryIndeed: params.countryIndeed || 'India',
     isRemote: params.isRemote,

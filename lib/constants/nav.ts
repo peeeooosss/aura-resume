@@ -18,8 +18,8 @@ export const NAV_ITEMS = [
   {
     title: 'Job Search',
     items: [
+      { href: '/dashboard/jobs', label: 'Job Browser', icon: Search, plan: 'free' as const, badge: null },
       { href: '/dashboard/jobs/matches', label: 'Job Matches', icon: Target, plan: 'pro' as const, badge: null },
-      { href: '/dashboard/jobs', label: 'Job Search', icon: Search, plan: 'pro' as const, badge: null },
       { href: '/dashboard/jobs/compare', label: 'Resume vs Job', icon: FileSearch, plan: 'pro' as const, badge: null },
     ],
   },

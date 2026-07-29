@@ -64,7 +64,7 @@ export async function scrapeLinkedInProfile(linkedinUrl: string): Promise<Linked
     : `https://linkedin.com/in/${linkedinUrl}`;
 
   try {
-    const results = await runApifyActor('apify/linkedin-profile-scraper', {
+    const results = await runApifyActor('harvestapi/linkedin-profile-scraper', {
       urls: [cleanUrl],
       proxyConfiguration: { useApifyProxy: true },
     });
@@ -104,7 +104,7 @@ export async function scrapeLinkedInCompany(companyUrl: string): Promise<any> {
     : `https://linkedin.com/company/${companyUrl}`;
 
   try {
-    const results = await runApifyActor('apify/linkedin-company-scraper', {
+    const results = await runApifyActor('harvestapi/linkedin-company', {
       urls: [cleanUrl],
       proxyConfiguration: { useApifyProxy: true },
     });

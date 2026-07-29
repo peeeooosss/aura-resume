@@ -1,10 +1,10 @@
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { JobSearchPage } from '@/components/dashboard/jobs/JobSearchPage';
+import { JobBrowserPage } from '@/components/dashboard/jobs/JobBrowserPage';
 
 export default function JobsPageRoute() {
   return (
     <DashboardLayout>
-      <JobSearchPage />
+      <JobBrowserPage />
     </DashboardLayout>
   );
 }

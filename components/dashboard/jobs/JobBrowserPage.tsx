@@ -1,26 +1,57 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useJobMatches } from '@/lib/hooks/useJobMatches';
-import { Search, MapPin, Briefcase, ExternalLink, Heart, ArrowRight, Loader2, AlertCircle, Filter, X, ChevronDown, IndianRupee } from 'lucide-react';
+import { Search, MapPin, Briefcase, ExternalLink, Heart, ArrowRight, Loader2, AlertCircle, Filter, X, IndianRupee, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import Link from 'next/link';
 
-export function JobSearchPage() {
-  const { matches, allMatches, searchQuery, setSearchQuery, filters, setFilters, isLoading, error, searchRealJobs } = useJobMatches();
+const CATEGORIES = [
+  { label: 'All', terms: 'software engineer developer' },
+  { label: 'Software Engineering', terms: 'software engineer developer' },
+  { label: 'Data Science', terms: 'data scientist machine learning analyst' },
+  { label: 'Digital Marketing', terms: 'digital marketing seo sem marketing' },
+  { label: 'Sales', terms: 'sales business development executive' },
+  { label: 'Design', terms: 'ui ux designer graphic designer' },
+  { label: 'Product', terms: 'product manager scrum agile' },
+  { label: 'Finance', terms: 'finance accountant financial analyst' },
+  { label: 'HR', terms: 'human resources recruitment hr manager' },
+  { label: 'Writing', terms: 'content writer copywriter journalist' },
+  { label: 'Customer Support', terms: 'customer support service representative' },
+];
+
+const REMOTE_TYPES = ['remote', 'hybrid', 'onsite'];
+const EXPERIENCE_LEVELS = ['mid', 'senior', 'lead', 'staff', 'principal'];
+
+export function JobBrowserPage() {
+  const { matches, allMatches, searchQuery, setSearchQuery, filters, setFilters, isLoading, loadingSources, error, searchRealJobs } = useJobMatches();
   const [showFilters, setShowFilters] = useState(false);
   const [searchInput, setSearchInput] = useState('');
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  const remoteTypes = ['remote', 'hybrid', 'onsite'];
-  const experienceLevels = ['mid', 'senior', 'lead', 'staff', 'principal'];
+  useEffect(() => {
+    if (!hasLoaded) {
+      searchRealJobs('software engineer', 'India');
+      setHasLoaded(true);
+    }
+  }, [hasLoaded, searchRealJobs]);
 
   const handleSearch = () => {
+    setActiveCategory('All');
     setSearchQuery(searchInput);
     searchRealJobs(searchInput || 'software engineer', filters.location || 'India');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
+  };
+
+  const handleCategoryClick = (label: string, terms: string) => {
+    setActiveCategory(label);
+    setSearchInput('');
+    setSearchQuery('');
+    searchRealJobs(terms, filters.location || 'India');
   };
 
   const clearFilters = () => {
@@ -34,6 +65,7 @@ export function JobSearchPage() {
     });
     setSearchInput('');
     setSearchQuery('');
+    setActiveCategory('All');
     searchRealJobs('software engineer', 'India');
   };
 
@@ -42,10 +74,29 @@ export function JobSearchPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-surface-900 dark:text-white">Job Search</h1>
-        <p className="text-surface-500 dark:text-slate-400 mt-1">Find your next opportunity with AI-powered matching</p>
+        <h1 className="text-3xl font-bold text-surface-900 dark:text-white">Job Browser</h1>
+        <p className="text-surface-500 dark:text-slate-400 mt-1">Browse & search real jobs from LinkedIn, Indeed & more</p>
       </div>
 
+      {/* Category Chips */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat.label}
+            onClick={() => handleCategoryClick(cat.label, cat.terms)}
+            className={cn(
+              'px-4 py-2 rounded-xl text-sm font-medium transition-all',
+              activeCategory === cat.label
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/20'
+                : 'bg-white dark:bg-slate-900/80 border border-surface-200 dark:border-slate-800 text-surface-600 dark:text-slate-300 hover:border-indigo-500 hover:text-indigo-400'
+            )}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search Bar + Filters */}
       <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6 mb-8">
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="flex-1 relative">
@@ -96,7 +147,7 @@ export function JobSearchPage() {
               <div>
                 <label className="block text-sm font-medium text-surface-500 dark:text-slate-400 mb-2">Work Type</label>
                 <div className="flex flex-wrap gap-2">
-                  {remoteTypes.map((type) => (
+                  {REMOTE_TYPES.map((type) => (
                     <button
                       key={type}
                       onClick={() => setFilters({ ...filters, remoteType: filters.remoteType === type ? '' : type })}
@@ -116,7 +167,7 @@ export function JobSearchPage() {
               <div>
                 <label className="block text-sm font-medium text-surface-500 dark:text-slate-400 mb-2">Experience Level</label>
                 <div className="flex flex-wrap gap-2">
-                  {experienceLevels.map((level) => (
+                  {EXPERIENCE_LEVELS.map((level) => (
                     <button
                       key={level}
                       onClick={() => setFilters({ ...filters, experienceLevel: filters.experienceLevel === level ? '' : level })}
@@ -162,15 +213,19 @@ export function JobSearchPage() {
         )}
       </div>
 
+      {/* Results Header */}
       <div className="mb-4 flex items-center justify-between">
         <p className="text-surface-500 dark:text-slate-400">
           <span className="font-semibold text-surface-900 dark:text-white">{allMatches.length}</span> jobs found
         </p>
-        <div className="text-sm text-surface-400 dark:text-slate-500">
-          Sorted by match score
+        <div className="flex items-center gap-2 text-sm text-surface-400 dark:text-slate-500">
+          {!isLoading && allMatches.length > 0 && (
+            <span className="text-emerald-400">✓ All sources loaded</span>
+          )}
         </div>
       </div>
 
+      {/* Error State */}
       {error && (
         <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-6 text-center mb-6">
           <AlertCircle className="w-8 h-8 text-rose-400 mx-auto mb-3" />
@@ -184,50 +239,77 @@ export function JobSearchPage() {
         </div>
       )}
 
-      {isLoading && (
+      {/* Loading State */}
+      {isLoading && allMatches.length === 0 && (
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <Loader2 className="w-8 h-8 text-indigo-400 animate-spin mx-auto mb-4" />
-            <p className="text-surface-900 dark:text-white font-medium">Searching across LinkedIn & Indeed...</p>
-            <p className="text-surface-400 dark:text-slate-500 text-sm mt-1">Finding the latest jobs in India</p>
+            <p className="text-surface-900 dark:text-white font-medium">Searching job boards...</p>
+            <div className="flex flex-wrap justify-center gap-2 mt-3">
+              {['indeed', 'linkedin'].map(src => (
+                <span
+                  key={src}
+                  className={cn(
+                    'px-3 py-1 text-xs font-medium rounded-full transition-colors',
+                    loadingSources.includes(src)
+                      ? 'bg-amber-500/20 text-amber-400 animate-pulse'
+                      : 'bg-emerald-500/20 text-emerald-400'
+                  )}
+                >
+                  {loadingSources.includes(src) ? '⏳' : '✓'} {src.charAt(0).toUpperCase() + src.slice(1)}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
+      {/* Progress bar while loading + results showing */}
+      {isLoading && allMatches.length > 0 && (
+        <div className="mb-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3 flex items-center gap-3">
+          <Loader2 className="w-4 h-4 text-indigo-400 animate-spin flex-shrink-0" />
+          <p className="text-sm text-indigo-300">
+            {allMatches.length} jobs loaded · Still searching {loadingSources.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')}...
+          </p>
+        </div>
+      )}
+
+      {/* Empty State */}
       {!isLoading && !error && allMatches.length === 0 && (
         <div className="bg-white border border-surface-200 dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-12 text-center">
           <Briefcase className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-          <p className="text-surface-900 dark:text-white text-lg font-medium mb-2">No jobs found yet</p>
-          <p className="text-surface-500 dark:text-slate-400">Enter a search term above and click Search to find real jobs from LinkedIn & Indeed India.</p>
+          <p className="text-surface-900 dark:text-white text-lg font-medium mb-2">No jobs found</p>
+          <p className="text-surface-500 dark:text-slate-400">Try a different category, search term, or adjust your filters.</p>
         </div>
       )}
 
-      {!isLoading && allMatches.length > 0 && (
-      <div className="space-y-4">
-        {matches.map((job) => (
-          <JobSearchCard key={job.id} job={job} />
-        ))}
+      {/* Job Cards */}
+      {allMatches.length > 0 && (
+        <div className="space-y-4">
+          {matches.map((job) => (
+            <JobCard key={job.id} job={job} />
+          ))}
 
-        {matches.length === 0 && (
-          <div className="text-center py-16 bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl">
-            <Briefcase className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-surface-900 dark:text-white mb-2">No jobs found</h3>
-            <p className="text-surface-500 dark:text-slate-400 mb-4">Try adjusting your search or filters</p>
-            <button
-              onClick={clearFilters}
-              className="px-4 py-2 bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-surface-900 dark:text-white rounded-xl transition-colors"
-            >
-              Clear Filters
-            </button>
-          </div>
-        )}
-      </div>
+          {matches.length === 0 && !isLoading && (
+            <div className="text-center py-16 bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl">
+              <Briefcase className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-surface-900 dark:text-white mb-2">No jobs match your filters</h3>
+              <p className="text-surface-500 dark:text-slate-400 mb-4">Try adjusting your search or filters</p>
+              <button
+                onClick={clearFilters}
+                className="px-4 py-2 bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-surface-900 dark:text-white rounded-xl transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
-function JobSearchCard({ job }: { job: any }) {
+function JobCard({ job }: { job: any }) {
   const scoreColor = job.matchScore >= 80 ? 'text-emerald-400' : job.matchScore >= 60 ? 'text-amber-400' : 'text-surface-500 dark:text-slate-400';
   const scoreBg = job.matchScore >= 80 ? 'bg-emerald-500/20' : job.matchScore >= 60 ? 'bg-amber-500/20' : 'bg-slate-500/20';
 
@@ -242,43 +324,56 @@ function JobSearchCard({ job }: { job: any }) {
             <span className={cn('px-2 py-0.5 text-xs font-semibold rounded-full', scoreBg, scoreColor)}>
               {job.matchScore}% Match
             </span>
+            <span className="px-2 py-0.5 text-xs font-medium bg-surface-100 dark:bg-slate-800 text-surface-500 dark:text-slate-400 rounded-full flex-shrink-0">
+              {job.source}
+            </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-sm text-surface-500 dark:text-slate-400 mb-4">
             <span className="flex items-center gap-1.5">
-              <Briefcase className="w-4 h-4" />
+              <Building2 className="w-4 h-4" />
               {job.company}
             </span>
             <span className="flex items-center gap-1.5">
               <MapPin className="w-4 h-4" />
               {job.location}
             </span>
-            <span className="flex items-center gap-1.5">
-              <IndianRupee className="w-4 h-4" />
-              {job.salaryMin ? `₹${(job.salaryMin / 100000).toFixed(1)}L - ₹${(job.salaryMax / 100000).toFixed(1)}L` : 'Salary not listed'}
-            </span>
-            <span className="px-2 py-0.5 text-xs bg-surface-100 dark:bg-slate-800 rounded-full capitalize">{job.remoteType}</span>
+            {(job.salaryMin || job.salaryMax) && (
+              <span className="flex items-center gap-1.5">
+                <IndianRupee className="w-4 h-4" />
+                {job.salaryMin && job.salaryMax
+                  ? `₹${(job.salaryMin / 100000).toFixed(1)}L - ₹${(job.salaryMax / 100000).toFixed(1)}L`
+                  : job.salaryMin
+                  ? `₹${(job.salaryMin / 100000).toFixed(1)}L+`
+                  : `Up to ₹${(job.salaryMax / 100000).toFixed(1)}L`}
+              </span>
+            )}
+            {job.remoteType && (
+              <span className="px-2 py-0.5 text-xs bg-surface-100 dark:bg-slate-800 rounded-full capitalize">{job.remoteType}</span>
+            )}
           </div>
 
-          <div className="flex flex-wrap gap-2 mb-4">
-            {job.matchedSkills.slice(0, 4).map((skill: string) => (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {job.matchedSkills.slice(0, 5).map((skill: string) => (
               <span key={skill} className="px-2.5 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-400 rounded-lg">
                 {skill}
               </span>
             ))}
-            {job.missingSkills.slice(0, 2).map((skill: string) => (
+            {job.missingSkills.slice(0, 3).map((skill: string) => (
               <span key={skill} className="px-2.5 py-1 text-xs font-medium bg-rose-500/10 text-rose-400 rounded-lg">
                 + {skill}
               </span>
             ))}
-            {job.matchedSkills.length > 4 && (
+            {job.matchedSkills.length > 5 && (
               <span className="px-2.5 py-1 text-xs font-medium bg-slate-800 text-surface-500 dark:text-slate-400 rounded-lg">
-                +{job.matchedSkills.length - 4} more
+                +{job.matchedSkills.length - 5} more
               </span>
             )}
           </div>
 
-          <p className="text-sm text-surface-400 dark:text-slate-500 line-clamp-2">{job.matchReasoning}</p>
+          {job.matchReasoning && (
+            <p className="text-sm text-surface-400 dark:text-slate-500 line-clamp-2">{job.matchReasoning}</p>
+          )}
         </div>
 
         <div className="flex flex-col items-end gap-2">
@@ -295,7 +390,7 @@ function JobSearchCard({ job }: { job: any }) {
             href={job.applyUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-surface-900 dark:text-white transition-colors"
+            className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
           >
             <ExternalLink className="w-5 h-5" />
           </a>
