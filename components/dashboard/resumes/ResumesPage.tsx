@@ -2,19 +2,22 @@
 
 import { useState, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useResumes } from '@/lib/hooks/useResumes';
-import { FileText, Upload, Trash2, Star, Shield, Sparkles, Eye, Upload as UploadIcon, Download, Wrench } from 'lucide-react';
+import { FileText, Upload, Trash2, Star, Shield, Sparkles, Eye, Upload as UploadIcon, Download, Wrench, MoreHorizontal, FilePen, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import { formatDate } from '@/lib/utils/helpers';
 
 type FilterTab = 'all' | 'uploaded' | 'analyzed' | 'fixed';
 
 export function ResumesPage() {
+  const router = useRouter();
   const { resumes, createResume, setPrimary, deleteResume, loading } = useResumes();
   const [showUploader, setShowUploader] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [filter, setFilter] = useState<FilterTab>('all');
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredResumes = filter === 'all'
@@ -180,6 +183,9 @@ export function ResumesPage() {
               isPrimary={resume.isPrimary}
               onSetPrimary={setPrimary}
               onDelete={deleteResume}
+              isMenuOpen={openMenuId === resume.id}
+              onToggleMenu={setOpenMenuId}
+              router={router}
             />
           ))}
         </div>
@@ -196,8 +202,14 @@ function getStatusBadge(status: string) {
   return { label: s, color: 'text-slate-400 bg-surface-100 dark:bg-slate-800 border-surface-200 dark:border-slate-700' };
 }
 
-function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete }: any) {
+function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete, isMenuOpen, onToggleMenu, router }: any) {
   const badge = getStatusBadge(resume.status);
+  const hasAnalysis = resume.atsScore !== null && resume.atsScore !== undefined;
+
+  const handleDownloadReport = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleMenu(null);
+  };
 
   return (
     <div className={cn(
@@ -220,9 +232,71 @@ function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete }: any) {
               v{resume.version}
             </span>
           )}
-          <button className="p-1.5 rounded-lg text-surface-400 dark:text-slate-500 hover:text-rose-400 hover:bg-surface-200 dark:hover:bg-slate-800 transition-colors" aria-label="Delete resume">
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <div className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleMenu(isMenuOpen ? null : resume.id); }}
+              className="p-1.5 rounded-lg text-surface-400 dark:text-slate-500 hover:text-surface-900 dark:hover:text-white hover:bg-surface-200 dark:hover:bg-slate-800 transition-colors"
+              aria-label="Actions"
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+            {isMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => onToggleMenu(null)} />
+                <div className="absolute right-0 top-full mt-1 z-20 w-56 bg-white dark:bg-slate-900 border border-surface-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 animate-fade-in">
+                  <button
+                    onClick={() => { onToggleMenu(null); router.push(`/dashboard/fixer?resumeId=${resume.id}&source=resumes`); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-surface-700 dark:text-slate-300 hover:bg-surface-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <Eye className="w-4 h-4 text-surface-400" />
+                    View Details
+                  </button>
+                  {hasAnalysis && (
+                    <>
+                      <button
+                        onClick={() => { onToggleMenu(null); router.push(`/dashboard/fixer?resumeId=${resume.id}&source=resumes`); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-surface-700 dark:text-slate-300 hover:bg-surface-100 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <FileText className="w-4 h-4 text-surface-400" />
+                        View Report
+                      </button>
+                      <button
+                        onClick={() => { onToggleMenu(null); router.push(`/dashboard/jobs/compare?resumeId=${resume.id}`); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-surface-700 dark:text-slate-300 hover:bg-surface-100 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4 text-surface-400" />
+                        Tailor for Job
+                      </button>
+                      <button
+                        onClick={() => { onToggleMenu(null); router.push(`/dashboard/templates`); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-surface-700 dark:text-slate-300 hover:bg-surface-100 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <FilePen className="w-4 h-4 text-surface-400" />
+                        Generate Cover Letter
+                      </button>
+                    </>
+                  )}
+                  <div className="border-t border-surface-200 dark:border-slate-800 my-1" />
+                  {!isPrimary && (
+                    <button
+                      onClick={() => { onToggleMenu(null); onSetPrimary(resume.id); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-surface-700 dark:text-slate-300 hover:bg-surface-100 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      <Star className="w-4 h-4 text-surface-400" />
+                      Set as Primary
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { onToggleMenu(null); onDelete(resume.id); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -237,7 +311,7 @@ function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete }: any) {
         {resume.parent && ` · Forked from v${resume.parent.version}`}
       </p>
 
-      {resume.atsScore !== null && resume.atsScore !== undefined ? (
+      {hasAnalysis ? (
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-surface-600 dark:text-slate-300">ATS Score</span>
@@ -289,22 +363,12 @@ function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete }: any) {
           </Link>
         ) : (
           <Link
-            href={`/dashboard/analyser`}
+            href={`/dashboard/fixer`}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:text-white font-medium transition-all"
           >
             <Eye className="w-4 h-4" />
-            Analyze First
+            Analyze Now
           </Link>
-        )}
-
-        {!isPrimary && (
-          <button
-            onClick={() => onSetPrimary(resume.id)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:text-white font-medium transition-all"
-          >
-            <Star className="w-4 h-4" />
-            Set as Primary
-          </button>
         )}
       </div>
     </div>

@@ -1,10 +1,5 @@
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { AnalyserPage } from '@/components/dashboard/analyser/AnalyserPage';
+import { redirect } from 'next/navigation';
 
 export default function AnalyserRoute() {
-  return (
-    <DashboardLayout>
-      <AnalyserPage />
-    </DashboardLayout>
-  );
+  redirect('/dashboard/fixer');
 }
