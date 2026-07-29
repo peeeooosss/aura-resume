@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 
 export function useResumes() {
   const [resumes, setResumes] = useState<any[]>([]);
@@ -23,6 +23,14 @@ export function useResumes() {
     }
     setLoading(false);
   };
+
+  const hasAnalyzedResume = useMemo(() => {
+    return resumes.some(r => r.overallScore != null || r.skills?.length > 0);
+  }, [resumes]);
+
+  const latestAnalysis = useMemo(() => {
+    return resumes.find(r => r.overallScore != null) || null;
+  }, [resumes]);
 
   const createResume = useCallback(async (file: File): Promise<any> => {
     const formData = new FormData();
@@ -64,6 +72,8 @@ export function useResumes() {
   return {
     resumes,
     loading,
+    hasAnalyzedResume,
+    latestAnalysis,
     createResume,
     updateResume,
     deleteResume,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 
 export interface JobMatch {
   id: string;
@@ -28,51 +28,6 @@ export interface JobMatch {
   description: string;
   requirements: string;
   benefits: string[];
-}
-
-function getResumeSkills(): string[] {
-  try {
-    const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
-    const latestId = Object.keys(analyses).sort().pop();
-    if (!latestId) return [];
-    const analysis = analyses[latestId];
-    const resume = analysis?.resume;
-    if (!resume) return [];
-
-    const skills = new Set<string>();
-    const skillKeywords = [/python/i, /javascript/i, /typescript/i, /react/i, /angular/i, /vue/i,
-      /node\.?js/i, /express/i, /django/i, /flask/i, /spring/i, /\.net/i, /java/i, /c#/i, /c\+\+/i, /go/i, /rust/i,
-      /swift/i, /kotlin/i, /ruby/i, /php/i, /scala/i, /aws/i, /azure/i, /gcp/i, /cloud/i,
-      /docker/i, /kubernetes/i, /k8s/i, /ci\/cd/i, /jenkins/i, /terraform/i, /ansible/i,
-      /sql/i, /postgres/i, /mysql/i, /mongodb/i, /redis/i, /nosql/i, /elasticsearch/i,
-      /graphql/i, /rest/i, /api/i, /microservice/i, /machine learning/i, /deep learning/i,
-      /tensorflow/i, /pytorch/i, /nlp/i, /computer vision/i, /data sci/i, /analytics/i,
-      /spark/i, /hadoop/i, /kafka/i, /linux/i, /git/i, /agile/i, /scrum/i, /devops/i];
-
-    const allText = [
-      ...(resume.strengths || []),
-      ...(resume.keywordGaps || []),
-      ...(resume.suggestions || []),
-      resume.originalText || '',
-    ].join(' ');
-
-    for (const kw of skillKeywords) {
-      if (kw.test(allText)) {
-        skills.add(kw.source.replace(/\?/g, '').replace(/\\/g, ''));
-      }
-    }
-
-    for (const word of allText.split(/[\s,;]+/)) {
-      const w = word.trim().replace(/[^a-zA-Z0-9#+./-]/g, '');
-      if (w.length > 2 && /[A-Z]/.test(w) && !/^(the|and|for|with|from|that|this|have|been|were|was|are|not)$/i.test(w)) {
-        skills.add(w);
-      }
-    }
-
-    return Array.from(skills).slice(0, 30);
-  } catch {
-    return [];
-  }
 }
 
 function enrichJobsWithMatching(jobs: any[], resumeSkills: string[]): JobMatch[] {
@@ -108,7 +63,7 @@ function enrichJobsWithMatching(jobs: any[], resumeSkills: string[]): JobMatch[]
   });
 }
 
-export function useJobMatches() {
+export function useJobMatches(initialResumeSkills: string[] = []) {
   const [matches, setMatches] = useState<JobMatch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,9 +78,12 @@ export function useJobMatches() {
   });
   const [savedOnly, setSavedOnly] = useState(false);
 
-  const resumeSkills = useMemo(() => getResumeSkills(), []);
+  const hasResumeSkills = useMemo(() => initialResumeSkills.length > 0, [initialResumeSkills]);
 
-  const searchRealJobs = useCallback(async (term: string, loc?: string) => {
+  const searchRealJobs = useCallback(async (term: string, loc?: string, skills?: string[]) => {
+    const skillList = skills || initialResumeSkills;
+    if (!skillList.length) return;
+
     setIsLoading(true);
     setError(null);
     try {
@@ -142,18 +100,14 @@ export function useJobMatches() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Search failed');
 
-      const enriched = enrichJobsWithMatching(data.jobs, resumeSkills);
+      const enriched = enrichJobsWithMatching(data.jobs, skillList);
       setMatches(enriched);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Job search failed');
     } finally {
       setIsLoading(false);
     }
-  }, [resumeSkills]);
-
-  useEffect(() => {
-    searchRealJobs('software engineer developer data', 'India');
-  }, []);
+  }, [initialResumeSkills]);
 
   const filteredMatches = useMemo(() => {
     return matches.filter(match => {
@@ -211,6 +165,7 @@ export function useJobMatches() {
     setSavedOnly,
     isLoading,
     error,
+    hasResumeSkills,
     searchRealJobs,
     toggleSave,
     apply,

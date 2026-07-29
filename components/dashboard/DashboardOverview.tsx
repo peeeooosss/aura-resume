@@ -11,25 +11,65 @@ import { cn } from '@/lib/utils/helpers';
 import {
   FileText, Target, Map, Globe, TrendingUp, CheckCircle,
   Clock, Award, Zap, Sparkles, Users, ArrowRight, Plus,
-  ExternalLink, Settings, LayoutDashboard, Scan, Wrench,
+  ExternalLink, Settings, LayoutDashboard, Scan, Wrench, Upload,
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatRelativeTime } from '@/lib/utils/helpers';
 import { useSession } from 'next-auth/react';
+import { useMemo, useEffect } from 'react';
 
 export function DashboardOverview() {
   const { data: session } = useSession();
   const currentPlan = usePlan(s => s.currentPlan);
   const usage = usePlan(s => s.usage);
   const getUsagePercent = usePlan(s => s.getUsagePercent);
-  const { resumes, getPrimary, createResume } = useResumes();
-  const { matches, stats } = useJobMatches();
+  const { resumes, getPrimary, hasAnalyzedResume, latestAnalysis } = useResumes();
   const { currentRoadmap, progress } = useRoadmap();
   const { currentPortfolio } = usePortfolio();
 
   const userName = (session?.user as any)?.name || (session?.user as any)?.email?.split('@')[0] || 'User';
 
   const primaryResume = getPrimary();
+
+  const resumeSkills = useMemo(() => {
+    if (!latestAnalysis) return [];
+    const skills = new Set<string>();
+    const skillKeywords = [/python/i, /javascript/i, /typescript/i, /react/i, /angular/i, /vue/i,
+      /node\.?js/i, /express/i, /django/i, /flask/i, /spring/i, /\.net/i, /java/i, /c#/i, /c\+\+/i, /go/i, /rust/i,
+      /swift/i, /kotlin/i, /ruby/i, /php/i, /scala/i, /aws/i, /azure/i, /gcp/i, /cloud/i,
+      /docker/i, /kubernetes/i, /k8s/i, /ci\/cd/i, /jenkins/i, /terraform/i, /ansible/i,
+      /sql/i, /postgres/i, /mysql/i, /mongodb/i, /redis/i, /nosql/i, /elasticsearch/i,
+      /graphql/i, /rest/i, /api/i, /microservice/i, /machine learning/i, /deep learning/i,
+      /tensorflow/i, /pytorch/i, /nlp/i, /computer vision/i, /data sci/i, /analytics/i,
+      /spark/i, /hadoop/i, /kafka/i, /linux/i, /git/i, /agile/i, /scrum/i, /devops/i];
+    const allText = [
+      ...(latestAnalysis.strengths || []),
+      ...(latestAnalysis.keywordGaps || []),
+      ...(latestAnalysis.suggestions || []),
+      latestAnalysis.rawText || '',
+    ].join(' ');
+    for (const kw of skillKeywords) {
+      if (kw.test(allText)) {
+        skills.add(kw.source.replace(/\?/g, '').replace(/\\/g, ''));
+      }
+    }
+    for (const word of allText.split(/[\s,;]+/)) {
+      const w = word.trim().replace(/[^a-zA-Z0-9#+./-]/g, '');
+      if (w.length > 2 && /[A-Z]/.test(w) && !/^(the|and|for|with|from|that|this|have|been|were|was|are|not)$/i.test(w)) {
+        skills.add(w);
+      }
+    }
+    return Array.from(skills).slice(0, 30);
+  }, [latestAnalysis]);
+
+  const { matches, stats, searchRealJobs, hasResumeSkills } = useJobMatches(resumeSkills);
+
+  useEffect(() => {
+    if (hasResumeSkills) {
+      searchRealJobs('software engineer developer data', 'India');
+    }
+  }, [hasResumeSkills, searchRealJobs]);
+
   const activeMatches = matches.filter(m => m.status === 'NEW' || m.status === 'SAVED').slice(0, 3);
   const upcomingTasks = currentRoadmap?.dailyTasks?.filter((t: any) => !t.isCompleted).slice(0, 3) || [];
 
@@ -170,11 +210,13 @@ export function DashboardOverview() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Link href={`/dashboard/resumes/${primaryResume?.id}`} className="text-indigo-400 hover:text-indigo-300 text-sm font-medium flex items-center gap-1">
-                  View Details <ArrowRight className="w-4 h-4" />
-                </Link>
+                {primaryResume && (
+                  <Link href={`/dashboard/resumes/${primaryResume.id}`} className="text-indigo-400 hover:text-indigo-300 text-sm font-medium flex items-center gap-1">
+                    View Details <ArrowRight className="w-4 h-4" />
+                  </Link>
+                )}
                 <Link href="/dashboard/resumes" className="px-4 py-2 bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-surface-900 dark:text-surface-900 dark:text-white text-sm font-medium rounded-xl transition-colors">
-                  Manage All
+                  {primaryResume ? 'Manage All' : 'Upload Resume'}
                 </Link>
               </div>
             </div>
@@ -214,19 +256,35 @@ export function DashboardOverview() {
           <section>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-surface-900 dark:text-white">Top Job Matches</h2>
-              <Link href="/dashboard/jobs/matches" className="text-indigo-400 hover:text-indigo-300 text-sm font-medium flex items-center gap-1">
-                View All <ArrowRight className="w-4 h-4" />
-              </Link>
+              {hasResumeSkills && (
+                <Link href="/dashboard/jobs/matches" className="text-indigo-400 hover:text-indigo-300 text-sm font-medium flex items-center gap-1">
+                  View All <ArrowRight className="w-4 h-4" />
+                </Link>
+              )}
             </div>
             <div className="space-y-3">
-              {activeMatches.length > 0 ? (
-                activeMatches.map((match) => (
-                  <JobMatchCard key={match.id} match={match} />
-                ))
+              {hasResumeSkills ? (
+                activeMatches.length > 0 ? (
+                  activeMatches.map((match) => (
+                    <JobMatchCard key={match.id} match={match} />
+                  ))
+                ) : (
+                  <div className="text-center py-8 bg-white border border-surface-200 dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl">
+                    <div className="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mx-auto mb-3">
+                      <Target className="w-6 h-6 text-indigo-400" />
+                    </div>
+                    <p className="text-surface-600 dark:text-slate-300 font-medium">Searching for matching jobs...</p>
+                    <p className="text-surface-400 dark:text-slate-500 text-sm mt-1">We'll find the best roles for your skills</p>
+                  </div>
+                )
               ) : (
-                <PlanGate requiredPlan="pro" featureName="Job Match Analyzer">
-                  <div className="text-center py-8 text-surface-400 dark:text-slate-500">Upgrade to Pro to see job matches</div>
-                </PlanGate>
+                <div className="text-center py-8 bg-white border border-surface-200 dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto mb-3">
+                    <Upload className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <p className="text-surface-600 dark:text-slate-300 font-medium">Upload your resume to see job matches</p>
+                  <p className="text-surface-400 dark:text-slate-500 text-sm mt-1">We'll match jobs to your skills and experience</p>
+                </div>
               )}
             </div>
           </section>
