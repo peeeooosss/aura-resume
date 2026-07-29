@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, History, Repeat, Linkedin } from 'lucide-react';
+import { Upload, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, History, Repeat, Linkedin, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 
 interface SingleAnalysis {
