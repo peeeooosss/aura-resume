@@ -1,0 +1,106 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { fixResumeToPerfectATS } from '@/lib/ai/openrouter';
+import { generateOptimizedResumePDF, getPDFBlobURL } from '@/lib/pdf/generateReport';
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { resumeId, userId } = body;
+
+    if (!resumeId || !userId) {
+      return NextResponse.json(
+        { error: 'resumeId and userId are required' },
+        { status: 400 }
+      );
+    }
+
+    const resume = await prisma.resume.findUnique({
+      where: { id: resumeId },
+      include: {
+        analyses: {
+          where: { type: 'resume' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!resume) {
+      return NextResponse.json({ error: 'Resume not found' }, { status: 404 });
+    }
+
+    if (!resume.rawText || resume.rawText.trim().length < 50) {
+      return NextResponse.json(
+        { error: 'Resume text is too short or missing. Please re-upload.' },
+        { status: 400 }
+      );
+    }
+
+    const latestAnalysis = resume.analyses[0];
+    const analysisData = latestAnalysis ? {
+      score: latestAnalysis.overallScore || 0,
+      strengths: latestAnalysis.strengths as string[] || [],
+      redFlags: latestAnalysis.redFlags as string[] || [],
+      suggestions: latestAnalysis.suggestions as string[] || [],
+      keywordGaps: latestAnalysis.keywordGaps as string[] || [],
+    } : {
+      score: 0,
+      strengths: [],
+      redFlags: ['No analysis found for this resume'],
+      suggestions: ['Run the resume analyzer first to get detailed fixes'],
+      keywordGaps: [],
+    };
+
+    const { optimizedResume, tokensUsed } = await fixResumeToPerfectATS(
+      resume.rawText.trim(),
+      analysisData
+    );
+
+    const doc = generateOptimizedResumePDF(optimizedResume, {
+      generatedAt: new Date().toLocaleString(),
+    });
+    const pdfBlobUrl = getPDFBlobURL(doc);
+
+    const parentId = resume.parentId || resume.id;
+    const childCount = await prisma.resume.count({
+      where: { parentId },
+    });
+
+    const newResume = await prisma.resume.create({
+      data: {
+        userId,
+        title: `${resume.title} (Fixed v${childCount + 2})`,
+        fileUrl: resume.fileUrl,
+        fileKey: resume.fileKey,
+        rawText: optimizedResume,
+        status: 'fixed',
+        version: childCount + 2,
+        parentId,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      optimizedResume,
+      pdfUrl: pdfBlobUrl,
+      resumeId: newResume.id,
+      version: newResume.version,
+      tokensUsed,
+    });
+  } catch (error: any) {
+    console.error('Resume fix failed:', error?.message || error);
+
+    if (error?.message?.includes('OpenRouter API error')) {
+      return NextResponse.json(
+        { error: 'AI service is temporarily unavailable. Please try again in a moment.' },
+        { status: 503 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: error?.message || 'Failed to fix resume. Please try again.' },
+      { status: 500 }
+    );
+  }
+}

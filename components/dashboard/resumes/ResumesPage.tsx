@@ -1,18 +1,32 @@
-// @ts-nocheck
 'use client';
 
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import { useResumes } from '@/lib/hooks/useResumes';
-import { FileText, Upload, Trash2, Edit, Star, Shield, Zap, Sparkles, Eye, Upload as UploadIcon, ChevronRight, Download } from 'lucide-react';
+import { FileText, Upload, Trash2, Star, Shield, Sparkles, Eye, Upload as UploadIcon, Download, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import { formatDate } from '@/lib/utils/helpers';
 
+type FilterTab = 'all' | 'uploaded' | 'analyzed' | 'fixed';
+
 export function ResumesPage() {
-  const { resumes, createResume, setPrimary, deleteResume } = useResumes();
+  const { resumes, createResume, setPrimary, deleteResume, loading } = useResumes();
   const [showUploader, setShowUploader] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [filter, setFilter] = useState<FilterTab>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const filteredResumes = filter === 'all'
+    ? resumes
+    : resumes.filter(r => r.status?.toLowerCase() === filter);
+
+  const counts = {
+    all: resumes.length,
+    uploaded: resumes.filter(r => r.status?.toLowerCase() === 'uploaded' || r.status?.toLowerCase() === 'parsed').length,
+    analyzed: resumes.filter(r => r.status?.toLowerCase() === 'analyzed').length,
+    fixed: resumes.filter(r => r.status?.toLowerCase() === 'fixed').length,
+  };
 
   const handleFileSelect = async (file: File) => {
     await createResume(file);
@@ -36,7 +50,14 @@ export function ResumesPage() {
 
   const handleDragLeave = () => setDragging(false);
 
-  if (resumes.length === 0 && !showUploader) {
+  const tabs: { key: FilterTab; label: string }[] = [
+    { key: 'all', label: `All (${counts.all})` },
+    { key: 'uploaded', label: `Uploaded (${counts.uploaded})` },
+    { key: 'analyzed', label: `Analyzed (${counts.analyzed})` },
+    { key: 'fixed', label: `Fixed (${counts.fixed})` },
+  ];
+
+  if (resumes.length === 0 && !showUploader && !loading) {
     return (
       <div className="max-w-3xl mx-auto">
         <div className="text-center py-16">
@@ -77,59 +98,112 @@ export function ResumesPage() {
         )}
       </div>
 
+      <div className="flex gap-1 mb-6 p-1 bg-surface-100 dark:bg-slate-800/50 rounded-xl w-fit">
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setFilter(tab.key)}
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+              filter === tab.key
+                ? 'bg-white dark:bg-slate-900 text-surface-900 dark:text-white shadow-sm'
+                : 'text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:hover:text-white'
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {showUploader && (
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
-          className={`mb-8 bg-white border-2 border-dashed border-surface-300 dark:bg-slate-900/80 dark:border-slate-800 rounded-3xl p-8 text-center transition-colors ${
+          className={cn(
+            'mb-8 bg-white border-2 border-dashed rounded-3xl p-8 text-center transition-colors',
             dragging
               ? 'border-indigo-500 bg-indigo-500/10'
               : selectedFile
               ? 'border-emerald-500 bg-emerald-500/5'
               : 'border-surface-300 dark:border-slate-700 hover:border-indigo-500 bg-surface-100 dark:bg-slate-800/50'
-          }`}
-        >
-          <UploadIcon className={`w-12 h-12 mx-auto mb-4 ${selectedFile ? 'text-emerald-400' : 'text-surface-400 dark:text-slate-500'} transition-colors`} />
-          {selectedFile ? (
-            <>
-              <p className="text-emerald-400 font-semibold mb-1">{selectedFile.name}</p>
-              <p className="text-surface-400 dark:text-slate-500 text-sm">Click or drop to replace</p>
-            </>
-          ) : (
-            <>
-              <p className="text-surface-900 dark:text-white font-semibold mb-1">Drop your resume here</p>
-              <p className="text-surface-400 dark:text-slate-500 text-sm">PDF, DOCX up to 10MB</p>
-            </>
           )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="absolute inset-0 opacity-0 cursor-pointer"
-            accept=".pdf,.docx"
-            onChange={(e) => e.target.files?.[0] && setSelectedFile(e.target.files[0])}
-          />
+        >
+          <div className="relative">
+            <UploadIcon className={cn('w-12 h-12 mx-auto mb-4 transition-colors', selectedFile ? 'text-emerald-400' : 'text-surface-400 dark:text-slate-500')} />
+            {selectedFile ? (
+              <>
+                <p className="text-emerald-400 font-semibold mb-1">{selectedFile.name}</p>
+                <p className="text-surface-400 dark:text-slate-500 text-sm">Click or drop to replace</p>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleFileSelect(selectedFile); }}
+                  className="mt-3 px-6 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-medium rounded-xl hover:shadow-lg transition-all"
+                >
+                  Upload
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-surface-900 dark:text-white font-semibold mb-1">Drop your resume here</p>
+                <p className="text-surface-400 dark:text-slate-500 text-sm">PDF, DOCX up to 10MB</p>
+              </>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="absolute inset-0 opacity-0 cursor-pointer"
+              accept=".pdf,.docx"
+              onChange={(e) => e.target.files?.[0] && setSelectedFile(e.target.files[0])}
+            />
+          </div>
+          <button
+            onClick={() => { setShowUploader(false); setSelectedFile(null); }}
+            className="mt-4 text-sm text-surface-400 dark:text-slate-500 hover:text-surface-900 dark:text-white underline"
+          >
+            Cancel
+          </button>
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {resumes.map((resume) => (
-          <ResumeCard
-            key={resume.id}
-            resume={resume}
-            isPrimary={resume.isPrimary}
-            onSetPrimary={setPrimary}
-            onDelete={deleteResume}
-          />
-        ))}
-      </div>
+      {filteredResumes.length === 0 ? (
+        <div className="text-center py-16 bg-white dark:bg-slate-900/50 rounded-2xl border border-surface-200 dark:border-slate-800">
+          <FileText className="w-12 h-12 text-surface-400 dark:text-slate-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-surface-900 dark:text-white mb-2">No {filter !== 'all' ? filter : ''} resumes</h3>
+          <p className="text-surface-500 dark:text-slate-400 text-sm">Upload a resume or change the filter.</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredResumes.map((resume) => (
+            <ResumeCard
+              key={resume.id}
+              resume={resume}
+              isPrimary={resume.isPrimary}
+              onSetPrimary={setPrimary}
+              onDelete={deleteResume}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
+function getStatusBadge(status: string) {
+  const s = status?.toLowerCase() || '';
+  if (s === 'fixed') return { label: 'Fixed', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' };
+  if (s === 'analyzed') return { label: 'Analyzed', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' };
+  if (s === 'uploaded' || s === 'parsed') return { label: 'Uploaded', color: 'text-slate-400 bg-surface-100 dark:bg-slate-800 border-surface-200 dark:border-slate-700' };
+  return { label: s, color: 'text-slate-400 bg-surface-100 dark:bg-slate-800 border-surface-200 dark:border-slate-700' };
+}
+
 function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete }: any) {
+  const badge = getStatusBadge(resume.status);
+
   return (
-    <div className={`group bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-3xl p-5 hover:border-surface-300 dark:hover:border-slate-700 transition-all ${isPrimary ? 'border-indigo-500/30' : ''}`}>
+    <div className={cn(
+      'group bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-3xl p-5 hover:border-surface-300 dark:hover:border-slate-700 transition-all relative',
+      isPrimary && 'ring-1 ring-indigo-500/30'
+    )}>
       {isPrimary && (
         <div className="absolute -top-3 -right-3 px-2 py-0.5 bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 text-xs font-semibold rounded-full">
           Primary
@@ -141,29 +215,39 @@ function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete }: any) {
           <FileText className="w-6 h-6 text-surface-500 dark:text-slate-400" />
         </div>
         <div className="flex items-center gap-1">
-          <button className="p-1.5 rounded-lg text-surface-400 dark:text-slate-500 hover:text-surface-900 dark:text-white hover:bg-surface-200 dark:hover:bg-slate-800 transition-colors" aria-label="View resume">
-            <Eye className="w-4 h-4" />
-          </button>
+          {resume.version && resume.version > 1 && (
+            <span className="px-2 py-0.5 text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full">
+              v{resume.version}
+            </span>
+          )}
           <button className="p-1.5 rounded-lg text-surface-400 dark:text-slate-500 hover:text-rose-400 hover:bg-surface-200 dark:hover:bg-slate-800 transition-colors" aria-label="Delete resume">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      <h3 className="font-semibold text-surface-900 dark:text-white mb-1 truncate">{resume.fileName}</h3>
-      <p className="text-surface-400 dark:text-slate-500 text-sm mb-4">Uploaded {formatDate(resume.createdAt)}</p>
+      <div className="flex items-center gap-2 mb-2">
+        <h3 className="font-semibold text-surface-900 dark:text-white truncate flex-1">{resume.fileName || resume.title}</h3>
+        <span className={cn('px-2 py-0.5 text-xs font-medium rounded-full border', badge.color)}>
+          {badge.label}
+        </span>
+      </div>
+      <p className="text-surface-400 dark:text-slate-500 text-sm mb-4">
+        {resume.createdAt ? `Uploaded ${formatDate(resume.createdAt)}` : ''}
+        {resume.parent && ` · Forked from v${resume.parent.version}`}
+      </p>
 
-      {resume.atsScore !== null ? (
+      {resume.atsScore !== null && resume.atsScore !== undefined ? (
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-surface-600 dark:text-slate-300">ATS Score</span>
-            <span className={`text-xl font-bold ${resume.atsScore! >= 80 ? 'text-emerald-400' : resume.atsScore! >= 60 ? 'text-amber-400' : 'text-rose-400'}`}>
+            <span className={cn('text-xl font-bold', resume.atsScore >= 80 ? 'text-emerald-400' : resume.atsScore >= 60 ? 'text-amber-400' : 'text-rose-400')}>
               {resume.atsScore}/100
             </span>
           </div>
           <div className="h-2 bg-surface-200 dark:bg-slate-800 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${resume.atsScore! >= 80 ? 'bg-emerald-500' : resume.atsScore! >= 60 ? 'bg-amber-500' : 'bg-rose-500'}`}
+              className={cn('h-full rounded-full transition-all duration-500', resume.atsScore >= 80 ? 'bg-emerald-500' : resume.atsScore >= 60 ? 'bg-amber-500' : 'bg-rose-500')}
               style={{ width: `${resume.atsScore}%` }}
             />
           </div>
@@ -175,35 +259,53 @@ function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete }: any) {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        {resume.skills.slice(0, 4).map((skill) => (
-          <span key={skill} className="px-2 py-0.5 text-xs bg-surface-100 text-surface-700 dark:bg-slate-800 dark:text-slate-300 rounded-full">{skill}</span>
-        ))}
-        {resume.skills.length > 4 && (
-          <span className="px-2 py-0.5 text-xs bg-indigo-500/20 text-indigo-400 rounded-full">+{resume.skills.length - 4} more</span>
-        )}
-      </div>
+      {(resume.skills?.length > 0) && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {resume.skills.slice(0, 4).map((skill: string) => (
+            <span key={skill} className="px-2 py-0.5 text-xs bg-surface-100 text-surface-700 dark:bg-slate-800 dark:text-slate-300 rounded-full">{skill}</span>
+          ))}
+          {resume.skills.length > 4 && (
+            <span className="px-2 py-0.5 text-xs bg-indigo-500/20 text-indigo-400 rounded-full">+{resume.skills.length - 4} more</span>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2 pt-4 border-t border-surface-200 dark:border-slate-800">
-        <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:text-white font-medium transition-colors">
-          <Eye className="w-4 h-4" />
-          View Details
-        </button>
+        {resume.status?.toLowerCase() === 'fixed' ? (
+          <Link
+            href={`/dashboard/jobs/compare?resumeId=${resume.id}`}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
+          >
+            <Sparkles className="w-4 h-4" />
+            Tailor for Job
+          </Link>
+        ) : resume.status?.toLowerCase() === 'analyzed' ? (
+          <Link
+            href={`/dashboard/fixer?resumeId=${resume.id}&source=resumes`}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-emerald-500/30 transition-all"
+          >
+            <Wrench className="w-4 h-4" />
+            AI Rewrite
+          </Link>
+        ) : (
+          <Link
+            href={`/dashboard/analyser`}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:text-white font-medium transition-all"
+          >
+            <Eye className="w-4 h-4" />
+            Analyze First
+          </Link>
+        )}
 
         {!isPrimary && (
           <button
             onClick={() => onSetPrimary(resume.id)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:text-white font-medium transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-surface-600 dark:text-slate-300 hover:text-surface-900 dark:text-white font-medium transition-all"
           >
             <Star className="w-4 h-4" />
             Set as Primary
           </button>
         )}
-
-        <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-emerald-500/30 transition-all">
-          <Sparkles className="w-4 h-4" />
-          AI Rewrite
-        </button>
       </div>
     </div>
   );

@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
               redFlags: resumeAnalysis.redFlags,
               suggestions: resumeAnalysis.suggestions,
               keywordGaps: resumeAnalysis.keywordGaps,
-              modelUsed: 'anthropic/claude-opus-4.8',
+              modelUsed: 'google/gemini-2.5-flash-lite',
               tokensUsed: resumeAnalysis.tokensUsed,
             },
           });
@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
               strengths: linkedinAnalysis.strengths,
               redFlags: linkedinAnalysis.redFlags,
               suggestions: linkedinAnalysis.suggestions,
-              modelUsed: 'anthropic/claude-opus-4.8',
+              modelUsed: 'google/gemini-2.5-flash-lite',
               tokensUsed: linkedinAnalysis.tokensUsed,
             },
           });
@@ -193,7 +193,7 @@ export async function POST(req: NextRequest) {
             userId,
             type: resumeFile ? 'resume_analysis' : 'linkedin_analysis',
             count: 1,
-            modelUsed: 'anthropic/claude-opus-4.8',
+            modelUsed: 'google/gemini-2.5-flash-lite',
           },
         });
 
@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
               userId,
               type: 'linkedin_template',
               count: 1,
-              modelUsed: 'anthropic/claude-opus-4.8',
+              modelUsed: 'google/gemini-2.5-flash-lite',
             },
           });
         }

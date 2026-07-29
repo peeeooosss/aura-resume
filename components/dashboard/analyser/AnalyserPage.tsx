@@ -2,7 +2,8 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, History, Repeat, Linkedin, RotateCcw } from 'lucide-react';
+import Link from 'next/link';
+import { Upload, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, History, Repeat, Linkedin, RotateCcw, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 
 interface SingleAnalysis {
@@ -311,12 +312,13 @@ export function AnalyserPage() {
               <RotateCcw className="w-5 h-5" />
               Analyze Another
             </button>
-            <button
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white font-semibold hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
+            <Link
+              href={`/dashboard/fixer?resumeId=${results.id}&source=analyser`}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl text-white font-semibold hover:shadow-lg hover:shadow-emerald-500/30 transition-all"
             >
-              <Download className="w-5 h-5" />
-              Download Report
-            </button>
+              <Wrench className="w-5 h-5" />
+              Fix it now
+            </Link>
           </div>
         </div>
       )}

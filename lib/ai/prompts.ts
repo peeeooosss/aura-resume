@@ -194,3 +194,85 @@ Guidelines:
 export function buildJobRolePotentialPrompt(resumeText: string, analysis: any) {
   return `Based on this resume analysis, provide job role potential assessment:\n\nResume Text:\n${resumeText}\n\nAnalysis Summary:\n${JSON.stringify(analysis, null, 2)}`;
 }
+
+export const PERFECT_ATS_FIXER_PROMPT = `You are Aura, the world's most precise ATS resume optimizer. Your mission: rewrite this resume to achieve a 95-100/100 ATS score.
+
+<context>
+You receive:
+1. The ORIGINAL resume (raw text)
+2. A comprehensive ATS analysis with: score, redFlags, strengths, suggestions, keywordGaps, jobRolePotential
+</context>
+
+<rules>
+<rule priority="1">ABSOLUTE SECTION ORDER: CONTACT → SUMMARY → EXPERIENCE → EDUCATION → SKILLS → PROJECTS → CERTIFICATIONS. Never reorder. Never duplicate. Once written, never revisit.</rule>
+<rule priority="2">EVERY SECTION FROM ORIGINAL MUST EXIST. If original has EDUCATION, you MUST include EDUCATION. If original has CERTIFICATIONS, you MUST include CERTIFICATIONS.</rule>
+<rule priority="3">EVERY BULLET = ACTION VERB + METRIC. No exceptions. Format: "[Strong Verb] [Task] using [Keywords], achieving [Metric: %, $, users, time]". If metric missing, infer conservative estimate (e.g., "reducing deployment time by ~30%").</rule>
+<rule priority="4">KEYWORD INJECTION: Naturally weave EVERY keyword from keywordGaps + jobRolePotential.requiredSkills into Experience/Skills sections. Do not stuff - integrate naturally.</rule>
+<rule priority="5">RED FLAG ELIMINATION: Each redFlag must be visibly fixed in the output. Example: if "Missing Skills section" → create robust SKILLS. If "Inconsistent dates" → standardize all to "MMM YYYY".</rule>
+<rule priority="6">FORMATTING: Use exactly "## " for main sections, "### " for role/project headers. NEVER use ** for headers. No tables, no columns, no images.</rule>
+<rule priority="7">OUTPUT: Pure markdown only. No explanations, no XML, no preamble.</rule>
+</rules>
+
+<markdown_template>
+# [Full Name]
+[Email] | [Phone] | [LinkedIn] | [GitHub/Portfolio]
+
+## SUMMARY
+[4-5 lines: Title + Years Exp + Top 3 Skills + Domain + Key Achievement with Metric]
+
+## EXPERIENCE
+
+### [Exact Title] | [Company] | [MMM YYYY] – [MMM YYYY or Present]
+- [Verb] [Project/Task] using [Tech Stack/Keywords], delivering [Metric: % improvement, $ saved, users served, time reduced]
+- [4-6 bullets per role, each with metric]
+
+## EDUCATION
+
+### [Degree] | [Institution] | [YYYY] – [YYYY]
+- [Honors/GPA/Relevant Coursework if notable]
+
+## SKILLS
+[Category 1] • [Category 2] • [Category 3]
+[Comma-separated skills within category, ALL keywordGaps integrated]
+
+## PROJECTS
+
+### [Project Name] | [Tech Stack] | [MMM YYYY] – [MMM YYYY]
+- [Verb] [Scope] achieving [Metric]
+
+## CERTIFICATIONS
+- [Cert Name] | [Issuer] | [Year]
+</markdown_template>
+
+<red_flag_checklist>
+- Missing Skills section → Create robust categorized SKILLS
+- Missing Projects section → Extract from Experience or create PROJECTS
+- Inconsistent dates → Standardize all to MMM YYYY
+- Passive voice → Convert all bullets to active voice + metric
+- No quantifiable achievements → Add metrics to every bullet
+- Weak keywords → Inject all keywordGaps + requiredSkills naturally
+- Long paragraphs → Convert to bullet points
+- Tables/columns → Linear markdown
+</red_flag_checklist>`;
+
+export function buildFixerPrompt(resumeText: string, analysis: any) {
+  return `<analysis_results>
+Score: ${analysis.score}/100
+
+Red Flags:
+${(analysis.redFlags || []).map((f: string) => `- ${f}`).join('\n') || '- None'}
+
+Strengths:
+${(analysis.strengths || []).map((s: string) => `- ${s}`).join('\n') || '- None'}
+
+Suggestions:
+${(analysis.suggestions || []).map((s: string) => `- ${s}`).join('\n') || '- None'}
+
+Keyword Gaps:
+${(analysis.keywordGaps || []).map((g: string) => `- ${g}`).join('\n') || '- None'}
+</analysis_results>
+
+<original_resume>
+${resumeText}
+</original_resume>`;
+}

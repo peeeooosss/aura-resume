@@ -1,4 +1,4 @@
-import { buildResumeAnalysisPrompt, buildLinkedInAnalysisPrompt, buildCoverLetterPrompt, buildJobMatchPrompt, buildRoadmapPrompt, buildJobRolePotentialPrompt, RESUME_ANALYSIS_PROMPT, LINKEDIN_ANALYSIS_PROMPT, COVER_LETTER_PROMPT, ROADMAP_GENERATION_PROMPT, JOB_MATCH_ANALYSIS_PROMPT, JOB_ROLE_POTENTIAL_PROMPT } from './prompts';
+import { buildResumeAnalysisPrompt, buildLinkedInAnalysisPrompt, buildCoverLetterPrompt, buildJobMatchPrompt, buildRoadmapPrompt, buildJobRolePotentialPrompt, RESUME_ANALYSIS_PROMPT, LINKEDIN_ANALYSIS_PROMPT, COVER_LETTER_PROMPT, ROADMAP_GENERATION_PROMPT, JOB_MATCH_ANALYSIS_PROMPT, JOB_ROLE_POTENTIAL_PROMPT, PERFECT_ATS_FIXER_PROMPT, buildFixerPrompt } from './prompts';
 import type { JobRolePotential } from '@/lib/types';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
@@ -37,7 +37,7 @@ async function callOpenRouter(
   } = {}
 ): Promise<{ content: string; tokensUsed: number; finishReason: string }> {
   const {
-    model = 'google/gemini-2.5-flash',
+    model = 'google/gemini-2.5-flash-lite',
     temperature = 0.3,
     maxTokens = 4000,
     expectJson = false,
@@ -109,7 +109,7 @@ export async function analyzeResume(resumeText: string): Promise<{
   const { content, tokensUsed, finishReason } = await callOpenRouter([
     { role: 'system', content: RESUME_ANALYSIS_PROMPT },
     { role: 'user', content: buildResumeAnalysisPrompt(resumeText) },
-  ], { model: 'anthropic/claude-opus-4.8', temperature: 0.2, maxTokens: 12000, expectJson: true });
+  ], { model: 'google/gemini-2.5-flash-lite', temperature: 0.2, maxTokens: 12000, expectJson: true });
 
   try {
     const parsed = JSON.parse(content);
@@ -232,6 +232,104 @@ ${resumeText}
   const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
     { role: 'system', content: systemPrompt },
     { role: 'user', content: userMessage },
+  ];
+
+  let currentFinishReason = finishReason;
+  let retries = 0;
+
+  while (currentFinishReason === 'length' && retries < 3) {
+    const continuationMessage = {
+      role: 'user' as const,
+      content: 'CRITICAL: You hit the length limit. Output ONLY the continuation of the markdown from exactly where you left off. DO NOT start from the beginning. DO NOT repeat the header or any previous sections. Output ONLY the remaining text.',
+    };
+
+    messages.push({ role: 'assistant', content: finalContent });
+    messages.push(continuationMessage);
+
+    const { content: contContent, tokensUsed: contTokens, finishReason: contReason } = await callOpenRouter(messages, {
+      temperature: 0.1,
+      maxTokens: 8000,
+      expectJson: false,
+    });
+
+    if (contContent && contContent.length > 20) {
+      finalContent += '\n' + contContent;
+      totalTokens += contTokens;
+    }
+
+    currentFinishReason = contReason;
+    retries++;
+  }
+
+  const missingSections: string[] = [];
+  if (!/##\s*EDUCATION/i.test(finalContent)) missingSections.push('EDUCATION');
+  if (!/##\s*SKILLS/i.test(finalContent)) missingSections.push('SKILLS');
+  if (!/##\s*PROJECTS/i.test(finalContent)) missingSections.push('PROJECTS');
+  if (!/##\s*CERTIFICATIONS/i.test(finalContent)) missingSections.push('CERTIFICATIONS');
+
+  if (missingSections.length > 0) {
+    const fallbackMessage = {
+      role: 'user' as const,
+      content: `CRITICAL: You forgot to include these sections: ${missingSections.join(', ')}. Generate ONLY these specific missing sections in strict markdown format (using ## headers). DO NOT regenerate the entire resume. DO NOT include the Summary or Experience sections again. Output ONLY the missing sections.`,
+    };
+
+    messages.push(fallbackMessage);
+
+    const { content: missingContent, tokensUsed: missingTokens } = await callOpenRouter(messages, {
+      temperature: 0.1,
+      maxTokens: 4000,
+      expectJson: false,
+    });
+
+    if (missingContent && missingContent.length > 20) {
+      finalContent += '\n\n' + missingContent.trim();
+      totalTokens += missingTokens;
+    }
+  }
+
+  return { optimizedResume: finalContent, tokensUsed: totalTokens };
+}
+
+export async function fixResumeToPerfectATS(
+  resumeText: string,
+  analysis: any
+): Promise<{
+  optimizedResume: string;
+  tokensUsed: number;
+}> {
+  const { content: firstContent, tokensUsed: firstTokens, finishReason } = await callOpenRouter([
+    { role: 'system', content: PERFECT_ATS_FIXER_PROMPT },
+    { role: 'user', content: buildFixerPrompt(resumeText, analysis) },
+  ], {
+    temperature: 0.1,
+    maxTokens: 24000,
+    expectJson: false,
+  });
+
+  if (!firstContent || firstContent.length < 100) {
+    throw new Error('AI returned empty or too short response. Please try again.');
+  }
+
+  let finalContent = firstContent;
+  let totalTokens = firstTokens;
+
+  const requiredSections = ['## SUMMARY', '## EXPERIENCE'];
+  if (/education|university|college|institute|b\.?\s*tech|bachelor|master|degree|gpa|school/i.test(resumeText)) {
+    requiredSections.push('## EDUCATION');
+  }
+  if (/skill|proficient|expertise|competenc|technolog|language|framework/i.test(resumeText)) {
+    requiredSections.push('## SKILLS');
+  }
+  if (/project|portfolio|github|hackathon|built|developed|created|launched|deployed/i.test(resumeText)) {
+    requiredSections.push('## PROJECTS');
+  }
+  if (/certif|course|credential|coursera|udemy|aws.*cert|comptia|license/i.test(resumeText)) {
+    requiredSections.push('## CERTIFICATIONS');
+  }
+
+  const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    { role: 'system', content: PERFECT_ATS_FIXER_PROMPT },
+    { role: 'user', content: buildFixerPrompt(resumeText, analysis) },
   ];
 
   let currentFinishReason = finishReason;
@@ -414,7 +512,7 @@ export async function analyzeLinkedIn(profileData: any): Promise<{
   const { content, tokensUsed } = await callOpenRouter([
     { role: 'system', content: LINKEDIN_ANALYSIS_PROMPT },
     { role: 'user', content: buildLinkedInAnalysisPrompt(profileData) },
-  ], { model: 'anthropic/claude-opus-4.8', temperature: 0.2, expectJson: true });
+  ], { model: 'google/gemini-2.5-flash-lite', temperature: 0.2, expectJson: true });
 
   try {
     const parsed = JSON.parse(content);
@@ -443,7 +541,7 @@ export async function generateCoverLetter(
   const { content, tokensUsed } = await callOpenRouter([
     { role: 'system', content: COVER_LETTER_PROMPT },
     { role: 'user', content: buildCoverLetterPrompt(jobDescription, resumeText) },
-  ], { model: 'anthropic/claude-opus-4.8', temperature: 0.5, maxTokens: 2000, expectJson: true });
+  ], { model: 'google/gemini-2.5-flash-lite', temperature: 0.5, maxTokens: 2000, expectJson: true });
 
   try {
     const parsed = JSON.parse(content);
@@ -480,7 +578,7 @@ export async function generateRoadmap(
   const { content, tokensUsed } = await callOpenRouter([
     { role: 'system', content: ROADMAP_GENERATION_PROMPT },
     { role: 'user', content: buildRoadmapPrompt(currentRole, goalRole, skills) },
-  ], { model: 'anthropic/claude-opus-4.8', temperature: 0.4, maxTokens: 3000, expectJson: true });
+  ], { model: 'google/gemini-2.5-flash-lite', temperature: 0.4, maxTokens: 3000, expectJson: true });
 
   try {
     const parsed = JSON.parse(content);
@@ -507,7 +605,7 @@ export async function analyzeJobMatch(
   const { content, tokensUsed } = await callOpenRouter([
     { role: 'system', content: JOB_MATCH_ANALYSIS_PROMPT },
     { role: 'user', content: buildJobMatchPrompt(jobDescription, resumeText) },
-  ], { model: 'anthropic/claude-opus-4.8', temperature: 0.2, expectJson: true });
+  ], { model: 'google/gemini-2.5-flash-lite', temperature: 0.2, expectJson: true });
 
   try {
     const parsed = JSON.parse(content);
@@ -528,7 +626,7 @@ export async function analyzeJobRolePotential(
   const { content, tokensUsed } = await callOpenRouter([
     { role: 'system', content: JOB_ROLE_POTENTIAL_PROMPT },
     { role: 'user', content: buildJobRolePotentialPrompt(resumeText, analysis) },
-  ], { model: 'anthropic/claude-opus-4.8', temperature: 0.2, expectJson: true });
+  ], { model: 'google/gemini-2.5-flash-lite', temperature: 0.2, expectJson: true });
 
   try {
     const parsed = JSON.parse(content);

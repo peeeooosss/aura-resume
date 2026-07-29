@@ -38,12 +38,19 @@ model Resume {
   fileKey   String?
   rawText   String?    @db.Text
   status    String     @default("uploaded")
+  version   Int        @default(1)
+  parentId  String?
+  parent    Resume?    @relation("ResumeVersions", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Resume[]   @relation("ResumeVersions")
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
   user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   analyses Analysis[]
   jobs     JobMatch[]
+
+  @@index([userId, status])
+  @@index([userId, parentId])
 }
 
 model Analysis {

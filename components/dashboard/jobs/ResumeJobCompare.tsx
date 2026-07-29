@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { FileSearch, FileText, AlertCircle, CheckCircle, XCircle, Sparkles, Download, Loader2, ArrowRight, IndianRupee } from 'lucide-react';
 import { generateOptimizedResumePDF, getPDFBlobURL } from '@/lib/pdf/generateReport';
+import { useResumes } from '@/lib/hooks/useResumes';
 
 export default function ResumeJobCompare() {
+  const { resumes } = useResumes();
   const [jobDescription, setJobDescription] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [company, setCompany] = useState('');
@@ -14,20 +16,26 @@ export default function ResumeJobCompare() {
   const [error, setError] = useState<string | null>(null);
   const [tailoredPdfUrl, setTailoredPdfUrl] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
+  const [selectedResumeId, setSelectedResumeId] = useState<string>('');
+
+  const fixedResumes = resumes.filter(r => r.status?.toLowerCase() === 'fixed' || r.rawText);
 
   const getResumeData = useCallback(() => {
-    try {
-      const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
-      const ids = Object.keys(analyses);
-      if (ids.length === 0) return null;
-      const latest = analyses[ids[ids.length - 1]];
-      return {
-        originalText: latest?.resume?.originalText || '',
-        analysis: latest?.resume || null,
-        id: ids[ids.length - 1],
-      };
-    } catch { return null; }
-  }, []);
+    if (!selectedResumeId) return null;
+    const resume = resumes.find(r => r.id === selectedResumeId);
+    if (!resume?.rawText) return null;
+    return {
+      originalText: resume.rawText,
+      analysis: { score: resume.atsScore, strengths: resume.strengths, redFlags: resume.redFlags },
+      id: resume.id,
+    };
+  }, [selectedResumeId, resumes]);
+
+  useEffect(() => {
+    if (fixedResumes.length > 0 && !selectedResumeId) {
+      setSelectedResumeId(fixedResumes[0].id);
+    }
+  }, [fixedResumes, selectedResumeId]);
 
   const handleCompare = async () => {
     if (!jobDescription.trim()) return;
@@ -130,13 +138,37 @@ export default function ResumeJobCompare() {
         <p className="text-surface-500 dark:text-slate-400 mt-1">Compare your resume against a job description and generate a tailored version</p>
       </div>
 
+      {fixedResumes.length > 0 && (
+        <div className="bg-white border border-surface-200 rounded-2xl shadow-sm dark:bg-slate-900/80 dark:border-slate-800 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-surface-900 dark:text-surface-900 dark:text-white mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-indigo-500" />
+            Select Resume to Compare
+          </h2>
+          <select
+            value={selectedResumeId}
+            onChange={(e) => setSelectedResumeId(e.target.value)}
+            className="w-full bg-surface-100 dark:bg-slate-800 border border-surface-300 dark:border-slate-700 rounded-xl px-4 py-3 text-surface-900 dark:text-white focus:outline-none focus:border-indigo-500 text-sm"
+          >
+            {fixedResumes.map(r => (
+              <option key={r.id} value={r.id}>
+                {r.fileName || r.title} {r.atsScore ? `(ATS: ${r.atsScore}/100)` : ''} {r.status === 'fixed' ? '(AI Fixed)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {!resumeData && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-6 dark:bg-amber-500/5 dark:border-amber-500/20">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
             <div>
               <p className="font-medium text-amber-800 dark:text-amber-300">No resume found</p>
-              <p className="text-amber-600 dark:text-amber-400 text-sm">Upload and analyze your resume from the Resume Analyser first, then come back here to compare it with job descriptions.</p>
+              <p className="text-amber-600 dark:text-amber-400 text-sm">
+                {fixedResumes.length === 0
+                  ? 'No resumes with extractable text found. Upload and analyze a resume first, then use the Resume Fixer to get a fixed version, then come back here.'
+                  : 'The selected resume has no extractable text. Please choose another one.'}
+              </p>
             </div>
           </div>
         </div>
