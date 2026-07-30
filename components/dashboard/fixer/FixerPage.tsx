@@ -61,15 +61,15 @@ function ScoreCircle({ score, size = 140 }: { score: number; size?: number }) {
 
 const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };
 
-function BlurGate({ children, hasProAccess }: { children: React.ReactNode; hasProAccess: boolean }) {
-  if (hasProAccess) return <>{children}</>;
+function BlurGate({ children, hasAccess, requiredPlan = 'pro' }: { children: React.ReactNode; hasAccess: boolean; requiredPlan?: string }) {
+  if (hasAccess) return <>{children}</>;
   return (
     <div className="relative">
       <div className="select-none pointer-events-none blur-[3px] opacity-50">{children}</div>
       <div className="absolute inset-0 flex items-center justify-center z-10">
-        <Link href="/plans?plan=pro" className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all">
+        <Link href={`/plans?plan=${requiredPlan}`} className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all">
           <Lock className="w-4 h-4" />
-          Upgrade to Pro to unlock
+          Upgrade to {requiredPlan === 'pro' ? 'Pro' : 'Quick Fix'} to unlock
         </Link>
       </div>
     </div>
@@ -80,6 +80,7 @@ export function FixerPage() {
   const router = useRouter();
   const { toast } = useToast();
   const currentPlan = usePlan(s => s.currentPlan);
+  const hasQuickAccess = (PLAN_TIER[currentPlan] ?? 0) >= (PLAN_TIER['quick'] ?? 0);
   const hasProAccess = (PLAN_TIER[currentPlan] ?? 0) >= (PLAN_TIER['pro'] ?? 0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -390,7 +391,7 @@ export function FixerPage() {
                 </div>
               </div>
 
-              <BlurGate hasProAccess={hasProAccess}>
+              <BlurGate hasAccess={hasQuickAccess} requiredPlan="quick">
                 {jrp && jrp.potentialRoles.length > 0 && (
                   <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
                     <h3 className="font-semibold text-surface-900 dark:text-white flex items-center gap-2 mb-4">
@@ -426,7 +427,7 @@ export function FixerPage() {
                 )}
               </BlurGate>
 
-              <BlurGate hasProAccess={hasProAccess}>
+              <BlurGate hasAccess={hasProAccess} requiredPlan="pro">
                 <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6 space-y-3">
                   {savedResumeId ? (
                     <div className="space-y-2">
@@ -460,7 +461,7 @@ export function FixerPage() {
             </div>
 
             <div className="lg:col-span-2 space-y-6">
-              {hasProAccess && showPdfPreview && reportPdfUrl && (
+              {hasQuickAccess && showPdfPreview && reportPdfUrl && (
                 <div className="bg-white border border-surface-200 dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl overflow-hidden">
                   <div className="p-3 border-b border-surface-200 dark:border-slate-800 flex items-center justify-between">
                     <span className="text-sm font-medium text-surface-600 dark:text-slate-300">Report Preview</span>
@@ -470,7 +471,7 @@ export function FixerPage() {
                 </div>
               )}
 
-              <BlurGate hasProAccess={hasProAccess}>
+              <BlurGate hasAccess={hasQuickAccess} requiredPlan="quick">
                 {analysis.redFlags.length > 0 && (
                   <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
                     <h3 className="flex items-center gap-2 text-rose-400 font-semibold mb-4"><AlertTriangle className="w-5 h-5" /> Red Flags ({analysis.redFlags.length})</h3>
@@ -500,7 +501,7 @@ export function FixerPage() {
                 </div>
               )}
 
-              <BlurGate hasProAccess={hasProAccess}>
+              <BlurGate hasAccess={hasQuickAccess} requiredPlan="quick">
                 {analysis.keywordGaps.length > 0 && (
                   <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
                     <h3 className="flex items-center gap-2 text-amber-400 font-semibold mb-4"><TrendingUp className="w-5 h-5" /> Keyword Gaps</h3>
@@ -513,7 +514,7 @@ export function FixerPage() {
                 )}
               </BlurGate>
 
-              <BlurGate hasProAccess={hasProAccess}>
+              <BlurGate hasAccess={hasQuickAccess} requiredPlan="quick">
                 {analysis.suggestions.length > 0 && (
                   <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
                     <h3 className="flex items-center gap-2 text-blue-400 font-semibold mb-4"><Sparkles className="w-5 h-5" /> Suggestions</h3>
@@ -529,7 +530,7 @@ export function FixerPage() {
                 )}
               </BlurGate>
 
-              {hasProAccess && fixedResume && (
+              {hasQuickAccess && fixedResume && (
                 <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl overflow-hidden">
                   <button
                     onClick={() => setShowFixedResume(!showFixedResume)}

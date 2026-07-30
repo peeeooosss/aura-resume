@@ -1,40 +1,70 @@
 'use client';
 
 import { useRoadmap } from '@/lib/hooks/useRoadmap';
+import { usePlan } from '@/lib/hooks/usePlan';
 import { useRouter } from 'next/navigation';
-import { ROADMAP_TASK_TYPES } from '@/lib/constants/roadmap';
-import { Map, Calendar, CheckCircle2, Clock, ArrowRight, Plus, Target, TrendingUp } from 'lucide-react';
+import { Map, Calendar, CheckCircle2, ArrowRight, Plus, Target, TrendingUp, Loader2, Lock, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 
-type TaskType = 'LEARN' | 'BUILD' | 'NETWORK' | 'APPLY' | 'INTERVIEW_PREP';
-
-interface RoadmapTask {
-  id: string;
-  day: number;
-  week: number;
-  type: TaskType;
-  title: string;
-  description?: string;
-  duration: number;
-  affiliateLinks?: Array<{ platform: string; url: string; title: string; commission: number }>;
-  isCompleted: boolean;
-  completedAt?: string;
-}
-
 export function RoadmapOverview() {
-  const { roadmaps, currentRoadmap, progress } = useRoadmap();
+  const { roadmaps, loading } = useRoadmap();
+  const { currentPlan } = usePlan();
   const router = useRouter();
 
-  const activeRoadmap = roadmaps.find(r => r.isActive) || currentRoadmap;
+  const activeRoadmap = roadmaps.find((r: any) => r.isActive);
+  const hasAccess = currentPlan === 'pro' || currentPlan === 'vip';
 
-  const today = new Date();
-  const currentDay = activeRoadmap
-    ? Math.ceil((today.getTime() - new Date(activeRoadmap.startDate).getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto flex items-center justify-center py-16">
+        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+      </div>
+    );
+  }
 
-  const todayTasks = activeRoadmap
-    ? activeRoadmap.dailyTasks.filter((t: any) => t.day === currentDay).slice(0, 5)
-    : [];
+  if (!hasAccess) {
+    return (
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
+              <Map className="w-8 h-8 text-indigo-400" />
+              Career Roadmap
+            </h1>
+            <p className="text-surface-500 dark:text-slate-400 mt-1">
+              Your personalized 90-day career transformation plans
+            </p>
+          </div>
+        </div>
+
+        <div className="text-center py-20">
+          <div className="w-20 h-20 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-6">
+            <Lock className="w-10 h-10 text-indigo-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-surface-900 dark:text-white mb-3">Roadmap Requires Pro or VIP</h2>
+          <p className="text-surface-500 dark:text-slate-400 mb-8 max-w-md mx-auto">
+            Generate AI-powered 90-day career roadmaps with tasks, videos, quizzes, projects, and interview prep.
+            Upgrade to Pro or VIP to unlock.
+          </p>
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={() => router.push('/dashboard/plans')}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
+            >
+              <Sparkles className="w-5 h-5" />
+              Upgrade to Pro
+            </button>
+            <button
+              onClick={() => router.push('/dashboard/plans')}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-surface-100 dark:bg-slate-800 text-surface-900 dark:text-white font-semibold rounded-xl border border-surface-300 dark:border-slate-700 hover:border-indigo-500/50 transition-all"
+            >
+              View VIP Plan
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -44,7 +74,9 @@ export function RoadmapOverview() {
             <Map className="w-8 h-8 text-indigo-400" />
             Career Roadmap
           </h1>
-          <p className="text-surface-500 dark:text-slate-400 mt-1">Your personalized 90-day career transformation plan</p>
+          <p className="text-surface-500 dark:text-slate-400 mt-1">
+            Your personalized 90-day career transformation plans
+          </p>
         </div>
         <button
           onClick={() => router.push('/dashboard/roadmap/generate')}
@@ -55,202 +87,132 @@ export function RoadmapOverview() {
         </button>
       </div>
 
-      {activeRoadmap ? (
-        <>
-          {/* Active Roadmap Card */}
-          <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6 mb-8">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-full">Active</span>
-                  <span className="text-surface-400 dark:text-slate-500 text-sm">Started {new Date(activeRoadmap.startDate).toLocaleDateString()}</span>
-                </div>
-                <h2 className="text-xl font-bold text-surface-900 dark:text-white">{activeRoadmap.targetRole}</h2>
-                {activeRoadmap.targetCompany && (
-                  <p className="text-surface-500 dark:text-slate-400 text-sm mt-1">Target: {activeRoadmap.targetCompany}</p>
-                )}
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-surface-900 dark:text-white">{progress?.overall || 0}%</div>
-                <p className="text-surface-400 dark:text-slate-500 text-sm">{progress?.completed || 0}/{progress?.total || 0} tasks</p>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="h-3 bg-surface-200 dark:bg-surface-100 dark:bg-slate-800 rounded-full overflow-hidden mb-4">
-              <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
-                style={{ width: `${activeRoadmap.progress}%` }}
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-surface-100 dark:bg-slate-800/50 rounded-2xl p-4">
-                <div className="flex items-center gap-2 text-surface-500 dark:text-slate-400 text-sm mb-1">
-                  <Calendar className="w-4 h-4" />
-                  <span>Current Day</span>
-                </div>
-                <p className="text-2xl font-bold text-surface-900 dark:text-white">Day {currentDay}</p>
-              </div>
-              <div className="bg-surface-100 dark:bg-slate-800/50 rounded-2xl p-4">
-                <div className="flex items-center gap-2 text-surface-500 dark:text-slate-400 text-sm mb-1">
-                  <Target className="w-4 h-4" />
-                  <span>Current Week</span>
-                </div>
-                <p className="text-2xl font-bold text-surface-900 dark:text-white">Week {Math.ceil(currentDay / 7)}</p>
-              </div>
-              <div className="bg-surface-100 dark:bg-slate-800/50 rounded-2xl p-4">
-                <div className="flex items-center gap-2 text-surface-500 dark:text-slate-400 text-sm mb-1">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>Remaining</span>
-                </div>
-                <p className="text-2xl font-bold text-surface-900 dark:text-white">{90 - currentDay} days</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Milestones Timeline */}
-          <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6 mb-8">
-            <h3 className="text-lg font-semibold text-surface-900 dark:text-white mb-6 flex items-center gap-2">
-              <Map className="w-5 h-5 text-indigo-400" />
-              Milestones Timeline
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {activeRoadmap.milestones.slice(0, 6).map((milestone: any) => {
-                const weekNum = milestone.week;
-                const currentWeek = Math.ceil(currentDay / 7);
-                const isCompleted = currentWeek > weekNum;
-                const isCurrent = currentWeek === weekNum;
-
-                return (
-                  <div
-                    key={weekNum}
-                    className={cn(
-                      "relative p-4 rounded-2xl border transition-all",
-                      isCurrent
-                        ? "bg-indigo-500/10 border-indigo-500/30"
-                        : isCompleted
-                        ? "bg-emerald-500/5 border-emerald-500/20"
-                        : "bg-surface-100 dark:bg-slate-800/50 border-surface-200 dark:border-slate-800"
-                    )}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
-                        isCurrent
-                          ? "bg-indigo-500 text-white"
-                          : isCompleted
-                          ? "bg-emerald-500/20 text-emerald-400"
-                          : "bg-slate-700 text-surface-500 dark:text-slate-400"
-                      )}>
-                        {isCompleted ? "✓" : weekNum}
-                      </span>
-                      <span className="text-sm font-medium text-surface-600 dark:text-slate-300">Week {weekNum}</span>
-                    </div>
-                    <h4 className="font-medium text-surface-900 dark:text-white text-sm mb-1">{milestone.theme}</h4>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {milestone.focus.slice(0, 2).map((f: string, i: number) => (
-                        <span key={i} className="px-2 py-0.5 bg-surface-100 dark:bg-slate-800 text-surface-500 dark:text-slate-400 text-xs rounded-full">
-                          {f}
-                        </span>
-                      ))}
-                      {milestone.focus.length > 2 && (
-                        <span className="px-2 py-0.5 bg-surface-100 dark:bg-slate-800 text-surface-400 dark:text-slate-500 text-xs rounded-full">
-                          +{milestone.focus.length - 2}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {activeRoadmap.milestones.length > 6 && (
-              <button
-                onClick={() => router.push(`/dashboard/roadmap/${activeRoadmap.id}`)}
-                className="mt-4 text-indigo-400 hover:text-indigo-300 text-sm font-medium flex items-center gap-1"
-              >
-                View all {activeRoadmap.milestones.length} milestones
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          {/* Today's Tasks */}
-          <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-                <Clock className="w-5 h-5 text-indigo-400" />
-                Today's Tasks (Day {currentDay})
-              </h3>
-              <button
-                onClick={() => router.push(`/dashboard/roadmap/${activeRoadmap.id}`)}
-                className="text-indigo-400 hover:text-indigo-300 text-sm font-medium flex items-center gap-1"
-              >
-                View all tasks
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {todayTasks.length > 0 ? (
-              <div className="space-y-3">
-                {todayTasks.map((task: RoadmapTask) => {
-                  const taskType = ROADMAP_TASK_TYPES[task.type];
-                  return (
-                    <div
-                      key={task.id}
-                      className={cn(
-                        "flex items-center gap-4 p-4 rounded-2xl border transition-all",
-                        task.isCompleted
-                          ? "bg-emerald-500/5 border-emerald-500/20"
-                          : "bg-surface-100 dark:bg-slate-800/50 border-surface-200 dark:border-slate-800 hover:border-surface-300 dark:border-slate-700"
-                      )}
-                    >
-                      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", taskType.bgColor)}>
-                        <span className="text-lg">{taskType.icon}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={cn(
-                          "font-medium truncate",
-                          task.isCompleted ? "text-surface-500 dark:text-slate-400 line-through" : "text-white"
-                        )}>
-                          {task.title}
-                        </p>
-                        <p className="text-surface-400 dark:text-slate-500 text-sm">{task.duration} min</p>
-                      </div>
-                      <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", taskType.bgColor, taskType.color)}>
-                        {taskType.label}
-                      </span>
-                      {task.isCompleted && (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <CheckCircle2 className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                <p className="text-surface-500 dark:text-slate-400">No tasks for today</p>
-              </div>
-            )}
-          </div>
-        </>
-      ) : (
+      {roadmaps.length === 0 ? (
         <div className="text-center py-16">
           <div className="w-20 h-20 rounded-2xl bg-surface-100 dark:bg-slate-800/50 border border-surface-300 dark:border-slate-700 flex items-center justify-center mx-auto mb-6">
             <Map className="w-10 h-10 text-surface-400 dark:text-slate-500" />
           </div>
-          <h2 className="text-2xl font-bold text-surface-900 dark:text-white mb-3">No Active Roadmap</h2>
+          <h2 className="text-2xl font-bold text-surface-900 dark:text-white mb-3">No Roadmaps Yet</h2>
           <p className="text-surface-500 dark:text-slate-400 mb-8 max-w-md mx-auto">
-            Generate a personalized 90-day roadmap to accelerate your career transition.
+            Select a resume to generate a personalized 90-day roadmap that will accelerate your career growth.
           </p>
           <button
             onClick={() => router.push('/dashboard/roadmap/generate')}
             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
           >
             <Plus className="w-5 h-5" />
-            Generate Your Roadmap
+            Generate Your First Roadmap
           </button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {activeRoadmap && (
+            <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-3xl p-6 mb-8">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-full">Active</span>
+                    <span className="text-surface-400 dark:text-slate-500 text-sm">
+                      Started {new Date(activeRoadmap.startDate).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-bold text-surface-900 dark:text-white">{activeRoadmap.goalRole}</h2>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-surface-900 dark:text-white">{activeRoadmap.progress}%</div>
+                  <p className="text-surface-400 dark:text-slate-500 text-sm">
+                    {activeRoadmap.completedTasks}/{activeRoadmap.totalTasks} tasks
+                  </p>
+                </div>
+              </div>
+
+              <div className="h-3 bg-surface-200 dark:bg-slate-800 rounded-full overflow-hidden mb-4">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+                  style={{ width: `${activeRoadmap.progress}%` }}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-surface-100 dark:bg-slate-800/50 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 text-surface-500 dark:text-slate-400 text-sm mb-1">
+                    <Target className="w-4 h-4" />
+                    <span>Phase</span>
+                  </div>
+                  <p className="text-2xl font-bold text-surface-900 dark:text-white">{activeRoadmap.currentPhase}/4</p>
+                </div>
+                <div className="bg-surface-100 dark:bg-slate-800/50 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 text-surface-500 dark:text-slate-400 text-sm mb-1">
+                    <Calendar className="w-4 h-4" />
+                    <span>Week</span>
+                  </div>
+                  <p className="text-2xl font-bold text-surface-900 dark:text-white">{activeRoadmap.currentWeek}/13</p>
+                </div>
+                <div className="bg-surface-100 dark:bg-slate-800/50 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 text-surface-500 dark:text-slate-400 text-sm mb-1">
+                    <TrendingUp className="w-4 h-4" />
+                    <span>Progress</span>
+                  </div>
+                  <p className="text-2xl font-bold text-surface-900 dark:text-white">{activeRoadmap.progress}%</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => router.push(`/dashboard/roadmap/${activeRoadmap.id}`)}
+                className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-500 transition-colors"
+              >
+                Continue Roadmap
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-3xl p-6">
+            <h3 className="text-lg font-semibold text-surface-900 dark:text-white mb-4">All Roadmaps</h3>
+            <div className="space-y-3">
+              {roadmaps.map((roadmap: any) => (
+                <button
+                  key={roadmap.id}
+                  onClick={() => router.push(`/dashboard/roadmap/${roadmap.id}`)}
+                  className={cn(
+                    "w-full p-4 rounded-2xl border-2 transition-all text-left",
+                    roadmap.isActive
+                      ? "border-indigo-500 bg-indigo-500/10"
+                      : "border-surface-300 dark:border-slate-700 bg-surface-100 dark:bg-slate-800/50 hover:border-surface-400 dark:hover:border-slate-600"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {roadmap.isActive && (
+                          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-full">Active</span>
+                        )}
+                        <span className="text-surface-400 dark:text-slate-500 text-sm">
+                          Phase {roadmap.currentPhase}/4
+                        </span>
+                      </div>
+                      <p className="font-medium text-surface-900 dark:text-white truncate">{roadmap.goalRole}</p>
+                      <p className="text-surface-500 dark:text-slate-400 text-sm">
+                        Created {new Date(roadmap.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-4">
+                      <div className="text-xl font-bold text-surface-900 dark:text-white">{roadmap.progress}%</div>
+                      <p className="text-surface-400 dark:text-slate-500 text-sm">
+                        {roadmap.completedTasks}/{roadmap.totalTasks}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="h-2 bg-surface-200 dark:bg-slate-700 rounded-full overflow-hidden mt-3">
+                    <div
+                      className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+                      style={{ width: `${roadmap.progress}%` }}
+                    />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>

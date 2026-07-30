@@ -3,7 +3,7 @@ export const CREDIT_COSTS = {
   linkedin_analysis: 10,
   job_search: 2,
   cover_letter: 5,
-  roadmap_generation: 10,
+  roadmap_generation: 120,
   resume_fix: 3,
   ai_interview: 8,
   cold_email: 3,
@@ -34,9 +34,12 @@ export async function deductCredits(userId: string, action: CreditAction): Promi
 export async function getCreditBalance(userId: string): Promise<number> {
   const { prisma } = await import('@/lib/db');
 
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const plan = (user?.plan as string) || 'free';
+
   const balance = await prisma.creditBalance.upsert({
     where: { userId },
-    create: { userId, balance: 100 },
+    create: { userId, balance: getInitialCredits(plan) },
     update: {},
   });
 

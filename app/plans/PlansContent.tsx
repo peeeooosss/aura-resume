@@ -1,8 +1,9 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Sparkles, Shield, Download, Zap, Sparkles as SparklesIcon, Users, Award, Star, X, Check, Lock, CreditCard, Mail, Linkedin, Briefcase, Mic, Target, Brain, GraduationCap, Handshake, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Sparkles, Shield, Download, Zap, Sparkles as SparklesIcon, Users, Award, Star, X, Check, Lock, CreditCard, Mail, Linkedin, Briefcase, Mic, Target, Brain, GraduationCap, Handshake, ArrowRight, Loader2 } from 'lucide-react';
+import { usePlan } from '@/lib/hooks/usePlan';
 
 function FeatureIcon({ value }: { value: any }) {
   if (value === true) return <Check className="w-5 h-5 text-emerald-400" />;
@@ -175,6 +176,37 @@ export default function PlansContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const highlightPlan = searchParams.get('plan') || 'pro';
+  const setPlan = usePlan(s => s.setPlan);
+  const [activating, setActivating] = useState<string | null>(null);
+
+  const handleActivatePlan = async (planId: string) => {
+    if (planId === 'free') {
+      router.push('/');
+      return;
+    }
+
+    setActivating(planId);
+    try {
+      const res = await fetch('/api/plan/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planId }),
+      });
+
+      if (res.ok) {
+        setPlan(planId as any);
+        router.push('/dashboard');
+      } else if (res.status === 401) {
+        router.push(`/login?redirect=/plans&plan=${planId}`);
+      } else {
+        console.error('Plan activation failed');
+      }
+    } catch {
+      router.push(`/login?redirect=/plans&plan=${planId}`);
+    } finally {
+      setActivating(null);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-slate-950 py-16 px-4">
@@ -249,11 +281,8 @@ export default function PlansContent() {
               </ul>
 
               <button
-                onClick={() => {
-                  if (plan.id === 'free') router.push('/');
-                  else if (plan.id === 'quick') router.push('/payment?plan=quick-fix');
-                  else router.push(`/login?redirect=/plans&plan=${plan.id}`);
-                }}
+                onClick={() => handleActivatePlan(plan.id)}
+                disabled={activating !== null}
                 className={`w-full py-3 rounded-xl font-semibold transition-all ${
                   plan.id === 'free'
                     ? 'bg-slate-800 text-white border border-slate-700 hover:bg-slate-700'
@@ -262,9 +291,11 @@ export default function PlansContent() {
                     : plan.id === 'pro'
                     ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg hover:shadow-indigo-500/30'
                     : 'bg-gradient-to-r from-amber-600 to-amber-500 text-white hover:shadow-lg hover:shadow-amber-500/30'
-                }`}
+                } disabled:opacity-50`}
               >
-                {plan.id === 'free' ? 'Start Free' : plan.id === 'quick' ? 'Get Quick Fix' : 'Get Started'}
+                {activating === plan.id ? (
+                  <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Activating...</span>
+                ) : plan.id === 'free' ? 'Start Free' : plan.id === 'quick' ? 'Get Quick Fix' : 'Get Started'}
               </button>
             </div>
           ))}
@@ -321,18 +352,20 @@ export default function PlansContent() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => router.push('/payment?plan=quick-fix')}
-              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
+              onClick={() => handleActivatePlan('quick')}
+              disabled={activating !== null}
+              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all disabled:opacity-50"
             >
-              <Download className="w-5 h-5" />
-              Start with Quick Fix (₹49)
+              {activating === 'quick' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+              {activating === 'quick' ? 'Activating...' : 'Start with Quick Fix (₹49)'}
             </button>
             <button
-              onClick={() => router.push('/login?redirect=/plans&plan=pro')}
-              className="inline-flex items-center gap-2 px-8 py-4 bg-slate-800 text-white font-semibold rounded-xl border border-slate-700 hover:bg-slate-700 transition-all"
+              onClick={() => handleActivatePlan('pro')}
+              disabled={activating !== null}
+              className="inline-flex items-center gap-2 px-8 py-4 bg-slate-800 text-white font-semibold rounded-xl border border-slate-700 hover:bg-slate-700 transition-all disabled:opacity-50"
             >
-              <ArrowRight className="w-5 h-5" />
-              Upgrade to Pro Bundle
+              {activating === 'pro' ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
+              {activating === 'pro' ? 'Activating...' : 'Upgrade to Pro Bundle'}
             </button>
           </div>
         </div>

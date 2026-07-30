@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -25,71 +24,30 @@ import {
   Star,
 } from 'lucide-react';
 
-interface PortfolioData {
-  name: string;
-  headline: string;
-  avatar: string;
-  location: string;
-  about: string;
-  skills: Array<{
-    category: string;
-    items: string[];
-  }>;
-  experience: Array<{
-    title: string;
-    company: string;
-    period: string;
-    description: string;
-    highlights: string[];
-  }>;
-  projects: Array<{
-    title: string;
-    description: string;
-    image: string;
-    tags: string[];
-    liveUrl: string;
-    githubUrl: string;
-  }>;
-  education: Array<{
-    degree: string;
-    school: string;
-    period: string;
-    description: string;
-  }>;
-  certifications: Array<{
-    name: string;
-    issuer: string;
-    date: string;
-    url: string;
-  }>;
-  testimonials: Array<{
-    name: string;
-    role: string;
-    content: string;
-    avatar: string;
-    rating: number;
-  }>;
-  contact: {
-    email: string;
-    phone: string;
-    social: {
-      github: string;
-      linkedin: string;
-      twitter: string;
-      website: string;
-    };
-  };
-  template: string;
-  primaryColor: string;
-  font: string;
+interface PortfolioPreviewData {
+  name?: string;
+  headline?: string;
+  avatar?: string;
+  location?: string;
+  about?: string;
+  skills?: Array<{ category: string; items: string[] }>;
+  experience?: Array<{ title: string; company: string; period: string; description: string; highlights: string[] }>;
+  projects?: Array<{ title: string; description: string; image: string; tags: string[]; liveUrl: string; githubUrl: string }>;
+  education?: Array<{ degree: string; school: string; period: string; description: string }>;
+  certifications?: Array<{ name: string; issuer: string; date: string; url: string }>;
+  testimonials?: Array<{ name: string; role: string; content: string; avatar: string; rating: number }>;
+  contact?: { email: string; phone: string; social: { github: string; linkedin: string; twitter: string; website: string } };
+  template?: string;
+  primaryColor?: string;
+  font?: string;
+  [key: string]: any;
 }
 
-export function PortfolioPreview({ slug }: { slug: string }) {
+export function PortfolioPreview({ slug, portfolio: portfolioProp, isPublic }: { slug?: string; portfolio?: PortfolioPreviewData; isPublic?: boolean }) {
   const { portfolios } = usePortfolio();
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const portfolio: any = portfolios.find(p => p.slug === slug) || null;
+  const portfolio: any = portfolioProp || portfolios.find(p => p.slug === slug) || null;
 
   useEffect(() => {
     if (portfolio?.testimonials && portfolio.testimonials.length > 1) {
@@ -128,35 +86,35 @@ export function PortfolioPreview({ slug }: { slug: string }) {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-lg border-b border-surface-200 dark:border-slate-800">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="font-semibold text-lg" style={{ color: primaryColor }}>
-            {portfolio.name}
+            {portfolio.name || portfolio.hero?.headline || 'Portfolio'}
           </div>
           <div className="flex items-center gap-6">
-            {portfolio.contact?.social?.github && (
+            {(portfolio.contact?.social?.github || portfolio.contact?.github) && (
               <a
-                href={portfolio.contact.social.github}
+                href={portfolio.contact?.social?.github || portfolio.contact?.github}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:text-white transition-colors"
+                className="text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:hover:text-white transition-colors"
               >
                 <Github className="w-5 h-5" />
               </a>
             )}
-            {portfolio.contact?.social?.linkedin && (
+            {(portfolio.contact?.social?.linkedin || portfolio.contact?.linkedin) && (
               <a
-                href={portfolio.contact.social.linkedin}
+                href={portfolio.contact?.social?.linkedin || portfolio.contact?.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:text-white transition-colors"
+                className="text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:hover:text-white transition-colors"
               >
                 <Linkedin className="w-5 h-5" />
               </a>
             )}
-            {portfolio.contact?.social?.twitter && (
+            {(portfolio.contact?.social?.twitter || portfolio.contact?.twitter) && (
               <a
-                href={portfolio.contact.social.twitter}
+                href={portfolio.contact?.social?.twitter || portfolio.contact?.twitter}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:text-white transition-colors"
+                className="text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:hover:text-white transition-colors"
               >
                 <Twitter className="w-5 h-5" />
               </a>
@@ -175,18 +133,20 @@ export function PortfolioPreview({ slug }: { slug: string }) {
       <main className="pt-16">
         <section className="py-20 px-6">
           <div className="max-w-4xl mx-auto text-center">
-            {portfolio.avatar && (
+            {(portfolio.avatar || portfolio.hero?.avatar) && (
               <img
-                src={portfolio.avatar}
-                alt={portfolio.name}
+                src={portfolio.avatar || portfolio.hero?.avatar}
+                alt={portfolio.name || portfolio.hero?.headline}
                 className="w-32 h-32 rounded-full mx-auto mb-6 object-cover border-4"
                 style={{ borderColor: primaryColor }}
               />
             )}
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              {portfolio.name}
+              {portfolio.name || portfolio.hero?.headline || 'Portfolio'}
             </h1>
-            <p className="text-xl text-surface-500 dark:text-slate-400 mb-4">{portfolio.headline}</p>
+            <p className="text-xl text-surface-500 dark:text-slate-400 mb-4">
+              {portfolio.headline || portfolio.hero?.subheadline || ''}
+            </p>
             {portfolio.location && (
               <div className="flex items-center justify-center gap-2 text-surface-400 dark:text-slate-500">
                 <MapPin className="w-4 h-4" />
@@ -220,7 +180,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
               Skills
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {portfolio.skills?.map((group, index) => (
+              {portfolio.skills?.map((group: { category: string; items: string[] }, index: number) => (
                 <div
                   key={index}
                   className="bg-surface-100 dark:bg-slate-900/50 rounded-2xl p-5 border border-surface-200 dark:border-slate-800"
@@ -263,7 +223,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                 style={{ backgroundColor: `${primaryColor}30` }}
               />
               <div className="space-y-8">
-                {portfolio.experience?.map((exp, index) => (
+                {portfolio.experience?.map((exp: any, index: number) => (
                   <div key={index} className="relative pl-12">
                     <div
                       className="absolute left-2.5 w-3 h-3 rounded-full border-2 bg-slate-950"
@@ -288,7 +248,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                       <p className="text-surface-600 dark:text-slate-300 mt-3">{exp.description}</p>
                       {exp.highlights && exp.highlights.length > 0 && (
                         <ul className="mt-3 space-y-1">
-                          {exp.highlights.map((highlight, i) => (
+                          {exp.highlights.map((highlight: string, i: number) => (
                             <li
                               key={i}
                               className="text-sm text-surface-500 dark:text-slate-400 flex items-start gap-2"
@@ -320,7 +280,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
               Projects
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {portfolio.projects?.map((project, index) => (
+              {portfolio.projects?.map((project: any, index: number) => (
                 <div
                   key={index}
                   className="bg-surface-100 dark:bg-slate-900/50 rounded-2xl border border-surface-200 dark:border-slate-800 overflow-hidden group hover:border-surface-300 dark:border-slate-700 transition-colors"
@@ -342,7 +302,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                       {project.description}
                     </p>
                     <div className="flex flex-wrap gap-2 mb-4">
-                      {project.tags?.map((tag, i) => (
+                      {project.tags?.map((tag: string, i: number) => (
                         <span
                           key={i}
                           className="px-2 py-1 rounded text-xs"
@@ -401,7 +361,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                       Education
                     </h2>
                     <div className="space-y-4">
-                      {portfolio.education.map((edu, index) => (
+                      {portfolio.education.map((edu: any, index: number) => (
                         <div
                           key={index}
                           className="bg-surface-100 dark:bg-slate-800/50 rounded-xl p-4 border border-surface-300 dark:border-slate-700"
@@ -433,7 +393,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                       Certifications
                     </h2>
                     <div className="space-y-4">
-                      {portfolio.certifications.map((cert, index) => (
+                      {portfolio.certifications.map((cert: any, index: number) => (
                         <div
                           key={index}
                           className="bg-surface-100 dark:bg-slate-800/50 rounded-xl p-4 border border-surface-300 dark:border-slate-700"
@@ -504,7 +464,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
+                      {Array.from({ length: 5 }).map((_: any, i: number) => (
                       <Star
                         key={i}
                         className="w-4 h-4"
@@ -537,7 +497,7 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                     <div className="flex gap-2">
-                      {portfolio.testimonials.map((_, i) => (
+                      {portfolio.testimonials.map((_: any, i: number) => (
                         <button
                           key={i}
                           onClick={() => setCurrentTestimonial(i)}
@@ -595,9 +555,9 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                   <span>Phone</span>
                 </a>
               )}
-              {portfolio.contact?.social?.website && (
+              {(portfolio.contact?.social?.website || portfolio.contact?.calendar) && (
                 <a
-                  href={portfolio.contact.social.website}
+                  href={portfolio.contact?.social?.website || portfolio.contact?.calendar}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-6 py-3 rounded-xl bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
@@ -608,9 +568,9 @@ export function PortfolioPreview({ slug }: { slug: string }) {
               )}
             </div>
             <div className="flex justify-center gap-4">
-              {portfolio.contact?.social?.github && (
+              {(portfolio.contact?.social?.github || portfolio.contact?.github) && (
                 <a
-                  href={portfolio.contact.social.github}
+                  href={portfolio.contact?.social?.github || portfolio.contact?.github}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 rounded-xl bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
@@ -618,9 +578,9 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                   <Github className="w-6 h-6" />
                 </a>
               )}
-              {portfolio.contact?.social?.linkedin && (
+              {(portfolio.contact?.social?.linkedin || portfolio.contact?.linkedin) && (
                 <a
-                  href={portfolio.contact.social.linkedin}
+                  href={portfolio.contact?.social?.linkedin || portfolio.contact?.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 rounded-xl bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
@@ -628,9 +588,9 @@ export function PortfolioPreview({ slug }: { slug: string }) {
                   <Linkedin className="w-6 h-6" />
                 </a>
               )}
-              {portfolio.contact?.social?.twitter && (
+              {(portfolio.contact?.social?.twitter || portfolio.contact?.twitter) && (
                 <a
-                  href={portfolio.contact.social.twitter}
+                  href={portfolio.contact?.social?.twitter || portfolio.contact?.twitter}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 rounded-xl bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"

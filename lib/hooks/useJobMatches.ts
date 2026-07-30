@@ -65,12 +65,13 @@ function enrichJobsWithMatching(jobs: any[], resumeSkills: string[]): JobMatch[]
   });
 }
 
-export function useJobMatches(initialResumeSkills: string[] = []) {
+export function useJobMatches() {
   const [matches, setMatches] = useState<JobMatch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingSources, setLoadingSources] = useState<string[]>([]);
+  const [searchSkills, setSearchSkills] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     location: '',
     remoteType: '',
@@ -81,10 +82,11 @@ export function useJobMatches(initialResumeSkills: string[] = []) {
   });
   const [savedOnly, setSavedOnly] = useState(false);
 
-  const hasResumeSkills = useMemo(() => initialResumeSkills.length > 0, [initialResumeSkills]);
+  const hasResumeSkills = useMemo(() => searchSkills.length > 0, [searchSkills]);
 
   const searchRealJobs = useCallback(async (term: string, loc?: string, skills?: string[]) => {
-    const skillList = skills || initialResumeSkills;
+    const skillList = skills || searchSkills;
+    if (skills) setSearchSkills(skills);
     const searchTerm = term || 'software engineer developer';
     const searchLocation = loc || 'India';
 
@@ -140,7 +142,7 @@ export function useJobMatches(initialResumeSkills: string[] = []) {
 
     setIsLoading(false);
     setLoadingSources([]);
-  }, [initialResumeSkills]);
+  }, [searchSkills]);
 
   const filteredMatches = useMemo(() => {
     return matches.filter(match => {

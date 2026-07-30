@@ -1,50 +1,70 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRoadmap } from '@/lib/hooks/useRoadmap';
 import { useRouter } from 'next/navigation';
-import { Loader2, Wand2, Target, Building2, Code2, Clock, Focus } from 'lucide-react';
+import { Loader2, Wand2, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { PlanGate } from '@/components/dashboard/PlanGate';
+
+interface Resume {
+  id: string;
+  fileName: string;
+  atsScore: number | null;
+  hasAnalysis: boolean;
+}
 
 export function RoadmapGenerate() {
   const { generateRoadmap, generating } = useRoadmap();
   const router = useRouter();
 
-  const [formData, setFormData] = useState({
-    targetRole: '',
-    targetCompany: '',
-    currentSkills: '',
-    hoursPerWeek: 15,
-    focusAreas: '',
-  });
+  const [resumes, setResumes] = useState<Resume[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState('');
+  const [loadingResumes, setLoadingResumes] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const fetchResumes = async () => {
+      try {
+        const res = await fetch('/api/resumes');
+        const data = await res.json();
+        if (res.ok) {
+          const resumeList = (data.resumes || []).map((r: any) => ({
+            id: r.id,
+            fileName: r.fileName || r.name || 'Untitled Resume',
+            atsScore: r.atsScore,
+            hasAnalysis: r.hasAnalysis || r.atsScore !== null,
+          }));
+          setResumes(resumeList);
+        }
+      } catch (err) {
+        console.error('Failed to fetch resumes:', err);
+      } finally {
+        setLoadingResumes(false);
+      }
+    };
+    fetchResumes();
+  }, []);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.targetRole.trim()) newErrors.targetRole = 'Target role is required';
-    if (!formData.currentSkills.trim()) newErrors.currentSkills = 'Current skills are required';
-    if (!formData.focusAreas.trim()) newErrors.focusAreas = 'Focus areas are required';
-    if (formData.hoursPerWeek < 5 || formData.hoursPerWeek > 40) {
-      newErrors.hoursPerWeek = 'Hours must be between 5-40';
+  const selectedResume = resumes.find(r => r.id === selectedResumeId);
+
+  const handleGenerate = async () => {
+    if (!selectedResumeId) {
+      setError('Please select a resume');
+      return;
     }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+    setError(null);
+    setSuccess(false);
 
-    const roadmap = await generateRoadmap({
-      targetRole: formData.targetRole,
-      targetCompany: formData.targetCompany || undefined,
-      currentSkills: formData.currentSkills.split(',').map(s => s.trim()),
-      hoursPerWeek: formData.hoursPerWeek,
-      focusAreas: formData.focusAreas.split(',').map(s => s.trim()),
-    });
-
-    if (roadmap) {
-      router.push(`/dashboard/roadmap/${roadmap.id}`);
+    try {
+      const result = await generateRoadmap(selectedResumeId);
+      setSuccess(true);
+      setTimeout(() => {
+        router.push(`/dashboard/roadmap/${result.id}`);
+      }, 1500);
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate roadmap');
     }
   };
 
@@ -59,141 +79,162 @@ export function RoadmapGenerate() {
           </div>
           <h2 className="text-2xl font-bold text-surface-900 dark:text-white mb-3">Generating Your Roadmap</h2>
           <p className="text-surface-500 dark:text-slate-400 max-w-md mx-auto">
-            Our AI is analyzing your goals and creating a personalized 90-day career transformation plan...
+            Our AI is analyzing your resume and creating a personalized 90-day career transformation plan...
           </p>
           <div className="mt-8 space-y-3 max-w-xs mx-auto">
             <div className="h-2 bg-surface-200 dark:bg-slate-800 rounded-full overflow-hidden">
               <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full animate-pulse" style={{ width: '60%' }} />
             </div>
-            <p className="text-surface-400 dark:text-slate-500 text-sm">This usually takes 2-3 seconds</p>
+            <p className="text-surface-400 dark:text-slate-500 text-sm">This usually takes 10-15 seconds</p>
           </div>
         </div>
       </div>
     );
   }
 
+  if (success) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-12 text-center">
+          <div className="w-20 h-20 rounded-2xl bg-emerald-500/20 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-surface-900 dark:text-white mb-3">Roadmap Generated!</h2>
+          <p className="text-surface-500 dark:text-slate-400">Redirecting to your roadmap...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
+    <PlanGate
+      requiredPlan="pro"
+      featureName="Roadmap Generation"
+      upgradeHref="/plans?plan=pro"
+    >
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
           <Wand2 className="w-8 h-8 text-indigo-400" />
           Generate Roadmap
         </h1>
-        <p className="text-surface-500 dark:text-slate-400 mt-1">Create your personalized 90-day career transformation plan</p>
+        <p className="text-surface-500 dark:text-slate-400 mt-1">
+          Select a resume to generate your personalized 90-day career roadmap
+        </p>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6 space-y-6">
-          {/* Target Role */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-slate-300 mb-2">
-              <Target className="w-4 h-4 text-indigo-400" />
-              Target Role *
-            </label>
-            <input
-              type="text"
-              placeholder="e.g., Staff Frontend Engineer, Senior Product Manager"
-              value={formData.targetRole}
-              onChange={(e) => setFormData(prev => ({ ...prev, targetRole: e.target.value }))}
-              className={inputClass}
-            />
-            {errors.targetRole && <p className="text-rose-400 text-sm mt-1">{errors.targetRole}</p>}
+      <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6 space-y-6">
+        {error && (
+          <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
+            <p className="text-rose-400 text-sm">{error}</p>
           </div>
+        )}
 
-          {/* Target Company */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-slate-300 mb-2">
-              <Building2 className="w-4 h-4 text-indigo-400" />
-              Target Company (Optional)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g., Google, Stripe, or 'Top tech companies'"
-              value={formData.targetCompany}
-              onChange={(e) => setFormData(prev => ({ ...prev, targetCompany: e.target.value }))}
-              className={inputClass}
-            />
-          </div>
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-slate-300 mb-3">
+            <FileText className="w-4 h-4 text-indigo-400" />
+            Select Resume *
+          </label>
 
-          {/* Current Skills */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-slate-300 mb-2">
-              <Code2 className="w-4 h-4 text-indigo-400" />
-              Current Skills *
-            </label>
-            <textarea
-              placeholder="e.g., React, TypeScript, Node.js, REST APIs, PostgreSQL"
-              value={formData.currentSkills}
-              onChange={(e) => setFormData(prev => ({ ...prev, currentSkills: e.target.value }))}
-              rows={3}
-              className={cn(inputClass, "resize-none")}
-            />
-            <p className="text-surface-400 dark:text-slate-500 text-xs mt-1">Separate skills with commas</p>
-            {errors.currentSkills && <p className="text-rose-400 text-sm mt-1">{errors.currentSkills}</p>}
-          </div>
-
-          {/* Hours per Week */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-slate-300 mb-2">
-              <Clock className="w-4 h-4 text-indigo-400" />
-              Hours per Week: {formData.hoursPerWeek}h
-            </label>
-            <input
-              type="range"
-              min={5}
-              max={40}
-              step={5}
-              value={formData.hoursPerWeek}
-              onChange={(e) => setFormData(prev => ({ ...prev, hoursPerWeek: parseInt(e.target.value) }))}
-              className="w-full h-2 bg-surface-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-            />
-            <div className="flex justify-between text-xs text-surface-400 dark:text-slate-500 mt-1">
-              <span>5h (Part-time)</span>
-              <span>20h (Half-time)</span>
-              <span>40h (Full-time)</span>
+          {loadingResumes ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
             </div>
-            {errors.hoursPerWeek && <p className="text-rose-400 text-sm mt-1">{errors.hoursPerWeek}</p>}
-          </div>
-
-          {/* Focus Areas */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-slate-300 mb-2">
-              <Focus className="w-4 h-4 text-indigo-400" />
-              Focus Areas *
-            </label>
-            <textarea
-              placeholder="e.g., System Design, Technical Leadership, Interview Prep"
-              value={formData.focusAreas}
-              onChange={(e) => setFormData(prev => ({ ...prev, focusAreas: e.target.value }))}
-              rows={3}
-              className={cn(inputClass, "resize-none")}
-            />
-            <p className="text-surface-400 dark:text-slate-500 text-xs mt-1">Separate areas with commas</p>
-            {errors.focusAreas && <p className="text-rose-400 text-sm mt-1">{errors.focusAreas}</p>}
-          </div>
+          ) : resumes.length === 0 ? (
+            <div className="text-center py-8 bg-surface-100 dark:bg-slate-800/50 rounded-2xl border border-surface-300 dark:border-slate-700">
+              <FileText className="w-12 h-12 text-surface-400 dark:text-slate-500 mx-auto mb-3" />
+              <p className="text-surface-500 dark:text-slate-400 mb-4">No resumes found. Upload a resume first.</p>
+              <button
+                onClick={() => router.push('/dashboard/resumes')}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-500 transition-colors text-sm font-medium"
+              >
+                Go to Resumes
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {resumes.map(resume => (
+                <button
+                  key={resume.id}
+                  onClick={() => {
+                    setSelectedResumeId(resume.id);
+                    setError(null);
+                  }}
+                  className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${
+                    selectedResumeId === resume.id
+                      ? 'border-indigo-500 bg-indigo-500/10'
+                      : 'border-surface-300 dark:border-slate-700 bg-surface-100 dark:bg-slate-800/50 hover:border-surface-400 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        selectedResumeId === resume.id ? 'bg-indigo-500/20' : 'bg-surface-200 dark:bg-slate-700'
+                      }`}>
+                        <FileText className={`w-5 h-5 ${
+                          selectedResumeId === resume.id ? 'text-indigo-400' : 'text-surface-500 dark:text-slate-400'
+                        }`} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-surface-900 dark:text-white">{resume.fileName}</p>
+                        <p className="text-surface-500 dark:text-slate-400 text-sm">
+                          {resume.atsScore ? `ATS Score: ${resume.atsScore}/100` : 'Not analyzed'}
+                        </p>
+                      </div>
+                    </div>
+                    {selectedResumeId === resume.id && (
+                      <CheckCircle2 className="w-5 h-5 text-indigo-400" />
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="mt-6 flex gap-4">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="px-6 py-3 bg-surface-100 hover:bg-surface-200 text-surface-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white font-semibold rounded-xl transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
-          >
-            <Wand2 className="w-5 h-5" />
-            Generate Roadmap
-          </button>
+        {selectedResume && (
+          <div className="p-4 bg-surface-100 dark:bg-slate-800/50 rounded-2xl border border-surface-300 dark:border-slate-700">
+            <h4 className="text-sm font-medium text-surface-600 dark:text-slate-300 mb-2">Selected Resume</h4>
+            <div className="flex items-center gap-4">
+              <div>
+                <p className="font-medium text-surface-900 dark:text-white">{selectedResume.fileName}</p>
+                <p className="text-surface-500 dark:text-slate-400 text-sm">
+                  {selectedResume.hasAnalysis
+                    ? `ATS Score: ${selectedResume.atsScore}/100 - Ready for roadmap generation`
+                    : 'Will be analyzed during roadmap generation'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
+          <p className="text-indigo-400 text-sm">
+            <strong>120 credits</strong> will be used for roadmap generation.
+            AI will analyze your resume, recommend the best career role, and create a personalized 90-day plan.
+          </p>
         </div>
-      </form>
+      </div>
+
+      <div className="mt-6 flex gap-4">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="px-6 py-3 bg-surface-100 hover:bg-surface-200 text-surface-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white font-semibold rounded-xl transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleGenerate}
+          disabled={!selectedResumeId || generating}
+          className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Wand2 className="w-5 h-5" />
+          Generate Roadmap
+        </button>
+      </div>
     </div>
+    </PlanGate>
   );
-}
-
-function cn(...classes: (string | undefined | boolean)[]) {
-  return classes.filter(Boolean).join(' ');
 }

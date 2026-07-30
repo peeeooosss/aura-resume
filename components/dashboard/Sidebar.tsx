@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, Target, Search, Map, Globe,
-  Settings, Mail, Mic, ChevronLeft, ChevronRight, Menu, X,
+  Settings, ChevronLeft, ChevronRight, Menu, X,
   Bell, User, LogOut, Shield, Zap, Sparkles, Users, Award,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';

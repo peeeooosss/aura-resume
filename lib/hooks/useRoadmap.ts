@@ -1,154 +1,165 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import type { RoadmapData, RoadmapPhase, RoadmapWeek, RoadmapDay, SkillGap } from '@/lib/types/roadmap';
 
-export interface RoadmapTask {
-  id: string;
-  day: number;
-  week: number;
-  type: 'LEARN' | 'BUILD' | 'NETWORK' | 'APPLY' | 'INTERVIEW_PREP';
-  title: string;
-  description?: string;
-  duration: number;
-  resources?: Array<{ type: string; url: string; title: string; commission?: number }>;
-  isCompleted: boolean;
-  completedAt?: string;
-  affiliateLinks?: Array<{ platform: string; url: string; title: string; commission: number }>;
-}
-
-export interface Roadmap {
-  id: string;
-  userId: string;
-  resumeId?: string;
-  targetRole: string;
-  targetCompany?: string;
-  startDate: string;
-  endDate: string;
-  overview: string;
-  milestones: Array<{ week: number; theme: string; focus: string[]; deliverables: string[] }>;
-  dailyTasks: RoadmapTask[];
-  progress: number;
-  completedTasks: number;
-  totalTasks: number;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+export type { RoadmapData, RoadmapPhase, RoadmapWeek, RoadmapDay, SkillGap };
 
 export function useRoadmap(roadmapId?: string) {
   const [roadmaps, setRoadmaps] = useState<any[]>([]);
   const [currentRoadmap, setCurrentRoadmap] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchRoadmaps = useCallback(async () => {
+    try {
+      const res = await fetch('/api/roadmap');
+      const data = await res.json();
+      if (res.ok) {
+        setRoadmaps(data.roadmaps || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch roadmaps:', err);
+    }
+  }, []);
+
+  const fetchRoadmap = useCallback(async (id: string) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/roadmap/${id}`);
+      const data = await res.json();
+      if (res.ok) {
+        setCurrentRoadmap(data.roadmap);
+      }
+    } catch (err) {
+      console.error('Failed to fetch roadmap:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRoadmaps();
+  }, [fetchRoadmaps]);
 
   useEffect(() => {
     if (roadmapId) {
-      setCurrentRoadmapsById(roadmapId);
+      fetchRoadmap(roadmapId);
     }
-  }, [roadmapId]);
+  }, [roadmapId, fetchRoadmap]);
 
-  const setCurrentRoadmapsById = useCallback((id: string) => {
-    setCurrentRoadmap(roadmaps.find(r => r.id === id) || null);
-  }, [roadmaps]);
-
-  useEffect(() => {
-    if (!roadmapId && roadmaps.length > 0) {
-      setCurrentRoadmap(roadmaps[0]);
-    }
-  }, [roadmapId, roadmaps]);
-
-  const dayTasks = useMemo(() => {
-    if (!currentRoadmap) return {};
-    const tasksByDay: Record<number, RoadmapTask[]> = {};
-    (currentRoadmap.dailyTasks || []).forEach((task: RoadmapTask) => {
-      if (!tasksByDay[task.day]) tasksByDay[task.day] = [];
-      tasksByDay[task.day].push(task);
-    });
-    return tasksByDay;
-  }, [currentRoadmap]);
-
-  const weekTasks = useMemo(() => {
-    if (!currentRoadmap) return {};
-    const tasksByWeek: Record<number, RoadmapTask[]> = {};
-    (currentRoadmap.dailyTasks || []).forEach((task: RoadmapTask) => {
-      if (!tasksByWeek[task.week]) tasksByWeek[task.week] = [];
-      tasksByWeek[task.week].push(task);
-    });
-    return tasksByWeek;
-  }, [currentRoadmap]);
-
-  const getDayTasks = useCallback((day: number) => dayTasks[day] || [], [dayTasks]);
-  const getWeekTasks = useCallback((week: number) => weekTasks[week] || [], [weekTasks]);
-
-  const toggleTask = useCallback((taskId: string) => {
-    if (!currentRoadmap) return;
-    const updatedTasks = currentRoadmap.dailyTasks.map((t: RoadmapTask) =>
-      t.id === taskId
-        ? { ...t, isCompleted: !t.isCompleted, completedAt: t.isCompleted ? undefined : new Date().toISOString() }
-        : t
-    );
-    const completedCount = updatedTasks.filter((t: RoadmapTask) => t.isCompleted).length;
-    const updatedRoadmap = {
-      ...currentRoadmap,
-      dailyTasks: updatedTasks,
-      completedTasks: completedCount,
-      progress: Math.round((completedCount / currentRoadmap.totalTasks) * 100),
-      updatedAt: new Date().toISOString(),
-    };
-    setCurrentRoadmap(updatedRoadmap);
-    setRoadmaps(prev => prev.map(r => r.id === updatedRoadmap.id ? updatedRoadmap : r));
-  }, [currentRoadmap]);
-
-  const generateRoadmap = useCallback(async (params: {
-    targetRole: string;
-    targetCompany?: string;
-    currentSkills: string[];
-    hoursPerWeek: number;
-    focusAreas: string[];
-  }) => {
+  const generateRoadmap = useCallback(async (resumeId: string) => {
     setGenerating(true);
+    setError(null);
     try {
       const res = await fetch('/api/roadmap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          currentRole: params.currentSkills[0] || 'Software Engineer',
-          goalRole: params.targetRole,
-          skills: params.currentSkills,
-        }),
+        body: JSON.stringify({ resumeId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Roadmap generation failed');
+      if (!res.ok) {
+        throw new Error(data.error || 'Roadmap generation failed');
+      }
 
-      const newRoadmap = data;
-      setRoadmaps(prev => [newRoadmap, ...prev]);
-      setCurrentRoadmap(newRoadmap);
-      return newRoadmap;
-    } catch (err) {
+      await fetchRoadmaps();
+      return data;
+    } catch (err: any) {
+      setError(err.message);
       throw err;
     } finally {
       setGenerating(false);
     }
+  }, [fetchRoadmaps]);
+
+  const completeTask = useCallback(async (roadmapId: string, dayNumber: number, taskId: string) => {
+    try {
+      const res = await fetch(`/api/roadmap/${roadmapId}/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: true }),
+      });
+      const data = await res.json();
+      if (res.ok && data.roadmap) {
+        setCurrentRoadmap(data.roadmap);
+        await fetchRoadmaps();
+      }
+      return data;
+    } catch (err) {
+      console.error('Failed to complete task:', err);
+      throw err;
+    }
+  }, [fetchRoadmaps]);
+
+  const unlockPhase = useCallback(async (roadmapId: string, phaseNumber: number) => {
+    try {
+      const res = await fetch(`/api/roadmap/${roadmapId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'unlock_phase', phaseNumber }),
+      });
+      const data = await res.json();
+      if (res.ok && data.roadmap) {
+        setCurrentRoadmap(data.roadmap);
+        await fetchRoadmaps();
+      }
+      return data;
+    } catch (err) {
+      console.error('Failed to unlock phase:', err);
+      throw err;
+    }
+  }, [fetchRoadmaps]);
+
+  const getPhaseProgress = useCallback((phase: RoadmapPhase) => {
+    let total = 0;
+    let completed = 0;
+    phase.weeksData.forEach(week => {
+      week.days.forEach(day => {
+        total++;
+        if (day.isCompleted) completed++;
+      });
+    });
+    return { total, completed, percentage: total > 0 ? Math.round((completed / total) * 100) : 0 };
   }, []);
 
-  const progress = currentRoadmap ? {
-    overall: currentRoadmap.progress || 0,
-    completed: currentRoadmap.completedTasks || 0,
-    total: currentRoadmap.totalTasks || 0,
-    currentStreak: 0,
-    longestStreak: 0,
-  } : null;
+  const isPhaseUnlocked = useCallback((roadmap: any, phaseNumber: number): boolean => {
+    if (!roadmap) return false;
+    const phaseKey = `phase${phaseNumber}Unlocked` as keyof typeof roadmap;
+    return roadmap[phaseKey] as boolean;
+  }, []);
+
+  const isPhaseComplete = useCallback((roadmap: any, phaseNumber: number): boolean => {
+    if (!roadmap?.phases) return false;
+    const phase = roadmap.phases.find((p: any) => p.phase === phaseNumber);
+    if (!phase) return false;
+    const { total, completed } = getPhaseProgress(phase);
+    return total > 0 && completed === total;
+  }, [getPhaseProgress]);
+
+  const canUnlockNextPhase = useCallback((roadmap: any, currentPhase: number): boolean => {
+    if (currentPhase >= 4) return false;
+    return isPhaseComplete(roadmap, currentPhase);
+  }, [isPhaseComplete]);
+
+  const currentPhase = currentRoadmap?.phases?.find((p: any) => p.phase === currentRoadmap?.currentPhase) || null;
 
   return {
     roadmaps,
     currentRoadmap,
+    currentPhase,
+    loading,
     generating,
-    dayTasks,
-    weekTasks,
-    getDayTasks,
-    getWeekTasks,
-    toggleTask,
+    error,
+    fetchRoadmaps,
+    fetchRoadmap,
     generateRoadmap,
-    progress,
+    completeTask,
+    unlockPhase,
+    getPhaseProgress,
+    isPhaseUnlocked,
+    isPhaseComplete,
+    canUnlockNextPhase,
     setCurrentRoadmap,
   };
 }

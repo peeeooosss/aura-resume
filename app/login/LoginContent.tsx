@@ -2,38 +2,95 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { ArrowLeft, Mail, Lock, Eye, EyeOff, Github, Chrome } from 'lucide-react';
+import { signIn } from 'next-auth/react';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, Github, Chrome, Loader2 } from 'lucide-react';
+import { usePlan } from '@/lib/hooks/usePlan';
 
 export default function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/plans';
-  const plan = searchParams.get('plan') || 'pro';
+  const planParam = searchParams.get('plan');
+  const setPlan = usePlan(s => s.setPlan);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
+  const [error, setError] = useState('');
+
+  const activatePlanAndRedirect = async (planId: string) => {
+    try {
+      const res = await fetch('/api/plan/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planId }),
+      });
+      if (res.ok) {
+        setPlan(planId as any);
+      }
+    } catch {
+      // Ignore activation errors
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setLoading(false);
-    const url = new URL(redirect, window.location.origin);
-    url.searchParams.set('plan', plan);
-    router.push(url.toString());
+    setError('');
+
+    try {
+      if (isSignup) {
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, username: email.split('@')[0] }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'Signup failed');
+        }
+      }
+
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        throw new Error('Invalid credentials');
+      }
+
+      if (planParam && planParam !== 'free') {
+        await activatePlanAndRedirect(planParam);
+      }
+
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleOAuth = (provider: string) => {
+  const handleOAuth = async (provider: string) => {
     setLoading(true);
-    setTimeout(() => {
+    setError('');
+
+    try {
+      await signIn(provider, { redirect: false });
+
+      if (planParam && planParam !== 'free') {
+        await activatePlanAndRedirect(planParam);
+      }
+
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
       setLoading(false);
-      const url = new URL(redirect, window.location.origin);
-      url.searchParams.set('plan', plan);
-      router.push(url.toString());
-    }, 1000);
+    }
   };
 
   return (
@@ -54,7 +111,9 @@ export default function LoginContent() {
         <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 md:p-10">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-600/10 border border-indigo-500/20 mb-6">
-              <span className="text-sm text-indigo-300 font-medium">{plan === 'vip' ? 'VIP Mentorship' : 'Pro Bundle'}</span>
+              <span className="text-sm text-indigo-300 font-medium">
+                {planParam === 'vip' ? 'VIP Mentorship' : planParam === 'pro' ? 'Pro Bundle' : planParam === 'quick' ? 'Quick Fix' : 'Sign In'}
+              </span>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
               {isSignup ? 'Create your account' : 'Welcome back'}
@@ -64,6 +123,9 @@ export default function LoginContent() {
                 ? 'Start your career transformation journey'
                 : 'Sign in to access your subscription features'}
             </p>
+            {error && (
+              <p className="text-rose-400 text-sm mt-2">{error}</p>
+            )}
           </div>
 
           <div className="space-y-4 mb-6">
@@ -169,7 +231,7 @@ export default function LoginContent() {
         </div>
 
         <div className="text-center mt-6 text-slate-500 text-sm">
-          <p>Demo mode — any credentials work</p>
+          <p>Demo mode — use any email/password to sign up</p>
         </div>
       </div>
     </main>

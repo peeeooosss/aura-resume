@@ -19,6 +19,9 @@ interface LinkedInProfile {
   profilePhoto?: string;
 }
 
+const POLL_INTERVAL_MS = 3000;
+const MAX_POLL_TIME_MS = 90000;
+
 async function runApifyActor(actorId: string, input: any): Promise<any> {
   const runResponse = await fetch(
     `${APIFY_API_URL}/acts/${actorId}/runs?token=${APIFY_TOKEN}`,
@@ -31,14 +34,19 @@ async function runApifyActor(actorId: string, input: any): Promise<any> {
 
   if (!runResponse.ok) {
     const error = await runResponse.text();
-    throw new Error(`Apify actor start failed: ${error}`);
+    throw new Error(`Apify actor start failed (status ${runResponse.status}): ${error}`);
   }
 
   const run = await runResponse.json();
+  const startTime = Date.now();
 
   let status = run.data.status;
   while (status === 'RUNNING' || status === 'READY') {
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    if (Date.now() - startTime > MAX_POLL_TIME_MS) {
+      throw new Error('Apify actor timed out after 90 seconds');
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
     const statusResponse = await fetch(
       `${APIFY_API_URL}/actor-runs/${run.data.id}?token=${APIFY_TOKEN}`
     );
@@ -64,9 +72,10 @@ export async function scrapeLinkedInProfile(linkedinUrl: string): Promise<Linked
     : `https://linkedin.com/in/${linkedinUrl}`;
 
   try {
-    const results = await runApifyActor('harvestapi/linkedin-profile-scraper', {
-      urls: [cleanUrl],
-      proxyConfiguration: { useApifyProxy: true },
+    const results = await runApifyActor('logiover~linkedin-profile-scraper', {
+      profiles: [cleanUrl],
+      includeRecentActivity: false,
+      maxResults: 1,
     });
 
     if (!results || results.length === 0) {
@@ -78,19 +87,19 @@ export async function scrapeLinkedInProfile(linkedinUrl: string): Promise<Linked
     return {
       url: cleanUrl,
       headline: profile.headline || '',
-      summary: profile.about || profile.summary || '',
-      experience: (profile.experience || []).map((exp: any) => ({
-        title: exp.title || '',
-        company: exp.company || '',
-        location: exp.location || '',
+      summary: profile.bio || profile.about || '',
+      experience: (profile.companies || profile.jobs || []).map((exp: any) => ({
+        title: exp.title || exp.name || '',
+        company: exp.name || exp.company || '',
+        location: profile.location || '',
         startDate: exp.startDate || '',
-        endDate: exp.endDate || exp.current ? 'Present' : '',
+        endDate: exp.endDate || '',
         description: exp.description || '',
       })),
       skills: (profile.skills || []).map((s: any) => s.name || s),
       recommendations: profile.recommendationsCount || 0,
-      connections: profile.connections || 0,
-      profilePhoto: profile.profilePicture || '',
+      connections: profile.followerCount || profile.connections || 0,
+      profilePhoto: profile.profileImageUrl || profile.profilePicture || '',
     };
   } catch (error) {
     console.error('LinkedIn scraping error:', error);
@@ -104,9 +113,9 @@ export async function scrapeLinkedInCompany(companyUrl: string): Promise<any> {
     : `https://linkedin.com/company/${companyUrl}`;
 
   try {
-    const results = await runApifyActor('harvestapi/linkedin-company', {
-      urls: [cleanUrl],
-      proxyConfiguration: { useApifyProxy: true },
+    const results = await runApifyActor('logiover~linkedin-profile-scraper', {
+      profiles: [cleanUrl],
+      maxResults: 1,
     });
 
     return results[0] || null;

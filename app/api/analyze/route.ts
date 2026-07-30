@@ -51,11 +51,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (!creditBalance || creditBalance.balance < totalCost) {
-      await prisma.creditBalance.upsert({
-        where: { userId },
-        create: { userId, balance: 1000 },
-        update: { balance: 1000 },
-      });
+      return NextResponse.json(
+        { error: 'Insufficient credits', required: totalCost, available: creditBalance?.balance || 0 },
+        { status: 402 }
+      );
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -139,6 +138,7 @@ export async function POST(req: NextRequest) {
               redFlags: resumeAnalysis.redFlags,
               suggestions: resumeAnalysis.suggestions,
               keywordGaps: resumeAnalysis.keywordGaps,
+              jobRolePotential: (resumeAnalysis as any).jobRolePotential || null,
               modelUsed: 'google/gemini-2.5-flash-lite',
               tokensUsed: resumeAnalysis.tokensUsed,
             },
@@ -176,10 +176,9 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        await tx.creditBalance.upsert({
+        await tx.creditBalance.update({
           where: { userId },
-          create: { userId, balance: 1000 },
-          update: {},
+          data: { balance: { decrement: totalCost } },
         });
 
         await tx.usageRecord.create({

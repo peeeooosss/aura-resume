@@ -4,7 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useResumes } from '@/lib/hooks/useResumes';
-import { FileText, Trash2, Star, Shield, Sparkles, Eye, Wrench, MoreHorizontal, FilePen, ExternalLink } from 'lucide-react';
+import { usePlan } from '@/lib/hooks/usePlan';
+import { FileText, Trash2, Star, Shield, Sparkles, Eye, Wrench, MoreHorizontal, FilePen, ExternalLink, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import { formatDate } from '@/lib/utils/helpers';
 
@@ -13,8 +14,12 @@ type FilterTab = 'all' | 'uploaded' | 'analyzed' | 'fixed';
 export function ResumesPage() {
   const router = useRouter();
   const { resumes, setPrimary, deleteResume, loading } = useResumes();
+  const currentPlan = usePlan(s => s.currentPlan);
   const [filter, setFilter] = useState<FilterTab>('all');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };
+  const canSave = (PLAN_TIER[currentPlan] ?? 0) >= (PLAN_TIER['pro'] ?? 0);
 
   const filteredResumes = filter === 'all'
     ? resumes
@@ -63,6 +68,26 @@ export function ResumesPage() {
         <h1 className="text-3xl font-bold text-surface-900 dark:text-white">My Resumes</h1>
         <p className="text-surface-500 dark:text-slate-400 mt-1">Manage, analyze, and optimize your resumes</p>
       </div>
+
+      {!canSave && (
+        <div className="mb-6 bg-gradient-to-r from-indigo-600/10 to-purple-600/10 border border-indigo-500/20 rounded-2xl p-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+              <Lock className="w-5 h-5 text-indigo-400" />
+            </div>
+            <div>
+              <p className="font-semibold text-surface-900 dark:text-white">Upgrade to Pro to save resumes</p>
+              <p className="text-sm text-surface-500 dark:text-slate-400">Free and Quick Fix plans can view analysis but cannot save resumes.</p>
+            </div>
+          </div>
+          <Link
+            href="/plans?plan=pro"
+            className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all text-sm flex-shrink-0"
+          >
+            Upgrade to Pro
+          </Link>
+        </div>
+      )}
 
       <div className="flex gap-1 mb-6 p-1 bg-surface-100 dark:bg-slate-800/50 rounded-xl w-fit">
         {tabs.map(tab => (
@@ -162,7 +187,7 @@ function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete, isMenuOpen, onT
                   {hasAnalysis && (
                     <>
                       <button
-                        onClick={() => { onToggleMenu(null); router.push(`/dashboard/fixer?resumeId=${resume.id}&source=resumes`); }}
+                        onClick={() => { onToggleMenu(null); router.push(`/dashboard/resumes/${resume.id}/report`); }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-surface-700 dark:text-slate-300 hover:bg-surface-100 dark:hover:bg-slate-800 transition-colors"
                       >
                         <FileText className="w-4 h-4 text-surface-400" />

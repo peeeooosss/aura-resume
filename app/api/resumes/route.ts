@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
             redFlags: true,
             suggestions: true,
             keywordGaps: true,
+            jobRolePotential: true,
           },
         },
       },
@@ -46,6 +47,7 @@ export async function GET(req: NextRequest) {
       redFlags: r.analyses?.[0]?.redFlags ?? [],
       suggestions: r.analyses?.[0]?.suggestions ?? [],
       keywordGaps: r.analyses?.[0]?.keywordGaps ?? [],
+      jobRolePotential: r.analyses?.[0]?.jobRolePotential ?? null,
       analyses: undefined,
     }));
 
@@ -60,10 +62,22 @@ export async function POST(req: NextRequest) {
   try {
     const userId = await requireSessionUserId();
     const body = await req.json();
-    const { title, rawText, status, atsScore, strengths, redFlags, suggestions, keywordGaps, parentId } = body;
+    const { title, rawText, status, atsScore, strengths, redFlags, suggestions, keywordGaps, jobRolePotential, parentId } = body;
 
     if (!title) {
       return NextResponse.json({ error: 'title is required' }, { status: 400 });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } });
+    const userPlan = user?.plan || 'free';
+    const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };
+    const canSave = (PLAN_TIER[userPlan] ?? 0) >= (PLAN_TIER['pro'] ?? 0);
+
+    if (!canSave) {
+      return NextResponse.json(
+        { error: 'Resume saving requires Pro or VIP plan', upgradeRequired: true },
+        { status: 403 }
+      );
     }
 
     const resume = await prisma.$transaction(async tx => {
@@ -89,6 +103,7 @@ export async function POST(req: NextRequest) {
             redFlags: redFlags || [],
             suggestions: suggestions || [],
             keywordGaps: keywordGaps || [],
+            jobRolePotential: jobRolePotential || null,
             modelUsed: 'google/gemini-2.5-flash-lite',
           },
         });

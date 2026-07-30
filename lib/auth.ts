@@ -4,6 +4,7 @@ import { prisma } from "./db";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { getInitialCredits } from "./constants/credits";
 
 export const authOptions = {
   adapter: PrismaAdapter(prisma),
@@ -56,15 +57,36 @@ export const authOptions = {
     strategy: "jwt" as const,
   },
   callbacks: {
+    async signIn({ user, account }: { user: any; account: any }) {
+      if (account?.provider === "google" && user?.id) {
+        const existingBalance = await prisma.creditBalance.findUnique({
+          where: { userId: user.id },
+        });
+        if (!existingBalance) {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+          });
+          const plan = (dbUser?.plan as string) || "free";
+          await prisma.creditBalance.create({
+            data: {
+              userId: user.id,
+              balance: getInitialCredits(plan),
+            },
+          });
+        }
+      }
+      return true;
+    },
     async jwt({ token, user }: { token: any; user: any }) {
       if (user) {
         token.id = user.id;
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
-          select: { username: true, onboarded: true },
+          select: { username: true, onboarded: true, plan: true },
         });
         token.username = dbUser?.username ?? null;
         token.onboarded = dbUser?.onboarded ?? false;
+        token.plan = (dbUser?.plan as string) || "free";
       }
       return token;
     },
@@ -73,6 +95,7 @@ export const authOptions = {
         session.user.id = token.id as string;
         session.user.username = token.username as string | null;
         session.user.onboarded = token.onboarded as boolean;
+        session.user.plan = (token.plan as string) || "free";
       }
       return session;
     },

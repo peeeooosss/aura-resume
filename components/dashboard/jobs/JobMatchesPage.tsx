@@ -1,18 +1,62 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useJobMatches } from '@/lib/hooks/useJobMatches';
-import { Target, Heart, ExternalLink, MapPin, Briefcase, ArrowRight, CheckCircle, Clock, Star, Loader2, AlertCircle, IndianRupee } from 'lucide-react';
+import { useResumes } from '@/lib/hooks/useResumes';
+import { Target, Heart, ExternalLink, MapPin, Briefcase, ArrowRight, CheckCircle, Clock, Star, Loader2, AlertCircle, IndianRupee, FileText, ChevronRight, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import Link from 'next/link';
 
+const STORAGE_KEY = 'aura-job-match-resume-id';
+
 export function JobMatchesPage() {
-  const { matches, savedOnly, setSavedOnly, toggleSave, stats, isLoading, error, searchRealJobs, setFilters } = useJobMatches();
+  const { matches, savedOnly, setSavedOnly, toggleSave, stats, isLoading, error, searchRealJobs, setFilters, hasResumeSkills } = useJobMatches();
+  const { resumes, loading: loadingResumes } = useResumes();
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedResumeId, setSelectedResumeId] = useState<string>('');
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searching, setSearching] = useState(false);
+
+  const selectedResume = useMemo(() => resumes.find(r => r.id === selectedResumeId), [resumes, selectedResumeId]);
+
+  const selectedResumeSkills = useMemo(() => {
+    if (!selectedResume) return [];
+    const fromAnalysis = selectedResume.analysis?.strengths;
+    const directSkills = selectedResume.skills;
+    const combined = [...(directSkills || []), ...(fromAnalysis || [])];
+    return Array.from(new Set(combined));
+  }, [selectedResume]);
+
+  useEffect(() => {
+    if (loadingResumes || resumes.length === 0) return;
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored && resumes.find(r => r.id === stored)) {
+      setSelectedResumeId(stored);
+    } else {
+      const primary = resumes.find(r => r.isPrimary) || resumes[0];
+      if (primary) {
+        setSelectedResumeId(primary.id);
+        localStorage.setItem(STORAGE_KEY, primary.id);
+      }
+    }
+  }, [loadingResumes, resumes]);
 
   useEffect(() => {
     setFilters(prev => ({ ...prev, minMatchScore: 20 }));
   }, []);
+
+  const handleFindMatches = async () => {
+    if (!selectedResume || selectedResumeSkills.length === 0) return;
+    setSearching(true);
+    localStorage.setItem(STORAGE_KEY, selectedResumeId);
+    await searchRealJobs('software engineer developer', 'India', selectedResumeSkills);
+    setHasSearched(true);
+    setSearching(false);
+  };
+
+  const handleChangeResume = () => {
+    setHasSearched(false);
+  };
 
   const statusOptions = [
     { value: 'all', label: 'All Matches', count: stats.total },
@@ -26,6 +70,134 @@ export function JobMatchesPage() {
     return true;
   });
 
+  const scoreColor = (score: number) => score >= 80 ? 'text-emerald-400' : score >= 60 ? 'text-amber-400' : 'text-surface-500 dark:text-slate-400';
+
+  if (!hasSearched) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
+              <Target className="w-6 h-6 text-surface-900 dark:text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-surface-900 dark:text-white">Job Matches</h1>
+              <p className="text-surface-500 dark:text-slate-400">Select a resume to find AI-matched job listings</p>
+            </div>
+          </div>
+        </div>
+
+        {loadingResumes ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+          </div>
+        ) : resumes.length === 0 ? (
+          <div className="text-center py-16 bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl">
+            <FileText className="w-12 h-12 text-surface-400 dark:text-slate-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-surface-900 dark:text-white mb-2">No Resumes Found</h3>
+            <p className="text-surface-500 dark:text-slate-400 mb-6">Upload a resume first to see matched job listings</p>
+            <Link href="/dashboard/resumes" className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-500 transition-colors">
+              Upload Resume
+            </Link>
+          </div>
+        ) : (
+          <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
+            <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4">Choose Your Resume</h2>
+            <p className="text-surface-500 dark:text-slate-400 text-sm mb-6">
+              Select the resume you want to match against job listings. We'll extract skills and find the best matches.
+            </p>
+
+            <div className="space-y-3 mb-6">
+              {resumes.map(resume => {
+                const isSelected = resume.id === selectedResumeId;
+                const skillCount = Array.from(new Set([...(resume.skills || []), ...(resume.analysis?.strengths || [])])).length;
+
+                return (
+                  <button
+                    key={resume.id}
+                    onClick={() => setSelectedResumeId(resume.id)}
+                    className={cn(
+                      'w-full p-4 rounded-2xl border-2 transition-all text-left',
+                      isSelected
+                        ? 'border-indigo-500 bg-indigo-500/10'
+                        : 'border-surface-300 dark:border-slate-700 bg-surface-100 dark:bg-slate-800/50 hover:border-surface-400 dark:hover:border-slate-600'
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          'w-10 h-10 rounded-xl flex items-center justify-center',
+                          isSelected ? 'bg-indigo-500/20' : 'bg-surface-200 dark:bg-slate-700'
+                        )}>
+                          <FileText className={cn(
+                            'w-5 h-5',
+                            isSelected ? 'text-indigo-400' : 'text-surface-500 dark:text-slate-400'
+                          )} />
+                        </div>
+                        <div>
+                          <p className="font-medium text-surface-900 dark:text-white">{resume.fileName || resume.name || 'Untitled Resume'}</p>
+                          <div className="flex items-center gap-3 text-sm text-surface-500 dark:text-slate-400 mt-0.5">
+                            {resume.atsScore != null && <span>ATS Score: {resume.atsScore}/100</span>}
+                            {skillCount > 0 && <span>{skillCount} skills detected</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className={cn(
+                        'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors',
+                        isSelected ? 'border-indigo-500 bg-indigo-500' : 'border-surface-400 dark:border-slate-600'
+                      )}>
+                        {isSelected && <CheckCircle className="w-4 h-4 text-white" />}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {selectedResume && selectedResumeSkills.length > 0 && (
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mb-6">
+                <p className="text-emerald-400 text-sm font-medium">
+                  {selectedResumeSkills.length} skills will be used for matching
+                </p>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {selectedResumeSkills.slice(0, 10).map((skill, i) => (
+                    <span key={i} className="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-300 rounded-full">
+                      {skill}
+                    </span>
+                  ))}
+                  {selectedResumeSkills.length > 10 && (
+                    <span className="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-300 rounded-full">
+                      +{selectedResumeSkills.length - 10} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={handleFindMatches}
+              disabled={!selectedResumeId || selectedResumeSkills.length === 0 || searching}
+              className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {searching ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Searching jobs...
+                </>
+              ) : (
+                <>
+                  <Target className="w-5 h-5" />
+                  Find Matches
+                  <ChevronRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
@@ -38,6 +210,24 @@ export function JobMatchesPage() {
             <p className="text-surface-500 dark:text-slate-400">AI-powered matches for your resume</p>
           </div>
         </div>
+      </div>
+
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          onClick={handleChangeResume}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-surface-600 dark:text-slate-300 bg-surface-100 dark:bg-slate-800/50 border border-surface-300 dark:border-slate-700 rounded-xl hover:border-indigo-500/50 transition-colors"
+        >
+          <RotateCcw className="w-4 h-4" />
+          Change Resume
+        </button>
+        {selectedResume && (
+          <div className="flex items-center gap-2 text-sm text-surface-500 dark:text-slate-400">
+            <FileText className="w-4 h-4 text-indigo-400" />
+            <span className="font-medium text-surface-900 dark:text-white">{selectedResume.fileName || selectedResume.name}</span>
+            <span>·</span>
+            <span>{selectedResumeSkills.length} skills</span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-8">
@@ -63,7 +253,7 @@ export function JobMatchesPage() {
           <AlertCircle className="w-8 h-8 text-rose-400 mx-auto mb-3" />
           <p className="text-rose-300 font-medium">{error}</p>
           <button
-            onClick={() => searchRealJobs('software engineer', 'India')}
+            onClick={handleFindMatches}
             className="mt-3 px-4 py-2 bg-rose-500/20 text-rose-300 rounded-xl text-sm hover:bg-rose-500/30 transition-colors"
           >
             Retry
@@ -91,10 +281,13 @@ export function JobMatchesPage() {
           <div className="text-center py-16 bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl">
             <Target className="w-12 h-12 text-slate-600 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-surface-900 dark:text-white mb-2">No matching jobs found</h3>
-            <p className="text-surface-500 dark:text-slate-400 mb-4">Upload your resume first to see skill-matched job listings</p>
-            <Link href="/dashboard/resumes" className="text-indigo-400 hover:text-indigo-300 underline text-sm">
-              Upload Resume →
-            </Link>
+            <p className="text-surface-500 dark:text-slate-400 mb-4">Try a different resume or adjust your search</p>
+            <button
+              onClick={handleChangeResume}
+              className="text-indigo-400 hover:text-indigo-300 underline text-sm"
+            >
+              Change Resume
+            </button>
           </div>
         )}
       </div>
@@ -144,7 +337,7 @@ function JobMatchCard({ job, onToggleSave }: { job: any; onToggleSave: (id: stri
               </span>
               <span className="flex items-center gap-1.5">
                 <IndianRupee className="w-4 h-4" />
-                {job.salaryMin ? `₹${(job.salaryMin / 100000).toFixed(1)}L - ₹{(job.salaryMax / 100000).toFixed(1)}L` : 'Salary not listed'}
+                {job.salaryMin ? `₹${(job.salaryMin / 100000).toFixed(1)}L - ₹${(job.salaryMax / 100000).toFixed(1)}L` : 'Salary not listed'}
               </span>
             </div>
 
@@ -192,7 +385,7 @@ function JobMatchCard({ job, onToggleSave }: { job: any; onToggleSave: (id: stri
 
         <button
           onClick={() => setShowBreakdown(!showBreakdown)}
-          className="text-sm text-surface-400 dark:text-slate-500 hover:text-surface-600 dark:text-slate-300 transition-colors"
+          className="text-sm text-surface-400 dark:text-slate-500 hover:text-surface-600 dark:hover:text-slate-300 transition-colors"
         >
           {showBreakdown ? 'Hide breakdown' : 'Show match breakdown'}
         </button>

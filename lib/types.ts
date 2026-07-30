@@ -20,6 +20,15 @@ export interface JobRolePotential {
   matchReasoning: string;
 }
 
+export interface PriorityAction {
+  area: string;
+  currentIssue: string;
+  fixAction: string;
+  exampleBefore: string;
+  exampleAfter: string;
+  impact: 'high' | 'medium' | 'low';
+}
+
 export interface SingleAnalysis {
   source: 'resume' | 'linkedin';
   score: number;
@@ -30,6 +39,8 @@ export interface SingleAnalysis {
   keywordGaps?: string[];
   jobRolePotential?: JobRolePotential;
   originalText?: string;
+  scoreBreakdown?: Record<string, number>;
+  priorityActions?: PriorityAction[];
 }
 
 export interface DualAnalysisResult {

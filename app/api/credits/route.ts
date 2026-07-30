@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getInitialCredits } from '@/lib/constants/credits';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get('userId') || 'demo-user';
 
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const plan = (user?.plan as string) || 'free';
+
   const balance = await prisma.creditBalance.upsert({
     where: { userId },
-    create: { userId, balance: 100 },
+    create: { userId, balance: getInitialCredits(plan) },
     update: {},
   });
 

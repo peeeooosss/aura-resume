@@ -124,15 +124,16 @@ async function main() {
     },
   });
 
+  const demoResume = await prisma.resume.findFirst({ where: { userId: 'demo-pro-user' } });
   await prisma.roadmap.create({
     data: {
       userId: 'demo-pro-user',
+      resumeId: demoResume?.id || '',
       title: 'Frontend Lead Path',
       goalRole: 'Frontend Lead',
       currentRole: 'Senior Engineer',
-      timeline: { months: 12 },
-      skillsToLearn: { items: ['System Design', 'Team Leadership', 'GraphQL'] },
-      milestones: { items: [{ month: 3, goal: 'Lead a feature team' }] },
+      phases: [] as any,
+      endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
     },
   });
   console.log('  → 1 LinkedIn profile, 1 roadmap');
@@ -236,24 +237,24 @@ async function main() {
   await prisma.roadmap.create({
     data: {
       userId: 'demo-vip-user',
+      resumeId: vipResume1.id,
       title: 'CTO Track',
       goalRole: 'CTO',
       currentRole: 'Engineering Manager',
-      timeline: { months: 24 },
-      skillsToLearn: { items: ['Business Strategy', 'Fundraising', 'Board Management'] },
-      milestones: { items: [{ month: 6, goal: 'Lead org-wide initiative' }, { month: 12, goal: 'VP of Engineering role' }] },
+      phases: [] as any,
+      endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
     },
   });
 
   await prisma.roadmap.create({
     data: {
       userId: 'demo-vip-user',
+      resumeId: vipResume2.id,
       title: 'Product Leadership',
       goalRole: 'VP Product',
       currentRole: 'Engineering Manager',
-      timeline: { months: 18 },
-      skillsToLearn: { items: ['Product Strategy', 'Go-to-Market', 'P&L Management'] },
-      milestones: { items: [{ month: 6, goal: 'Cross-functional leadership' }] },
+      phases: [] as any,
+      endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
     },
   });
 
@@ -263,10 +264,10 @@ async function main() {
       title: 'Engineering Leadership Portfolio',
       slug: 'demo-vip-portfolio',
       description: 'Showcase of engineering leadership and technical achievements.',
-      theme: 'professional',
-      sections: { projects: ['Led migration to microservices', 'Built team from 5 to 20'] },
+      template: 'professional',
+      data: { projects: ['Led migration to microservices', 'Built team from 5 to 20'] },
       isPublished: true,
-      viewCount: 42,
+      views: 42,
     },
   });
   console.log('  → 1 LinkedIn profile, 2 roadmaps, 1 portfolio');

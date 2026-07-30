@@ -60,17 +60,36 @@ Job Role Potential Guidelines:
 - Match reasoning should be specific and actionable
 - Consider current job market trends for the candidate's experience level`;
 
-export const LINKEDIN_ANALYSIS_PROMPT = `You are an expert LinkedIn profile optimizer and personal branding strategist. Analyze the provided LinkedIn profile data and return a comprehensive analysis in the specified JSON format.
+export const LINKEDIN_ANALYSIS_PROMPT = `You are an expert LinkedIn profile optimizer and personal branding strategist. Analyze the provided LinkedIn profile data and return a comprehensive analysis with actionable fix recommendations.
 
 Return ONLY valid JSON in this exact format:
 {
   "score": number (0-100),
-  "strengths": string[] (3-5 items),
-  "redFlags": string[] (4-6 items),
-  "suggestions": string[] (3-5 items)
+  "scoreBreakdown": {
+    "headline": number (0-20),
+    "aboutSection": number (0-20),
+    "experience": number (0-25),
+    "skills": number (0-15),
+    "network": number (0-10),
+    "completeness": number (0-10)
+  },
+  "strengths": string[] (3-5 items - what's working well),
+  "redFlags": string[] (4-6 items - specific issues found),
+  "suggestions": string[] (3-5 items - general improvement tips),
+  "keywordGaps": string[] (3-5 items - missing keywords for target roles),
+  "priorityActions": [
+    {
+      "area": "Headline|About|Experience|Skills|Network|Completeness",
+      "currentIssue": "Specific problem with current profile",
+      "fixAction": "Exact steps to fix this issue",
+      "exampleBefore": "Current text or what's wrong",
+      "exampleAfter": "Improved text showing the fix",
+      "impact": "high|medium|low"
+    }
+  ] (5-8 items - ordered by impact, most critical first)
 }
 
-Evaluation criteria:
+Evaluation criteria (out of 100):
 - Headline optimization (20 points): Keywords, role clarity, value proposition
 - About section quality (20 points): Storytelling, keywords, call-to-action
 - Experience descriptions (25 points): Achievement-oriented, quantified results
@@ -78,12 +97,21 @@ Evaluation criteria:
 - Network & engagement (10 points): Connection count, activity, recommendations
 - Profile completeness (10 points): All sections filled, custom URL, photo
 
+Priority Actions Guidelines:
+- Each action must have a SPECIFIC before/after example from the actual profile
+- Actions must be ordered by impact (high first)
+- Fix actions must be step-by-step and immediately actionable
+- Examples must show the EXACT text to change and what to change it to
+- Cover all critical areas: headline, about, experience, skills, keywords
+
 Red flags should be SPECIFIC to this profile. Examples:
 - "Headline only shows current title, missing target keywords"
 - "About section is 2 sentences - needs 3-5 paragraph narrative"
 - "No quantified achievements in last 3 roles"
 - "Only 47 connections - below 500 threshold for algorithm visibility"
-- "Top 3 skills don't match target role requirements"`;
+- "Top 3 skills don't match target role requirements"
+
+Keyword Gaps should identify missing keywords that would improve visibility for target roles.`;
 
 export const ROADMAP_GENERATION_PROMPT = `You are an expert career strategist. Create a 90-day career roadmap based on the user's current role, target role, and skill gaps.
 
@@ -144,6 +172,132 @@ export function buildLinkedInAnalysisPrompt(profileData: any) {
 export function buildRoadmapPrompt(currentRole: string, goalRole: string, skills: string[]) {
   return `Create a 90-day roadmap for transitioning from "${currentRole}" to "${goalRole}".
 Current skills: ${skills.join(', ')}`;
+}
+
+export const ROADMAP_FROM_RESUME_PROMPT = `You are an expert career strategist. Create a complete 90-day career roadmap with tasks, videos, quizzes, projects, and AI interview questions based on the user's resume analysis.
+
+Return ONLY valid JSON. No text before or after the JSON.
+
+JSON structure:
+{
+  "recommendedRole": {
+    "title": "best role match",
+    "matchScore": 85,
+    "reasoning": "why this role fits",
+    "salaryRange": "₹18L-28L",
+    "timeToReady": "90 days with 15 hrs/week"
+  },
+  "currentStrengths": ["React", "TypeScript"],
+  "criticalGaps": [
+    { "skill": "System Design", "importance": "high", "timeToLearn": "3 weeks" }
+  ],
+  "phases": [
+    {
+      "phase": 1,
+      "title": "Foundation & Gap Analysis",
+      "weeks": "1-2",
+      "theme": "Understand gaps and build learning plan",
+      "milestone": { "title": "Gap analysis done", "description": "Identified top skill gaps and started learning" },
+      "weeksData": [
+        {
+          "week": 1,
+          "title": "Assessment & Planning",
+          "isUnlocked": true,
+          "days": [
+            {
+              "day": 1,
+              "title": "Review Your Resume Analysis",
+              "description": "Study your resume score and identify top 3 areas to improve",
+              "duration": 30,
+              "type": "LEARN",
+              "isCompleted": false
+            }
+          ]
+        }
+      ],
+      "phaseContent": {
+        "videos": [
+          { "title": "How to Read Your ATS Resume Score", "url": "https://www.youtube.com/watch?v=REAL_ID", "description": "Understanding what each section of your resume analysis means" }
+        ],
+        "quiz": [
+          {
+            "question": "What is the first step in career gap analysis?",
+            "options": ["Start a course", "Assess current skills", "Update resume", "Apply for jobs"],
+            "correctIndex": 1,
+            "explanation": "You must first understand where you stand before planning your learning path."
+          }
+        ],
+        "projects": [
+          {
+            "name": "Personal Learning Plan",
+            "description": "Create a structured 90-day learning roadmap document with weekly goals",
+            "techStack": ["Notion", "Google Sheets"],
+            "deliverables": ["Learning plan document", "Weekly goal tracker", "Resource list"],
+            "steps": ["List all skill gaps from your analysis", "Prioritize by importance", "Assign time estimates", "Create weekly schedule", "Set milestones for each week"],
+            "difficulty": "beginner"
+          }
+        ],
+        "aiInterview": [
+          {
+            "question": "Walk me through your approach to identifying skill gaps in your career.",
+            "expectedPoints": ["Self-assessment methods", "Using resume analysis tools", "Comparing against job descriptions", "Prioritizing gaps by market demand"],
+            "followUp": "How do you prioritize which gaps to address first?"
+          }
+        ]
+      }
+    }
+  ]
+}
+
+Rules for ALL content:
+- Generate ALL 4 phases with ALL 90 days (Phase 1: days 1-14, Phase 2: days 15-28, Phase 3: days 29-56, Phase 4: days 57-90)
+- Each day has exactly 1 task (no resources/videos per task)
+- Task types: LEARN, BUILD, NETWORK, APPLY, INTERVIEW_PREP — distribute across phases
+- Duration: 30-240 minutes per task
+- All weeksData isUnlocked: true (no phase locking)
+
+Rules for videos (3-5 per phase):
+- Use REAL YouTube video IDs that are relevant to the phase topic
+- Format url as "https://www.youtube.com/watch?v=REAL_ID"
+- Titles must be specific and relevant to the phase theme
+
+Rules for quiz (3 questions per phase):
+- 4 options each, one correct
+- Questions test knowledge relevant to the phase theme
+- Explanations must be educational and detailed
+
+Rules for projects (2 per phase):
+- Must be buildable within the phase timeframe
+- Include real tech stacks, specific deliverables, and step-by-step instructions
+- Difficulty should match the phase (Phase 1: beginner, Phase 2: intermediate, Phase 3: intermediate-advanced, Phase 4: advanced)
+
+Rules for AI interview (2 per phase):
+- Questions should be role-specific based on recommendedRole
+- expectedPoints: 3-5 specific talking points
+- followUp: one follow-up question
+
+General:
+- currentStrengths and criticalGaps must come from the resume analysis
+- recommendedRole must match the user's actual skills
+- Day numbers sequential (1-90), weeks sequential (1-13)
+- Output ONLY the JSON object`;
+
+export function buildRoadmapFromResumePrompt(resumeText: string, analysis: any) {
+  const skills = analysis.strengths?.join(', ') || 'Not specified';
+  const gaps = analysis.keywordGaps?.join(', ') || 'Not specified';
+  const redFlags = analysis.redFlags?.join(', ') || 'None';
+
+  return `Create a 90-day career roadmap based on this resume analysis.
+
+ATS Score: ${analysis.score}/100
+Strengths: ${skills}
+Keyword Gaps: ${gaps}
+Red Flags: ${redFlags}
+
+Resume text (first 2000 chars):
+${resumeText.slice(0, 2000)}
+
+Generate the complete roadmap JSON now.`;
 }
 
 export function buildCoverLetterPrompt(jobDescription: string, resumeText: string) {
@@ -275,4 +429,133 @@ ${(analysis.keywordGaps || []).map((g: string) => `- ${g}`).join('\n') || '- Non
 <original_resume>
 ${resumeText}
 </original_resume>`;
+}
+
+export const INTERVIEW_QUESTIONS_PROMPT = `You are an expert technical interviewer. Generate interview questions based on the candidate's resume and target role.
+
+Return ONLY valid JSON in this exact format:
+{
+  "questions": [
+    {
+      "question": "The interview question",
+      "category": "technical|behavioral|situational",
+      "expectedPoints": ["Key point 1", "Key point 2", "Key point 3"],
+      "followUp": "Optional follow-up question if answer is shallow"
+    }
+  ]
+}
+
+Guidelines:
+- Generate exactly the number of questions requested
+- Mix question types based on interviewType:
+  - "technical": Focus on skills, system design, coding concepts, architecture
+  - "behavioral": Focus on past experiences, leadership, conflict resolution, teamwork
+  - "mixed": Equal mix of technical and behavioral
+- Questions should be specific to the candidate's resume and target role
+- Difficulty affects question complexity:
+  - "easy": Foundational concepts, basic scenarios
+  - "medium": Applied knowledge, complex scenarios
+  - "hard": System design, trade-offs, edge cases, leadership at scale
+- expectedPoints: 3-5 key points a strong answer should cover
+- Each question should be unique and explore different aspects of the candidate's profile
+- Questions should progressively get more challenging`;
+
+export const INTERVIEW_EVALUATE_PROMPT = `You are an expert interview evaluator. Score the candidate's answer and provide detailed feedback.
+
+Return ONLY valid JSON in this exact format:
+{
+  "score": number (0-100),
+  "feedback": "Detailed feedback on the answer quality, structure, and content",
+  "followUp": "A follow-up question to dig deeper (null if answer was comprehensive)",
+  "expectedPointsHit": ["Point 1 the candidate covered well"],
+  "expectedPointsMissed": ["Point 1 the candidate missed"]
+}
+
+Scoring criteria:
+- Technical accuracy (30 points): Correctness of information
+- Depth of knowledge (25 points): Shows understanding beyond surface level
+- Communication clarity (20 points): Clear, structured, concise
+- Examples provided (15 points): Real-world examples or specific situations
+- Confidence delivery (10 points): Decisive, not wishy-washy
+
+Feedback must be:
+- Specific to what the candidate said
+- Include what was good and what could improve
+- Suggest how to structure the answer better
+- Be encouraging but honest`;
+
+export const INTERVIEW_FINAL_REPORT_PROMPT = `You are an expert interview coach. Generate a comprehensive final report based on all interview answers.
+
+Return ONLY valid JSON in this exact format:
+{
+  "overallScore": number (0-100),
+  "scores": {
+    "technical": number (0-100),
+    "communication": number (0-100),
+    "confidence": number (0-100),
+    "completeness": number (0-100)
+  },
+  "summary": "2-3 paragraph overall assessment of interview performance",
+  "strengths": ["Top 3-5 strengths demonstrated"],
+  "improvements": ["Top 3-5 areas for improvement"]
+}
+
+Guidelines:
+- Overall score should be weighted average of all scores
+- Summary should be balanced - highlight wins and growth areas
+- Strengths should reference specific answers
+- Improvements should be actionable with specific advice
+- Tone should be coaching-oriented, not judgmental
+- Consider the target role when evaluating`;
+
+export function buildInterviewQuestionsPrompt(
+  resumeText: string,
+  targetRole: string,
+  interviewType: string,
+  difficulty: string,
+  count: number
+) {
+  return `Generate ${count} interview questions for a candidate interviewing for "${targetRole}".
+
+Interview type: ${interviewType}
+Difficulty: ${difficulty}
+
+Resume (first 1500 chars):
+${resumeText.slice(0, 1500)}
+
+Generate the questions JSON now.`;
+}
+
+export function buildInterviewEvaluatePrompt(
+  question: string,
+  expectedPoints: string[],
+  answer: string,
+  targetRole: string
+) {
+  return `Evaluate this interview answer.
+
+Question: ${question}
+Target Role: ${targetRole}
+Expected key points: ${expectedPoints.join(', ')}
+
+Candidate's answer:
+${answer}
+
+Evaluate and score the answer now.`;
+}
+
+export function buildInterviewReportPrompt(
+  questions: Array<{ question: string; answer: string; score: number; feedback: string }>,
+  targetRole: string
+) {
+  const qaBlock = questions
+    .map((q, i) => `Q${i + 1}: ${q.question}\nA: ${q.answer}\nScore: ${q.score}/100\nFeedback: ${q.feedback}`)
+    .join('\n\n');
+
+  return `Generate a final interview report for a candidate interviewing for "${targetRole}".
+
+Interview Q&A:
+${qaBlock}
+
+Generate the final report JSON now.`;
 }

@@ -24,7 +24,7 @@ export function DashboardOverview() {
   const usage = usePlan(s => s.usage);
   const getUsagePercent = usePlan(s => s.getUsagePercent);
   const { resumes, getPrimary, hasAnalyzedResume, latestAnalysis } = useResumes();
-  const { currentRoadmap, progress } = useRoadmap();
+  const { currentRoadmap } = useRoadmap();
   const { currentPortfolio } = usePortfolio();
 
   const userName = (session?.user as any)?.name || (session?.user as any)?.email?.split('@')[0] || 'User';
@@ -62,13 +62,13 @@ export function DashboardOverview() {
     return Array.from(skills).slice(0, 30);
   }, [latestAnalysis]);
 
-  const { matches, stats, searchRealJobs, hasResumeSkills } = useJobMatches(resumeSkills);
+  const { matches, stats, searchRealJobs, hasResumeSkills } = useJobMatches();
 
   useEffect(() => {
-    if (hasResumeSkills) {
-      searchRealJobs('software engineer developer data', 'India');
+    if (resumeSkills.length > 0) {
+      searchRealJobs('software engineer developer data', 'India', resumeSkills);
     }
-  }, [hasResumeSkills, searchRealJobs]);
+  }, [resumeSkills, searchRealJobs]);
 
   const activeMatches = matches.filter(m => m.status === 'NEW' || m.status === 'SAVED').slice(0, 3);
   const upcomingTasks = currentRoadmap?.dailyTasks?.filter((t: any) => !t.isCompleted).slice(0, 3) || [];

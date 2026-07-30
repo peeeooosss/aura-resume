@@ -1,5 +1,7 @@
-import { buildResumeAnalysisPrompt, buildLinkedInAnalysisPrompt, buildCoverLetterPrompt, buildJobMatchPrompt, buildRoadmapPrompt, buildJobRolePotentialPrompt, RESUME_ANALYSIS_PROMPT, LINKEDIN_ANALYSIS_PROMPT, COVER_LETTER_PROMPT, ROADMAP_GENERATION_PROMPT, JOB_MATCH_ANALYSIS_PROMPT, JOB_ROLE_POTENTIAL_PROMPT, PERFECT_ATS_FIXER_PROMPT, buildFixerPrompt } from './prompts';
+import { buildResumeAnalysisPrompt, buildLinkedInAnalysisPrompt, buildCoverLetterPrompt, buildJobMatchPrompt, buildRoadmapPrompt, buildJobRolePotentialPrompt, RESUME_ANALYSIS_PROMPT, LINKEDIN_ANALYSIS_PROMPT, COVER_LETTER_PROMPT, ROADMAP_GENERATION_PROMPT, JOB_MATCH_ANALYSIS_PROMPT, JOB_ROLE_POTENTIAL_PROMPT, PERFECT_ATS_FIXER_PROMPT, buildFixerPrompt, ROADMAP_FROM_RESUME_PROMPT, buildRoadmapFromResumePrompt, INTERVIEW_QUESTIONS_PROMPT, INTERVIEW_EVALUATE_PROMPT, INTERVIEW_FINAL_REPORT_PROMPT, buildInterviewQuestionsPrompt, buildInterviewEvaluatePrompt, buildInterviewReportPrompt } from './prompts';
 import type { JobRolePotential } from '@/lib/types';
+import type { RoadmapGenerationResult } from '@/lib/types/roadmap';
+import type { InterviewQuestion, InterviewScores, FinalReport } from '@/lib/types/interview';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -92,9 +94,56 @@ function extractJsonFromResponse(text: string): string {
       JSON.parse(jsonMatch[0]);
       return jsonMatch[0];
     } catch {}
+
+    // Try to recover truncated JSON by closing unclosed structures
+    const recovered = tryRecoverTruncatedJson(jsonMatch[0]);
+    if (recovered) {
+      return recovered;
+    }
   }
 
   return trimmed;
+}
+
+function tryRecoverTruncatedJson(text: string): string | null {
+  // Count unclosed braces and brackets
+  let braces = 0;
+  let brackets = 0;
+  let inString = false;
+  let escape = false;
+
+  for (const char of text) {
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (char === '\\') {
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (char === '{') braces++;
+    if (char === '}') braces--;
+    if (char === '[') brackets++;
+    if (char === ']') brackets--;
+  }
+
+  // Close any unclosed strings, then close brackets and braces
+  let recovered = text;
+  if (inString) recovered += '"';
+  while (brackets > 0) { recovered += ']'; brackets--; }
+  while (braces > 0) { recovered += '}'; braces--; }
+
+  try {
+    JSON.parse(recovered);
+    return recovered;
+  } catch {
+    return null;
+  }
 }
 
 export async function analyzeResume(resumeText: string): Promise<{
@@ -504,23 +553,43 @@ ${resumeText}
 
 export async function analyzeLinkedIn(profileData: any): Promise<{
   score: number;
+  scoreBreakdown: Record<string, number>;
   strengths: string[];
   redFlags: string[];
   suggestions: string[];
+  keywordGaps: string[];
+  priorityActions: Array<{
+    area: string;
+    currentIssue: string;
+    fixAction: string;
+    exampleBefore: string;
+    exampleAfter: string;
+    impact: 'high' | 'medium' | 'low';
+  }>;
   tokensUsed: number;
 }> {
   const { content, tokensUsed } = await callOpenRouter([
     { role: 'system', content: LINKEDIN_ANALYSIS_PROMPT },
     { role: 'user', content: buildLinkedInAnalysisPrompt(profileData) },
-  ], { model: 'google/gemini-2.5-flash-lite', temperature: 0.2, expectJson: true });
+  ], { model: 'google/gemini-2.5-flash-lite', temperature: 0.2, maxTokens: 6000, expectJson: true });
 
   try {
     const parsed = JSON.parse(content);
     return {
       score: parsed.score || 0,
+      scoreBreakdown: parsed.scoreBreakdown || {
+        headline: 0,
+        aboutSection: 0,
+        experience: 0,
+        skills: 0,
+        network: 0,
+        completeness: 0,
+      },
       strengths: parsed.strengths || [],
       redFlags: parsed.redFlags || [],
       suggestions: parsed.suggestions || [],
+      keywordGaps: parsed.keywordGaps || [],
+      priorityActions: parsed.priorityActions || [],
       tokensUsed,
     };
   } catch (e) {
@@ -636,6 +705,143 @@ export async function analyzeJobRolePotential(
     };
   } catch (e) {
     console.error('Failed to parse job role potential. Raw content:\n', content);
+    throw new Error('AI returned invalid data. Please try again.');
+  }
+}
+
+export async function generateRoadmapFromResume(
+  resumeText: string,
+  analysis: any
+): Promise<RoadmapGenerationResult> {
+  const { content, tokensUsed, finishReason } = await callOpenRouter([
+    { role: 'system', content: ROADMAP_FROM_RESUME_PROMPT },
+    { role: 'user', content: buildRoadmapFromResumePrompt(resumeText, analysis) },
+  ], { model: 'google/gemini-2.5-flash', temperature: 0.4, maxTokens: 16000, expectJson: true });
+
+  if (finishReason === 'length') {
+    console.error('Roadmap generation truncated at', tokensUsed, 'tokens.');
+  }
+
+  try {
+    const parsed = JSON.parse(content);
+    const phases = (parsed.phases || []).map((phase: any) => ({
+      ...phase,
+      weeksData: (phase.weeksData || []).map((week: any) => ({
+        ...week,
+        isUnlocked: true,
+        days: (week.days || []).map((day: any) => ({
+          ...day,
+          isCompleted: false,
+        })),
+      })),
+      phaseContent: phase.phaseContent || { videos: [], quiz: [], projects: [], aiInterview: [] },
+    }));
+
+    return {
+      recommendedRole: parsed.recommendedRole,
+      currentStrengths: parsed.currentStrengths || [],
+      criticalGaps: parsed.criticalGaps || [],
+      phases,
+      totalTasks: phases.reduce((acc: number, phase: any) =>
+        acc + (phase.weeksData?.reduce((wAcc: number, week: any) =>
+          wAcc + (week.days?.length || 0), 0) || 0), 0) || 0,
+      tokensUsed,
+    };
+  } catch (e) {
+    console.error('Failed to parse roadmap. Raw content (first 500):\n', content.slice(0, 500));
+    console.error('Raw content (last 500):\n', content.slice(-500));
+    throw new Error('AI returned invalid data. Please try again.');
+  }
+}
+
+export async function generateInterviewQuestions(
+  resumeText: string,
+  targetRole: string,
+  interviewType: string,
+  difficulty: string,
+  count: number = 10
+): Promise<{ questions: InterviewQuestion[]; tokensUsed: number }> {
+  const { content, tokensUsed } = await callOpenRouter([
+    { role: 'system', content: INTERVIEW_QUESTIONS_PROMPT },
+    { role: 'user', content: buildInterviewQuestionsPrompt(resumeText, targetRole, interviewType, difficulty, count) },
+  ], { model: 'google/gemini-2.5-flash-lite', temperature: 0.4, maxTokens: 8000, expectJson: true });
+
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      questions: (parsed.questions || []).map((q: any) => ({
+        question: q.question || '',
+        category: q.category || 'technical',
+        expectedPoints: q.expectedPoints || [],
+        followUp: q.followUp || undefined,
+      })),
+      tokensUsed,
+    };
+  } catch (e) {
+    console.error('Failed to parse interview questions. Raw content:\n', content);
+    throw new Error('AI returned invalid data. Please try again.');
+  }
+}
+
+export async function evaluateInterviewAnswer(
+  question: string,
+  expectedPoints: string[],
+  answer: string,
+  targetRole: string
+): Promise<{ score: number; feedback: string; followUp: string | null; expectedPointsHit: string[]; expectedPointsMissed: string[]; tokensUsed: number }> {
+  const { content, tokensUsed } = await callOpenRouter([
+    { role: 'system', content: INTERVIEW_EVALUATE_PROMPT },
+    { role: 'user', content: buildInterviewEvaluatePrompt(question, expectedPoints, answer, targetRole) },
+  ], { model: 'google/gemini-2.5-flash-lite', temperature: 0.3, maxTokens: 2000, expectJson: true });
+
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      score: Math.min(100, Math.max(0, parsed.score || 0)),
+      feedback: parsed.feedback || '',
+      followUp: parsed.followUp || null,
+      expectedPointsHit: parsed.expectedPointsHit || [],
+      expectedPointsMissed: parsed.expectedPointsMissed || [],
+      tokensUsed,
+    };
+  } catch (e) {
+    console.error('Failed to parse answer evaluation. Raw content:\n', content);
+    throw new Error('AI returned invalid data. Please try again.');
+  }
+}
+
+export async function generateInterviewReport(
+  questions: Array<{ question: string; answer: string; score: number; feedback: string }>,
+  targetRole: string
+): Promise<FinalReport> {
+  const { content, tokensUsed } = await callOpenRouter([
+    { role: 'system', content: INTERVIEW_FINAL_REPORT_PROMPT },
+    { role: 'user', content: buildInterviewReportPrompt(questions, targetRole) },
+  ], { model: 'google/gemini-2.5-flash-lite', temperature: 0.3, maxTokens: 4000, expectJson: true });
+
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      overallScore: parsed.overallScore || 0,
+      scores: {
+        technical: parsed.scores?.technical || 0,
+        communication: parsed.scores?.communication || 0,
+        confidence: parsed.scores?.confidence || 0,
+        completeness: parsed.scores?.completeness || 0,
+      },
+      summary: parsed.summary || '',
+      strengths: parsed.strengths || [],
+      improvements: parsed.improvements || [],
+      questionFeedback: questions.map((q, i) => ({
+        question: q.question,
+        score: q.score,
+        feedback: q.feedback,
+        answer: q.answer,
+      })),
+      tokensUsed,
+    };
+  } catch (e) {
+    console.error('Failed to parse interview report. Raw content:\n', content);
     throw new Error('AI returned invalid data. Please try again.');
   }
 }

@@ -2,18 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { usePortfolio } from '@/lib/hooks/usePortfolio';
+import { useResumes } from '@/lib/hooks/useResumes';
+import { PORTFOLIO_TEMPLATES, type TemplateId } from '@/lib/constants/templates';
 import {
   Sparkles, Globe, EyeOff, Copy, Check, ExternalLink,
   Layout, Palette, Type, Eye, Layers, ChevronDown, ChevronUp, Settings,
+  FileText, Link2, Plus, Trash2, Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import Link from 'next/link';
-
-const templates = [
-  { id: 'modern', name: 'Modern', description: 'Clean and professional' },
-  { id: 'minimal', name: 'Minimal', description: 'Simple and elegant' },
-  { id: 'creative', name: 'Creative', description: 'Bold and colorful' },
-];
 
 const colors = [
   '#6366f1', '#8b5cf6', '#a855f7', '#ec4899',
@@ -22,13 +19,13 @@ const colors = [
 ];
 
 const fonts = [
-  { id: 'inter', name: 'Inter' },
-  { id: 'poppins', name: 'Poppins' },
-  { id: 'roboto', name: 'Roboto' },
-  { id: 'montserrat', name: 'Montserrat' },
+  { id: 'Inter', name: 'Inter' },
+  { id: 'Poppins', name: 'Poppins' },
+  { id: 'Roboto', name: 'Roboto' },
+  { id: 'Montserrat', name: 'Montserrat' },
 ];
 
-const sections = [
+const sectionDefs = [
   { id: 'hero', label: 'Hero', description: 'Name, headline, and avatar' },
   { id: 'about', label: 'About', description: 'Professional summary' },
   { id: 'skills', label: 'Skills', description: 'Technical skills grouped by category' },
@@ -39,60 +36,122 @@ const sections = [
   { id: 'contact', label: 'Contact', description: 'Email, LinkedIn, GitHub' },
 ];
 
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+}
+
 export function PortfolioBuilder() {
   const {
+    portfolios,
     currentPortfolio,
+    loading,
+    saving,
+    fetchPortfolio,
     createPortfolio,
     updatePortfolio,
     publishPortfolio,
+    setCurrentPortfolio,
   } = usePortfolio();
 
-  const [selectedTemplate, setSelectedTemplate] = useState('modern');
+  const { resumes, loading: loadingResumes } = useResumes();
+
+  const [selectedResumeId, setSelectedResumeId] = useState('');
+  const [portfolioTitle, setPortfolioTitle] = useState('');
+  const [customSlug, setCustomSlug] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>('modern');
   const [primaryColor, setPrimaryColor] = useState('#6366f1');
-  const [selectedFont, setSelectedFont] = useState('inter');
+  const [selectedFont, setSelectedFont] = useState('Inter');
   const [enabledSections, setEnabledSections] = useState<string[]>(
-    sections.map((s) => s.id)
+    sectionDefs.map(s => s.id)
   );
   const [copied, setCopied] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
-  const [slug, setSlug] = useState('arjun-sharma');
+  const [projectLinks, setProjectLinks] = useState<Array<{ title: string; url: string; description: string; tags: string[] }>>([]);
 
   useEffect(() => {
     if (currentPortfolio) {
       setSelectedTemplate(currentPortfolio.template || 'modern');
       setPrimaryColor(currentPortfolio.theme?.primaryColor || '#6366f1');
-      setSelectedFont(currentPortfolio.theme?.font || 'inter');
-      setSlug(currentPortfolio.slug || 'arjun-sharma');
+      setSelectedFont(currentPortfolio.theme?.font || 'Inter');
+      setCustomSlug(currentPortfolio.slug || '');
+      setEnabledSections(currentPortfolio.enabledSections || sectionDefs.map(s => s.id));
+      setProjectLinks(currentPortfolio.projects || []);
+      setPortfolioTitle(currentPortfolio.hero?.headline || currentPortfolio.slug);
     }
   }, [currentPortfolio]);
 
+  useEffect(() => {
+    if (resumes.length > 0 && !selectedResumeId) {
+      const primary = resumes.find((r: any) => r.isPrimary) || resumes[0];
+      if (primary) {
+        setSelectedResumeId(primary.id);
+        if (!portfolioTitle) setPortfolioTitle(primary.fileName || primary.name || 'My Portfolio');
+        if (!customSlug) setCustomSlug(slugify(primary.fileName || primary.name || 'portfolio'));
+      }
+    }
+  }, [resumes, selectedResumeId, portfolioTitle, customSlug]);
+
   const handleCreatePortfolio = async () => {
-    await createPortfolio();
+    if (!selectedResumeId || !portfolioTitle || !customSlug) return;
+    const defaultTheme = PORTFOLIO_TEMPLATES.find(t => t.id === selectedTemplate)?.defaultTheme || PORTFOLIO_TEMPLATES[0].defaultTheme;
+    await createPortfolio(
+      selectedResumeId,
+      portfolioTitle,
+      customSlug,
+      selectedTemplate,
+      { ...defaultTheme, primaryColor, font: selectedFont }
+    );
   };
 
   const handlePublishToggle = async () => {
-    if (currentPortfolio?.isPublished) {
-      updatePortfolio({ isPublished: false });
-    } else {
-      await publishPortfolio(slug);
-    }
+    if (!currentPortfolio) return;
+    await publishPortfolio(currentPortfolio.id);
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(
-      `${window.location.origin}/portfolio/${slug}`
-    );
+    if (!currentPortfolio) return;
+    navigator.clipboard.writeText(`${window.location.origin}/portfolio/${currentPortfolio.slug}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const toggleSection = (sectionId: string) => {
-    setEnabledSections((prev) =>
-      prev.includes(sectionId)
-        ? prev.filter((id) => id !== sectionId)
-        : [...prev, sectionId]
-    );
+    const updated = enabledSections.includes(sectionId)
+      ? enabledSections.filter(id => id !== sectionId)
+      : [...enabledSections, sectionId];
+    setEnabledSections(updated);
+    updatePortfolio({ enabledSections: updated } as any);
   };
+
+  const addProjectLink = () => {
+    const updated = [...projectLinks, { title: '', url: '', description: '', tags: [] }];
+    setProjectLinks(updated);
+    updatePortfolio({ projects: updated } as any);
+  };
+
+  const updateProjectLink = (index: number, field: string, value: any) => {
+    const updated = projectLinks.map((p, i) => i === index ? { ...p, [field]: value } : p);
+    setProjectLinks(updated);
+    updatePortfolio({ projects: updated } as any);
+  };
+
+  const removeProjectLink = (index: number) => {
+    const updated = projectLinks.filter((_, i) => i !== index);
+    setProjectLinks(updated);
+    updatePortfolio({ projects: updated } as any);
+  };
+
+  if (loading || loadingResumes) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+      </div>
+    );
+  }
 
   if (!currentPortfolio) {
     return (
@@ -107,72 +166,126 @@ export function PortfolioBuilder() {
           </p>
 
           <div className="max-w-2xl mx-auto text-left space-y-6">
-            <div>
-              <h3 className="text-sm font-medium text-surface-600 dark:text-slate-300 mb-3">Choose a Template</h3>
-              <div className="grid grid-cols-3 gap-3">
-                {templates.map((template) => (
-                  <button
-                    key={template.id}
-                    onClick={() => setSelectedTemplate(template.id)}
-                    className={cn(
-                      'p-4 rounded-xl border-2 transition-all',
-                      selectedTemplate === template.id
-                        ? 'border-indigo-500 bg-indigo-500/10'
-                        : 'border-surface-300 dark:border-slate-700 bg-surface-100 dark:bg-slate-800/50 hover:border-slate-600'
-                    )}
-                  >
-                    <div className="font-medium text-surface-900 dark:text-white">{template.name}</div>
-                    <div className="text-xs text-surface-500 dark:text-slate-400 mt-1">{template.description}</div>
-                  </button>
-                ))}
+            {resumes.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="w-10 h-10 text-surface-400 mx-auto mb-3" />
+                <p className="text-surface-500 dark:text-slate-400 mb-4">Upload a resume first to create a portfolio</p>
+                <Link href="/dashboard/resumes" className="text-indigo-400 hover:text-indigo-300 underline text-sm">
+                  Upload Resume
+                </Link>
               </div>
-            </div>
+            ) : (
+              <>
+                <div>
+                  <h3 className="text-sm font-medium text-surface-600 dark:text-slate-300 mb-3">Select Resume *</h3>
+                  <div className="space-y-2">
+                    {resumes.map((resume: any) => (
+                      <button
+                        key={resume.id}
+                        onClick={() => {
+                          setSelectedResumeId(resume.id);
+                          if (!portfolioTitle) setPortfolioTitle(resume.fileName || resume.name || 'My Portfolio');
+                          if (!customSlug) setCustomSlug(slugify(resume.fileName || resume.name || 'portfolio'));
+                        }}
+                        className={cn(
+                          'w-full p-3 rounded-xl border-2 transition-all text-left flex items-center gap-3',
+                          selectedResumeId === resume.id
+                            ? 'border-indigo-500 bg-indigo-500/10'
+                            : 'border-surface-300 dark:border-slate-700 bg-surface-100 dark:bg-slate-800/50 hover:border-slate-600'
+                        )}
+                      >
+                        <FileText className={cn('w-5 h-5', selectedResumeId === resume.id ? 'text-indigo-400' : 'text-surface-400')} />
+                        <div>
+                          <p className="font-medium text-surface-900 dark:text-white text-sm">{resume.fileName || resume.name}</p>
+                          {resume.atsScore != null && (
+                            <p className="text-surface-500 dark:text-slate-400 text-xs">ATS Score: {resume.atsScore}/100</p>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            <div>
-              <h3 className="text-sm font-medium text-surface-600 dark:text-slate-300 mb-3">Primary Color</h3>
-              <div className="flex gap-2 flex-wrap">
-                {colors.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setPrimaryColor(color)}
-                    className={cn(
-                      'w-8 h-8 rounded-full transition-all',
-                      primaryColor === color
-                        ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-900'
-                        : 'hover:scale-110'
-                    )}
-                    style={{ backgroundColor: color }}
+                <div>
+                  <h3 className="text-sm font-medium text-surface-600 dark:text-slate-300 mb-2">Portfolio Title *</h3>
+                  <input
+                    type="text"
+                    value={portfolioTitle}
+                    onChange={(e) => {
+                      setPortfolioTitle(e.target.value);
+                      if (!customSlug || customSlug === slugify(portfolioTitle)) {
+                        setCustomSlug(slugify(e.target.value));
+                      }
+                    }}
+                    placeholder="e.g. John Doe - Full Stack Developer"
+                    className="w-full px-4 py-3 bg-surface-100 dark:bg-slate-800/50 border border-surface-300 dark:border-slate-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm"
                   />
-                ))}
-              </div>
-            </div>
+                </div>
 
-            <div>
-              <h3 className="text-sm font-medium text-surface-600 dark:text-slate-300 mb-3">Font</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {fonts.map((font) => (
-                  <button
-                    key={font.id}
-                    onClick={() => setSelectedFont(font.id)}
-                    className={cn(
-                      'p-3 rounded-xl border-2 transition-all',
-                      selectedFont === font.id
-                        ? 'border-indigo-500 bg-indigo-500/10'
-                        : 'border-surface-300 dark:border-slate-700 bg-surface-100 dark:bg-slate-800/50 hover:border-slate-600'
-                    )}
-                  >
-                    <span className="text-surface-900 dark:text-white">{font.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+                <div>
+                  <h3 className="text-sm font-medium text-surface-600 dark:text-slate-300 mb-2">Custom URL Slug *</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-surface-400 dark:text-slate-500">aura.dev/</span>
+                    <input
+                      type="text"
+                      value={customSlug}
+                      onChange={(e) => setCustomSlug(e.target.value.replace(/[^a-z0-9-]/g, ''))}
+                      placeholder="john-doe"
+                      className="flex-1 px-3 py-2 bg-surface-100 dark:bg-slate-800/50 border border-surface-300 dark:border-slate-700 rounded-lg text-surface-900 dark:text-white text-sm focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
 
-            <button
-              onClick={handleCreatePortfolio}
-              className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-medium hover:from-indigo-600 hover:to-purple-600 transition-all"
-            >
-              Create Portfolio
-            </button>
+                <div>
+                  <h3 className="text-sm font-medium text-surface-600 dark:text-slate-300 mb-3">Choose Template</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {PORTFOLIO_TEMPLATES.map((template) => (
+                      <button
+                        key={template.id}
+                        onClick={() => setSelectedTemplate(template.id as TemplateId)}
+                        className={cn(
+                          'p-4 rounded-xl border-2 transition-all text-left',
+                          selectedTemplate === template.id
+                            ? 'border-indigo-500 bg-indigo-500/10'
+                            : 'border-surface-300 dark:border-slate-700 bg-surface-100 dark:bg-slate-800/50 hover:border-slate-600'
+                        )}
+                      >
+                        <div className="font-medium text-surface-900 dark:text-white text-sm">{template.name}</div>
+                        <div className="text-xs text-surface-500 dark:text-slate-400 mt-1">{template.description}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-surface-600 dark:text-slate-300 mb-3">Primary Color</h3>
+                  <div className="flex gap-2 flex-wrap">
+                    {colors.map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setPrimaryColor(color)}
+                        className={cn(
+                          'w-8 h-8 rounded-full transition-all',
+                          primaryColor === color
+                            ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-900'
+                            : 'hover:scale-110'
+                        )}
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleCreatePortfolio}
+                  disabled={!selectedResumeId || !portfolioTitle || !customSlug || saving}
+                  className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-medium hover:from-indigo-600 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                  Create Portfolio
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -184,7 +297,9 @@ export function PortfolioBuilder() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white">Portfolio Builder</h1>
-          <p className="text-surface-500 dark:text-slate-400 mt-1">Customize and manage your portfolio</p>
+          <p className="text-surface-500 dark:text-slate-400 mt-1">
+            {saving ? 'Saving...' : 'Customize and manage your portfolio'}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -245,7 +360,7 @@ export function PortfolioBuilder() {
               Sections
             </h2>
             <div className="space-y-2">
-              {sections.map((section) => (
+              {sectionDefs.map((section) => (
                 <div
                   key={section.id}
                   className="flex items-center justify-between p-3 bg-surface-100 dark:bg-slate-800/50 rounded-xl"
@@ -269,6 +384,58 @@ export function PortfolioBuilder() {
 
           <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
             <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4 flex items-center gap-2">
+              <Link2 className="w-5 h-5 text-indigo-400" />
+              Project Links
+            </h2>
+            <p className="text-surface-500 dark:text-slate-400 text-sm mb-4">
+              Add links to your projects, GitHub repos, or live demos
+            </p>
+            <div className="space-y-3">
+              {projectLinks.map((project, index) => (
+                <div key={index} className="p-4 bg-surface-100 dark:bg-slate-800/50 rounded-xl border border-surface-200 dark:border-slate-700 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <input
+                      type="text"
+                      value={project.title}
+                      onChange={(e) => updateProjectLink(index, 'title', e.target.value)}
+                      placeholder="Project name"
+                      className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-surface-300 dark:border-slate-600 rounded-lg text-surface-900 dark:text-white text-sm focus:outline-none focus:border-indigo-500"
+                    />
+                    <button
+                      onClick={() => removeProjectLink(index)}
+                      className="ml-2 p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <input
+                    type="url"
+                    value={project.url}
+                    onChange={(e) => updateProjectLink(index, 'url', e.target.value)}
+                    placeholder="https://github.com/..."
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-surface-300 dark:border-slate-600 rounded-lg text-surface-900 dark:text-white text-sm focus:outline-none focus:border-indigo-500"
+                  />
+                  <input
+                    type="text"
+                    value={project.description}
+                    onChange={(e) => updateProjectLink(index, 'description', e.target.value)}
+                    placeholder="Brief description (optional)"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-surface-300 dark:border-slate-600 rounded-lg text-surface-900 dark:text-white text-sm focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              ))}
+              <button
+                onClick={addProjectLink}
+                className="w-full py-3 border-2 border-dashed border-surface-300 dark:border-slate-700 rounded-xl text-surface-500 dark:text-slate-400 hover:border-indigo-500 hover:text-indigo-400 transition-colors flex items-center justify-center gap-2 text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Add Project Link
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
+            <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4 flex items-center gap-2">
               <Palette className="w-5 h-5 text-indigo-400" />
               Theme
             </h2>
@@ -281,7 +448,7 @@ export function PortfolioBuilder() {
                       key={color}
                       onClick={() => {
                         setPrimaryColor(color);
-                        updatePortfolio({ theme: { ...currentPortfolio.theme, primaryColor: color, font: currentPortfolio.theme?.font || 'Inter', borderRadius: currentPortfolio.theme?.borderRadius || 'rounded-xl', spacing: currentPortfolio.theme?.spacing || 'normal' } });
+                        updatePortfolio({ theme: { ...currentPortfolio.theme, primaryColor: color, font: selectedFont, borderRadius: 'rounded-xl', spacing: 'normal' } });
                       }}
                       className={cn(
                         'w-8 h-8 rounded-full transition-all',
@@ -296,13 +463,13 @@ export function PortfolioBuilder() {
               </div>
               <div>
                 <p className="text-sm text-surface-500 dark:text-slate-400 mb-2">Template</p>
-                <div className="grid grid-cols-3 gap-3">
-                  {templates.map((template) => (
+                <div className="grid grid-cols-2 gap-3">
+                  {PORTFOLIO_TEMPLATES.map((template) => (
                     <button
                       key={template.id}
                       onClick={() => {
-                        setSelectedTemplate(template.id);
-                        updatePortfolio({ template: template.id as any });
+                        setSelectedTemplate(template.id as TemplateId);
+                        updatePortfolio({ template: template.id as TemplateId });
                       }}
                       className={cn(
                         'p-3 rounded-xl border-2 transition-all text-center',
@@ -312,6 +479,28 @@ export function PortfolioBuilder() {
                       )}
                     >
                       <span className="text-sm font-medium text-surface-900 dark:text-white">{template.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-surface-500 dark:text-slate-400 mb-2">Font</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {fonts.map((font) => (
+                    <button
+                      key={font.id}
+                      onClick={() => {
+                        setSelectedFont(font.id);
+                        updatePortfolio({ theme: { ...currentPortfolio.theme, primaryColor, font: font.id, borderRadius: 'rounded-xl', spacing: 'normal' } });
+                      }}
+                      className={cn(
+                        'p-3 rounded-xl border-2 transition-all',
+                        selectedFont === font.id
+                          ? 'border-indigo-500 bg-indigo-500/10'
+                          : 'border-surface-300 dark:border-slate-700 bg-surface-100 dark:bg-slate-800/50 hover:border-slate-600'
+                      )}
+                    >
+                      <span className="text-surface-900 dark:text-white">{font.name}</span>
                     </button>
                   ))}
                 </div>
@@ -333,8 +522,12 @@ export function PortfolioBuilder() {
                   <span className="text-sm text-surface-400 dark:text-slate-500">aura.dev/</span>
                   <input
                     type="text"
-                    value={slug}
-                    onChange={(e) => setSlug(e.target.value)}
+                    value={customSlug}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^a-z0-9-]/g, '');
+                      setCustomSlug(val);
+                      updatePortfolio({ slug: val });
+                    }}
                     className="flex-1 px-3 py-2 bg-surface-100 dark:bg-slate-800/50 border border-surface-300 dark:border-slate-700 rounded-lg text-surface-900 dark:text-white text-sm focus:outline-none focus:border-indigo-500"
                   />
                 </div>

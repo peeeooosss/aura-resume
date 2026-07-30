@@ -21,70 +21,76 @@ export async function POST(req: NextRequest) {
     }
 
     const profileData = await scrapeLinkedInProfile(linkedinUrl);
-
     const analysis = await analyzeLinkedIn(profileData);
 
-    await prisma.creditBalance.update({
-      where: { userId },
-      data: { balance: { decrement: CREDIT_COSTS.linkedin_analysis } },
-    });
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedBalance = await tx.creditBalance.update({
+        where: { userId },
+        data: { balance: { decrement: CREDIT_COSTS.linkedin_analysis } },
+      });
 
-    await prisma.linkedInProfile.upsert({
-      where: { userId },
-      create: {
-        userId,
-        linkedinUrl,
-        headline: profileData.headline,
-        summary: profileData.summary,
-        experience: profileData.experience,
-        skills: profileData.skills,
-        analysisScore: analysis.score,
-        suggestions: analysis.suggestions,
-        lastSyncedAt: new Date(),
-      },
-      update: {
-        linkedinUrl,
-        headline: profileData.headline,
-        summary: profileData.summary,
-        experience: profileData.experience,
-        skills: profileData.skills,
-        analysisScore: analysis.score,
-        suggestions: analysis.suggestions,
-        lastSyncedAt: new Date(),
-      },
-    });
+      await tx.linkedInProfile.upsert({
+        where: { userId },
+        create: {
+          userId,
+          linkedinUrl,
+          headline: profileData.headline,
+          summary: profileData.summary,
+          experience: profileData.experience,
+          skills: profileData.skills,
+          analysisScore: analysis.score,
+          suggestions: analysis.suggestions,
+          lastSyncedAt: new Date(),
+        },
+        update: {
+          linkedinUrl,
+          headline: profileData.headline,
+          summary: profileData.summary,
+          experience: profileData.experience,
+          skills: profileData.skills,
+          analysisScore: analysis.score,
+          suggestions: analysis.suggestions,
+          lastSyncedAt: new Date(),
+        },
+      });
 
-    await prisma.analysis.create({
-      data: {
-        userId,
-        resumeId: 'linkedin-only',
-        type: 'linkedin',
-        overallScore: analysis.score,
-        strengths: analysis.strengths,
-        redFlags: analysis.redFlags,
-        suggestions: analysis.suggestions,
-        modelUsed: 'claude-3.5-sonnet',
-        tokensUsed: analysis.tokensUsed,
-      },
-    });
+      await tx.analysis.create({
+        data: {
+          userId,
+          resumeId: 'linkedin-only',
+          type: 'linkedin',
+          overallScore: analysis.score,
+          strengths: analysis.strengths,
+          redFlags: analysis.redFlags,
+          suggestions: analysis.suggestions,
+          modelUsed: 'google/gemini-2.5-flash-lite',
+          tokensUsed: analysis.tokensUsed,
+        },
+      });
 
-    await prisma.usageRecord.create({
-      data: {
-        userId,
-        type: 'linkedin_analysis',
-        count: 1,
-        modelUsed: 'claude-3.5-sonnet',
-      },
+      await tx.usageRecord.create({
+        data: {
+          userId,
+          type: 'linkedin_analysis',
+          count: 1,
+          modelUsed: 'google/gemini-2.5-flash-lite',
+        },
+      });
+
+      return updatedBalance.balance;
     });
 
     return NextResponse.json({
       score: analysis.score,
+      scoreBreakdown: analysis.scoreBreakdown,
       strengths: analysis.strengths,
       redFlags: analysis.redFlags,
       suggestions: analysis.suggestions,
+      keywordGaps: analysis.keywordGaps,
+      priorityActions: analysis.priorityActions,
       tokensUsed: analysis.tokensUsed,
       creditsUsed: CREDIT_COSTS.linkedin_analysis,
-      creditsRemaining: creditBalance.balance - CREDIT_COSTS.linkedin_analysis,
+      creditsRemaining: result,
     });
   } catch (error) {
     console.error('LinkedIn analysis error:', error);

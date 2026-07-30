@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { fixResumeToPerfectATS } from '@/lib/ai/openrouter';
 import { generateOptimizedResumePDF, getPDFBlobURL } from '@/lib/pdf/generateReport';
 import { requireSessionUserId } from '@/lib/auth/getSessionUser';
+import { CREDIT_COSTS } from '@/lib/constants/credits';
 
 export async function POST(request: Request) {
   try {
@@ -14,6 +15,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'resumeId is required' },
         { status: 400 }
+      );
+    }
+
+    const creditBalance = await prisma.creditBalance.findUnique({ where: { userId } });
+    if (!creditBalance || creditBalance.balance < CREDIT_COSTS.resume_fix) {
+      return NextResponse.json(
+        { error: 'Insufficient credits', insufficientCredits: true },
+        { status: 402 }
       );
     }
 
@@ -69,17 +78,24 @@ export async function POST(request: Request) {
       where: { parentId },
     });
 
-    const newResume = await prisma.resume.create({
-      data: {
-        userId,
-        title: `${resume.title} (Fixed v${childCount + 2})`,
-        fileUrl: resume.fileUrl,
-        fileKey: resume.fileKey,
-        rawText: optimizedResume,
-        status: 'fixed',
-        version: childCount + 2,
-        parentId,
-      },
+    const newResume = await prisma.$transaction(async (tx) => {
+      await tx.creditBalance.update({
+        where: { userId },
+        data: { balance: { decrement: CREDIT_COSTS.resume_fix } },
+      });
+
+      return tx.resume.create({
+        data: {
+          userId,
+          title: `${resume.title} (Fixed v${childCount + 2})`,
+          fileUrl: resume.fileUrl,
+          fileKey: resume.fileKey,
+          rawText: optimizedResume,
+          status: 'fixed',
+          version: childCount + 2,
+          parentId,
+        },
+      });
     });
 
     return NextResponse.json({
@@ -89,6 +105,8 @@ export async function POST(request: Request) {
       resumeId: newResume.id,
       version: newResume.version,
       tokensUsed,
+      creditsUsed: CREDIT_COSTS.resume_fix,
+      creditsRemaining: (creditBalance?.balance || 0) - CREDIT_COSTS.resume_fix,
     });
   } catch (error: any) {
     console.error('Resume fix failed:', error?.message || error);

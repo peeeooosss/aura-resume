@@ -30,6 +30,7 @@ model User {
   usage              UsageRecord[]
   linkedinTemplates  LinkedInTemplate[]
   creditBalance      CreditBalance?
+  interviewSessions  InterviewSession[]
 }
 
 model Resume {
@@ -50,24 +51,28 @@ model Resume {
   user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   analyses Analysis[]
   jobs     JobMatch[]
+  roadmaps Roadmap[]
+  interviewSessions InterviewSession[]
+  portfolios Portfolio[]
 
   @@index([userId, status])
   @@index([userId, parentId])
 }
 
 model Analysis {
-  id            String   @id @default(cuid())
-  resumeId      String
-  userId        String
-  type          String   // "resume" | "linkedin" | "roadmap" | "gap"
-  overallScore  Float?
-  strengths     Json?
-  redFlags      Json?
-  suggestions   Json?
-  keywordGaps   Json?
-  modelUsed     String?
-  tokensUsed    Int?
-  createdAt     DateTime @default(now())
+  id                String   @id @default(cuid())
+  resumeId          String
+  userId            String
+  type              String   // "resume" | "linkedin" | "roadmap" | "gap"
+  overallScore      Float?
+  strengths         Json?
+  redFlags          Json?
+  suggestions       Json?
+  keywordGaps       Json?
+  jobRolePotential  Json?
+  modelUsed         String?
+  tokensUsed        Int?
+  createdAt         DateTime @default(now())
 
   resume Resume? @relation(fields: [resumeId], references: [id], onDelete: Cascade)
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -112,33 +117,67 @@ model JobMatch {
 model Roadmap {
   id            String   @id @default(cuid())
   userId        String
+  resumeId      String
   title         String
   goalRole      String
   currentRole   String?
-  timeline      Json?
-  skillsToLearn Json?
-  milestones    Json?
-  aiGenerated   Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  overview      String?  @db.Text
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStrengths  Json?
+  criticalGaps      Json?
+
+  phases           Json
+
+  currentPhase     Int      @default(1)
+  currentWeek      Int      @default(1)
+  currentDay       Int      @default(1)
+  totalTasks       Int      @default(0)
+  completedTasks   Int      @default(0)
+  progress         Float    @default(0)
+
+  startDate        DateTime @default(now())
+  endDate          DateTime
+  isActive         Boolean  @default(true)
+  isCompleted      Boolean  @default(false)
+
+  phase1Unlocked   Boolean  @default(true)
+  phase2Unlocked   Boolean  @default(false)
+  phase3Unlocked   Boolean  @default(false)
+  phase4Unlocked   Boolean  @default(false)
+
+  aiGenerated      Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, resumeId])
+  @@index([userId])
 }
 
 model Portfolio {
-  id          String   @id @default(cuid())
-  userId      String
-  title       String
-  slug        String   @unique
-  description String?  @db.Text
-  theme       String?  @default("default")
-  sections    Json?
-  isPublished Boolean  @default(false)
-  viewCount   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String    @id @default(cuid())
+  userId          String
+  resumeId        String?
+  title           String
+  slug            String    @unique
+  description     String?   @db.Text
+  template        String?   @default("modern")
+  theme           Json?
+  data            Json?
+  isPublished     Boolean   @default(false)
+  publishedAt     DateTime?
+  views           Int       @default(0)
+  uniqueVisitors  Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resume Resume? @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([slug])
 }
 
 model Payment {
@@ -183,9 +222,38 @@ model LinkedInTemplate {
 model CreditBalance {
   id        String   @id @default(cuid())
   userId    String   @unique
-  balance   Int      @default(100)
+  balance   Int      @default(50)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model InterviewSession {
+  id             String   @id @default(cuid())
+  userId         String
+  resumeId       String
+  targetRole     String
+  interviewType  String   @default("mixed") // "technical" | "behavioral" | "mixed"
+  difficulty     String   @default("medium") // "easy" | "medium" | "hard"
+  status         String   @default("active") // "active" | "completed" | "abandoned"
+
+  questions      Json     // Array of { question, answer, score, feedback, followUp }
+  currentQ       Int      @default(0)
+  totalQuestions  Int     @default(10)
+
+  overallScore   Float?
+  scores         Json?    // { technical, communication, confidence, completeness }
+  feedback       Json?    // Detailed feedback per question
+  summary        String?  @db.Text
+
+  startedAt      DateTime @default(now())
+  completedAt    DateTime?
+  duration       Int?     // seconds
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, status])
 }
