@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, FileText, Target, Search, Map, Globe,
-  Settings, Shield, Zap, Sparkles, Users, Award,
+  Settings, Mail, Mic, Shield, Zap, Sparkles, Users, Award,
   Wrench, FilePen, FileSearch, Linkedin, Clock,
 } from 'lucide-react';
 
@@ -27,8 +27,15 @@ export const NAV_ITEMS = [
   {
     title: 'Career Growth',
     items: [
-      { href: '/dashboard/roadmap', label: '90-Day Roadmap', icon: Map, plan: 'pro' as const, badge: null },
+      { href: '/dashboard/roadmap', label: '90-Day Roadmap', icon: Map, plan: 'vip' as const, badge: null },
       { href: '/dashboard/portfolio', label: 'Portfolio', icon: Globe, plan: 'vip' as const, badge: null },
+    ],
+  },
+  {
+    title: 'VIP Features',
+    items: [
+      { href: '/dashboard/emails', label: 'Cold Emails', icon: Mail, plan: 'vip' as const, badge: null },
+      { href: '/dashboard/interviews', label: 'AI Interviews', icon: Mic, plan: 'vip' as const, badge: 'New' as const },
     ],
   },
   {

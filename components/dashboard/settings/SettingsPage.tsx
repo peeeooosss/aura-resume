@@ -8,7 +8,7 @@ import { PLAN_DEFINITIONS, type PlanId } from '@/lib/constants/plans';
 import { formatDate, getInitials } from '@/lib/utils/helpers';
 import {
   User, Mail, CreditCard, FileText, Target, TrendingUp, Award,
-  Map, Bell, BellOff, Download, Trash2, Shield, ArrowRight,
+  Map, Download, Trash2, Shield, ArrowRight,
   CheckCircle, AlertTriangle, ExternalLink, LogOut, Camera,
   Sparkles, Loader2,
 } from 'lucide-react';
@@ -20,24 +20,29 @@ export function SettingsPage() {
   const { user } = useAuth();
   const planDef = PLAN_DEFINITIONS[currentPlan];
 
-  const [notifications, setNotifications] = useState({
-    emailUpdates: true,
-    weeklyDigest: true,
-    jobAlerts: true,
-    resumeTips: false,
-  });
-
   const [exporting, setExporting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const toggleNotification = (key: keyof typeof notifications) => {
-    setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
   const handleExportData = async () => {
     setExporting(true);
-    await new Promise(r => setTimeout(r, 2000));
-    setExporting(false);
+    try {
+      const res = await fetch('/api/user/export');
+      if (!res.ok) throw new Error('Export failed');
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `aura-resume-data-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed:', err);
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -171,54 +176,6 @@ export function SettingsPage() {
         </div>
       </section>
 
-      {/* Notification Preferences */}
-      <section className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
-            <Bell className="w-5 h-5 text-emerald-400" />
-          </div>
-          <h2 className="text-xl font-bold text-surface-900 dark:text-white">Notifications</h2>
-        </div>
-
-        <div className="space-y-3">
-          {[
-            { key: 'emailUpdates' as const, label: 'Email Updates', desc: 'Receive product updates and feature announcements' },
-            { key: 'weeklyDigest' as const, label: 'Weekly Digest', desc: 'Summary of your activity and progress each week' },
-            { key: 'jobAlerts' as const, label: 'Job Match Alerts', desc: 'Get notified when new jobs match your profile' },
-            { key: 'resumeTips' as const, label: 'Resume Tips', desc: 'Weekly tips to improve your resume score' },
-          ].map(({ key, label, desc }) => (
-            <div
-              key={key}
-              className="flex items-center justify-between p-4 bg-surface-100 dark:bg-slate-800/30 rounded-xl hover:bg-surface-100 dark:bg-slate-800/50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                {notifications[key] ? (
-                  <Bell className="w-5 h-5 text-emerald-400" />
-                ) : (
-                  <BellOff className="w-5 h-5 text-surface-400 dark:text-slate-500" />
-                )}
-                <div>
-                  <p className="text-surface-900 dark:text-white font-medium">{label}</p>
-                  <p className="text-surface-400 dark:text-slate-500 text-sm">{desc}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => toggleNotification(key)}
-                className={`relative w-12 h-7 rounded-full transition-colors ${
-                  notifications[key] ? 'bg-indigo-600' : "bg-surface-300 dark:bg-slate-700"
-                }`}
-              >
-                <span
-                  className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                    notifications[key] ? 'translate-x-5' : ''
-                  }`}
-                />
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Account Actions */}
       <section className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
         <div className="flex items-center gap-3 mb-6">
@@ -238,7 +195,7 @@ export function SettingsPage() {
               <Download className="w-5 h-5 text-surface-500 dark:text-slate-400 group-hover:text-emerald-400 transition-colors" />
               <div className="text-left">
                 <p className="text-surface-900 dark:text-white font-medium">Export All Data</p>
-                <p className="text-surface-400 dark:text-slate-500 text-sm">Download all your resumes, analyses, and account data</p>
+                <p className="text-surface-400 dark:text-slate-500 text-sm">Download all your resumes, analyses, and account data as JSON</p>
               </div>
             </div>
             {exporting ? (

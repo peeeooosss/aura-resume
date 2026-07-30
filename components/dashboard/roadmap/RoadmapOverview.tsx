@@ -41,24 +41,24 @@ export function RoadmapOverview() {
           <div className="w-20 h-20 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-6">
             <Lock className="w-10 h-10 text-indigo-400" />
           </div>
-          <h2 className="text-2xl font-bold text-surface-900 dark:text-white mb-3">Roadmap Requires Pro or VIP</h2>
+          <h2 className="text-2xl font-bold text-surface-900 dark:text-white mb-3">Roadmap Requires VIP</h2>
           <p className="text-surface-500 dark:text-slate-400 mb-8 max-w-md mx-auto">
             Generate AI-powered 90-day career roadmaps with tasks, videos, quizzes, projects, and interview prep.
-            Upgrade to Pro or VIP to unlock.
+            Upgrade to VIP to unlock.
           </p>
           <div className="flex items-center justify-center gap-4">
             <button
-              onClick={() => router.push('/dashboard/plans')}
+              onClick={() => router.push('/plans?plan=vip')}
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
             >
               <Sparkles className="w-5 h-5" />
-              Upgrade to Pro
+              Upgrade to VIP
             </button>
             <button
-              onClick={() => router.push('/dashboard/plans')}
+              onClick={() => router.push('/plans')}
               className="inline-flex items-center gap-2 px-6 py-3 bg-surface-100 dark:bg-slate-800 text-surface-900 dark:text-white font-semibold rounded-xl border border-surface-300 dark:border-slate-700 hover:border-indigo-500/50 transition-all"
             >
-              View VIP Plan
+              View All Plans
             </button>
           </div>
         </div>

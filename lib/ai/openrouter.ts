@@ -845,3 +845,18 @@ export async function generateInterviewReport(
     throw new Error('AI returned invalid data. Please try again.');
   }
 }
+
+export async function generateText(prompt: string): Promise<{ text: string; tokensUsed: number }> {
+  const messages: OpenRouterMessage[] = [
+    { role: 'system', content: 'You are an expert AI assistant. Return only valid JSON.' },
+    { role: 'user', content: prompt },
+  ];
+
+  const result = await callOpenRouter(messages, {
+    temperature: 0.7,
+    maxTokens: 2000,
+    expectJson: true,
+  });
+
+  return { text: result.content, tokensUsed: result.tokensUsed };
+}

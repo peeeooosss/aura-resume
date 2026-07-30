@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { formatRelativeTime } from '@/lib/utils/helpers';
 import { useSession } from 'next-auth/react';
 import { useMemo, useEffect } from 'react';
+import { PLAN_DEFINITIONS, type PlanId } from '@/lib/constants/plans';
 
 export function DashboardOverview() {
   const { data: session } = useSession();
@@ -73,12 +74,14 @@ export function DashboardOverview() {
   const activeMatches = matches.filter(m => m.status === 'NEW' || m.status === 'SAVED').slice(0, 3);
   const upcomingTasks = currentRoadmap?.dailyTasks?.filter((t: any) => !t.isCompleted).slice(0, 3) || [];
 
+  const planDef = PLAN_DEFINITIONS[currentPlan as PlanId] || PLAN_DEFINITIONS.free;
   const limits = {
-    free: { resumes: 1, scansThisMonth: 1, jobMatches: 5, tailoredResumes: 0, roadmaps: 0 },
-    quick: { resumes: 3, scansThisMonth: 999, jobMatches: 20, tailoredResumes: 0, roadmaps: 1 },
-    pro: { resumes: 999, scansThisMonth: 999, jobMatches: 100, tailoredResumes: 5, roadmaps: 3 },
-    vip: { resumes: 999, scansThisMonth: 999, jobMatches: 999, tailoredResumes: 999, roadmaps: 999 },
-  }[currentPlan];
+    resumes: planDef.limits.resumes === 999 ? 999 : planDef.limits.resumes,
+    scansThisMonth: planDef.limits.scansPerMonth === 999 ? 999 : planDef.limits.scansPerMonth,
+    jobMatches: planDef.limits.jobMatches === 999 ? 999 : planDef.limits.jobMatches,
+    tailoredResumes: planDef.limits.tailoredResumes === 999 ? 999 : planDef.limits.tailoredResumes,
+    roadmaps: planDef.limits.roadmaps === 999 ? 999 : planDef.limits.roadmaps,
+  };
 
   return (
     <div className="space-y-8">
@@ -186,10 +189,10 @@ export function DashboardOverview() {
           />
         </PlanGate>
         <PlanGate
-          requiredPlan="pro"
+          requiredPlan="vip"
           featureName="90-Day Roadmap"
           showUpgrade={false}
-          fallback={<LockedQuickAction icon={Map} title="Generate Roadmap" description="Pro plan required" requiredPlan="pro" />}
+          fallback={<LockedQuickAction icon={Map} title="Generate Roadmap" description="VIP plan required" requiredPlan="vip" />}
         >
           <QuickActionCard
             icon={Map}
@@ -199,10 +202,10 @@ export function DashboardOverview() {
           />
         </PlanGate>
         <PlanGate
-          requiredPlan="pro"
+          requiredPlan="vip"
           featureName="Portfolio Builder"
           showUpgrade={false}
-          fallback={<LockedQuickAction icon={Globe} title="Build Portfolio" description="Pro plan required" requiredPlan="pro" />}
+          fallback={<LockedQuickAction icon={Globe} title="Build Portfolio" description="VIP plan required" requiredPlan="vip" />}
         >
           <QuickActionCard
             icon={Globe}

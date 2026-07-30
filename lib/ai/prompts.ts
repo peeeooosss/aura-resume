@@ -559,3 +559,41 @@ ${qaBlock}
 
 Generate the final report JSON now.`;
 }
+
+export function buildColdEmailPrompt(
+  resumeText: string,
+  targetCompany: string,
+  targetRole: string,
+  emailType: 'networking' | 'referral' | 'inquiry' = 'networking'
+) {
+  const typeInstructions = {
+    networking: 'Write a professional networking email to connect with someone at the company. Focus on shared interests and mutual value.',
+    referral: 'Write a referral request email. Ask the recipient to consider referring you for the role. Be specific about why you are a good fit.',
+    inquiry: 'Write a job inquiry email expressing interest in opportunities at the company. Highlight relevant experience and ask about open positions.',
+  };
+
+  return `You are an expert career coach and professional email writer. Generate a personalized cold outreach email.
+
+Target Company: ${targetCompany}
+Target Role: ${targetRole}
+Email Type: ${emailType}
+Instructions: ${typeInstructions[emailType]}
+
+Candidate's Resume (first 1500 characters):
+${resumeText.slice(0, 1500)}
+
+Generate a professional cold email in this JSON format:
+{
+  "subject": "Compelling email subject line (max 60 chars)",
+  "body": "The full email body (3-4 paragraphs, professional tone, personalized based on the resume)",
+  "tips": ["tip1", "tip2", "tip3"]
+}
+
+Rules:
+- Keep the email under 200 words
+- Be specific about the candidate's relevant skills from the resume
+- Include a clear call to action
+- Professional but not stiff tone
+- No generic templates — make it feel personal
+- Return ONLY valid JSON`;
+}

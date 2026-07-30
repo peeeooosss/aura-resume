@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { PlanId } from '@/lib/constants/plans';
+import { PLAN_DEFINITIONS, type PlanId } from '@/lib/constants/plans';
 
 interface PlanState {
   currentPlan: PlanId;
@@ -19,6 +19,18 @@ interface PlanState {
   resetMonthlyUsage: () => void;
   canAccess: (feature: keyof PlanState['usage']) => boolean;
   getUsagePercent: (feature: keyof PlanState['usage']) => number;
+}
+
+function getPlanLimit(plan: PlanId, key: string): number {
+  const def = PLAN_DEFINITIONS[plan] || PLAN_DEFINITIONS.free;
+  const limitsMap: Record<string, number> = {
+    resumes: def.limits.resumes,
+    scansThisMonth: def.limits.scansPerMonth,
+    jobMatches: def.limits.jobMatches,
+    tailoredResumes: def.limits.tailoredResumes,
+    roadmaps: def.limits.roadmaps,
+  };
+  return limitsMap[key] ?? 0;
 }
 
 export const usePlan = create<PlanState>()(
@@ -42,28 +54,17 @@ export const usePlan = create<PlanState>()(
       })),
       canAccess: (feature) => {
         const plan = get().currentPlan;
-        const limits: Record<PlanId, Record<string, number>> = {
-          free: { resumes: 1, scansThisMonth: 1, jobMatches: 5, tailoredResumes: 0, roadmaps: 0 },
-          quick: { resumes: 3, scansThisMonth: 999, jobMatches: 20, tailoredResumes: 0, roadmaps: 1 },
-          pro: { resumes: 999, scansThisMonth: 999, jobMatches: 100, tailoredResumes: 5, roadmaps: 3 },
-          vip: { resumes: 999, scansThisMonth: 999, jobMatches: 999, tailoredResumes: 999, roadmaps: 999 },
-        };
-        const limit = limits[plan][feature] ?? 0;
-        const usage = get().usage[feature] ?? 0;
-        return limit === 999 || usage < limit;
+        const limit = getPlanLimit(plan, feature);
+        const used = get().usage[feature] ?? 0;
+        return limit === 999 || used < limit;
       },
       getUsagePercent: (feature) => {
         const plan = get().currentPlan;
-        const limits: Record<PlanId, Record<string, number>> = {
-          free: { resumes: 1, scansThisMonth: 1, jobMatches: 5, tailoredResumes: 0, roadmaps: 0 },
-          quick: { resumes: 3, scansThisMonth: 20, jobMatches: 20, tailoredResumes: 0, roadmaps: 1 },
-          pro: { resumes: 20, scansThisMonth: 100, jobMatches: 100, tailoredResumes: 5, roadmaps: 3 },
-          vip: { resumes: 50, scansThisMonth: 200, jobMatches: 200, tailoredResumes: 20, roadmaps: 10 },
-        };
-        const limit = limits[plan][feature] ?? 1;
-        const usage = get().usage[feature] ?? 0;
+        const limit = getPlanLimit(plan, feature);
+        const used = get().usage[feature] ?? 0;
         if (limit === 0) return 100;
-        return Math.min(100, Math.round((usage / limit) * 100));
+        if (limit === 999) return Math.min(100, used * 2);
+        return Math.min(100, Math.round((used / limit) * 100));
       },
     }),
     {
