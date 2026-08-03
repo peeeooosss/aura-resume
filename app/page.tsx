@@ -11,12 +11,16 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file) setSelectedFile(file);
+    if (file) {
+      setSelectedFile(file);
+      setError(null);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -29,6 +33,7 @@ export default function Home() {
   const handleSubmit = async () => {
     if (!selectedFile) return;
     setLoading(true);
+    setError(null);
 
     const formData = new FormData();
     formData.append('resume', selectedFile);
@@ -37,7 +42,7 @@ export default function Home() {
       const res = await fetch('/api/analyze', { method: 'POST', body: formData });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || 'Analysis failed');
+        setError(data.error || 'Analysis failed. Please try again.');
         setLoading(false);
         return;
       }
@@ -53,6 +58,7 @@ export default function Home() {
       }));
       router.push(`/results?id=${data.id}`);
     } catch {
+      setError('Network error. Please check your connection and try again.');
       setLoading(false);
     }
   };
@@ -119,12 +125,12 @@ export default function Home() {
                     <FileText className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
                     <p className="text-emerald-400 font-semibold mb-1">{selectedFile.name}</p>
                     <p className="text-surface-500 dark:text-slate-500 text-sm">Click or drop to replace</p>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
-                      className="mt-3 text-sm text-surface-500 dark:text-slate-500 hover:text-surface-900 dark:hover:text-white underline"
-                    >
-                      Remove
-                    </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSelectedFile(null); setError(null); }}
+                        className="mt-3 text-sm text-surface-500 dark:text-slate-500 hover:text-surface-900 dark:hover:text-white underline"
+                      >
+                        Remove
+                      </button>
                   </>
                 ) : (
                   <>
@@ -139,7 +145,11 @@ export default function Home() {
                 type="file"
                 className="absolute inset-0 opacity-0 pointer-events-none"
                 accept=".pdf,.docx"
-                onChange={(e) => e.target.files?.[0] && setSelectedFile(e.target.files[0])}
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setSelectedFile(file);
+                  if (file) setError(null);
+                }}
               />
             </div>
 
@@ -147,6 +157,18 @@ export default function Home() {
               LinkedIn Analyser available in Dashboard (Pro plan)
             </div>
           </div>
+
+          {error && (
+            <div className="mb-8 rounded-xl border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30 p-4 text-center">
+              <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
+              <button
+                onClick={() => setError(null)}
+                className="mt-2 text-xs text-red-600 dark:text-red-400 underline hover:text-red-800 dark:hover:text-red-200"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
 
           <div className="text-center">
             <button
