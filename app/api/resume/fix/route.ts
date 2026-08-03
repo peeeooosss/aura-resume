@@ -73,37 +73,15 @@ export async function POST(request: Request) {
     });
     const pdfBlobUrl = getPDFBlobURL(doc);
 
-    const parentId = resume.parentId || resume.id;
-    const childCount = await prisma.resume.count({
-      where: { parentId },
-    });
-
-    const newResume = await prisma.$transaction(async (tx) => {
-      await tx.creditBalance.update({
-        where: { userId },
-        data: { balance: { decrement: CREDIT_COSTS.resume_fix } },
-      });
-
-      return tx.resume.create({
-        data: {
-          userId,
-          title: `${resume.title} (Fixed v${childCount + 2})`,
-          fileUrl: resume.fileUrl,
-          fileKey: resume.fileKey,
-          rawText: optimizedResume,
-          status: 'fixed',
-          version: childCount + 2,
-          parentId,
-        },
-      });
+    await prisma.creditBalance.update({
+      where: { userId },
+      data: { balance: { decrement: CREDIT_COSTS.resume_fix } },
     });
 
     return NextResponse.json({
       success: true,
       optimizedResume,
       pdfUrl: pdfBlobUrl,
-      resumeId: newResume.id,
-      version: newResume.version,
       tokensUsed,
       creditsUsed: CREDIT_COSTS.resume_fix,
       creditsRemaining: (creditBalance?.balance || 0) - CREDIT_COSTS.resume_fix,

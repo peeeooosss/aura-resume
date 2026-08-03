@@ -1,35 +1,204 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
-import { ArrowLeft, CreditCard, Lock, CheckCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { ArrowLeft, CreditCard, Lock, CheckCircle, Loader2, Phone } from 'lucide-react';
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
+const PLANS: Record<string, { name: string; price: number; planId: string; period: string; features: string[] }> = {
+  'quick-fix': {
+    name: 'Quick Fix',
+    price: 49,
+    planId: 'quick',
+    period: 'one-time',
+    features: ['Full ATS scan', 'Red flag details & fixes', 'ATS-optimized resume download', 'PDF report'],
+  },
+  'pro-bundle': {
+    name: 'Pro Bundle',
+    price: 499,
+    planId: 'pro',
+    period: '/3 months',
+    features: ['AI resume rewrite', 'Cover letters', 'LinkedIn review', 'Portfolio builder'],
+  },
+  'vip-mentorship': {
+    name: 'VIP Mentorship',
+    price: 1499,
+    planId: 'vip',
+    period: '/3 months',
+    features: ['Everything in Pro', '1-on-1 mentoring', 'Salary coaching', 'Unlimited support'],
+  },
+};
 
 export default function PaymentForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const plan = searchParams.get('plan') || 'quick-fix';
+  const rawPlan = searchParams.get('plan') || 'quick-fix';
   const resultId = searchParams.get('resultId');
+
+  const plan = PLANS[rawPlan] || PLANS['quick-fix'];
 
   const [step, setStep] = useState<'details' | 'processing' | 'success'>('details');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [resumeId, setResumeId] = useState<string | null>(null);
 
-  const planConfig =
-    plan === 'quick-fix'
-      ? { name: 'Quick Fix', price: 49, period: 'one-time', features: ['Full ATS scan', 'Red flag details', 'PDF report'] }
-      : plan === 'vip-mentorship'
-      ? { name: 'VIP Mentorship', price: 1499, period: '/3 months', features: ['Everything in Pro', '1-on-1 mentoring', 'Salary coaching', 'Unlimited support'] }
-      : { name: 'Pro Bundle', price: 499, period: '/3 months', features: ['AI resume rewrite', 'Cover letters', 'LinkedIn review', 'Portfolio builder'] };
+  const handleRazorpayCheckout = useCallback(async () => {
+    if (!email || !name || !phone) return;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !name) return;
     setLoading(true);
-    setStep('processing');
-    await new Promise(r => setTimeout(r, 2500));
-    setLoading(false);
-    setStep('success');
+    setError('');
+
+    const scriptLoaded = await loadRazorpayScript();
+    if (!scriptLoaded) {
+      setError('Failed to load payment gateway. Please refresh and try again.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const orderRes = await fetch('/api/payment/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: plan.planId }),
+      });
+
+      if (!orderRes.ok) {
+        const err = await orderRes.json();
+        throw new Error(err.error || 'Failed to create order');
+      }
+
+      const { orderId, amount, currency, keyId } = await orderRes.json();
+
+      let storedResumeText = '';
+      let storedAnalysis: any = null;
+      let storedFileName = '';
+
+      if (resultId) {
+        try {
+          const stored = sessionStorage.getItem(`aura-result-${resultId}`);
+          if (stored) {
+            const data = JSON.parse(stored);
+            storedResumeText = data.resume?.originalText || '';
+            storedAnalysis = data.resume;
+            storedFileName = data.resume?.fileName || '';
+          }
+        } catch {}
+
+        if (!storedResumeText) {
+          try {
+            const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
+            if (analyses[resultId]) {
+              storedResumeText = analyses[resultId].resume?.originalText || '';
+              storedAnalysis = analyses[resultId].resume;
+            }
+          } catch {}
+        }
+      }
+
+      const options = {
+        key: keyId,
+        amount,
+        currency,
+        name: 'Aura Resume',
+        description: `${plan.name} — ₹${plan.price}`,
+        order_id: orderId,
+        prefill: { name, email, contact: phone },
+        theme: { color: '#6366f1' },
+        handler: async (response: any) => {
+          setStep('processing');
+          try {
+            const verifyRes = await fetch('/api/payment/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                plan: plan.planId,
+                ...(storedResumeText ? {
+                  resumeText: storedResumeText,
+                  analysis: storedAnalysis,
+                  fileName: storedFileName,
+                } : {}),
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+
+            if (!verifyRes.ok) {
+              throw new Error(verifyData.error || 'Payment verification failed');
+            }
+
+            if (storedResumeText && resultId) {
+              const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
+              if (analyses[resultId]) {
+                analyses[resultId].unlockedTier = plan.planId;
+                analyses[resultId].purchasedAt = new Date().toISOString();
+                if (verifyData.optimizedResume) {
+                  analyses[resultId].optimizedResumeText = verifyData.optimizedResume;
+                }
+                localStorage.setItem('aura-analyses', JSON.stringify(analyses));
+              }
+              localStorage.setItem(`aura-unlocked-${resultId}`, JSON.stringify({
+                tier: plan.planId,
+                at: Date.now(),
+              }));
+            }
+
+            setResumeId(verifyData.resumeId);
+            setLoading(false);
+            setStep('success');
+          } catch (err: any) {
+            setError(err.message || 'Payment verification failed');
+            setLoading(false);
+            setStep('details');
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setLoading(false);
+          },
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', (resp: any) => {
+        setError(resp.error?.description || 'Payment failed. Please try again.');
+        setLoading(false);
+      });
+      rzp.open();
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong');
+      setLoading(false);
+    }
+  }, [email, name, phone, plan, resultId, router]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !name || !phone) return;
+    handleRazorpayCheckout();
   };
 
   if (step === 'success') {
@@ -43,19 +212,15 @@ export default function PaymentForm() {
               <CheckCircle className="w-10 h-10 text-emerald-400" />
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">Payment Successful!</h1>
-            <p className="text-slate-400 mb-6">Your {planConfig.name} is now active. Check your email for the PDF report.</p>
+            <p className="text-slate-400 mb-6">Your {plan.name} plan is now active.</p>
             <button
               onClick={() => {
-                if (resultId) {
-                  const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
-                  if (analyses[resultId]) {
-                    analyses[resultId].unlockedTier = plan === 'vip-mentorship' ? 'vip' : plan === 'quick-fix' ? 'quick' : 'pro';
-                    localStorage.setItem('aura-analyses', JSON.stringify(analyses));
-                  }
-                  localStorage.setItem(`aura-unlocked-${resultId}`, JSON.stringify({ tier: plan === 'vip-mentorship' ? 'vip' : plan === 'quick-fix' ? 'quick' : 'pro', at: Date.now() }));
-                  router.push(`/report/${resultId}`);
+                if (resumeId) {
+                  router.push(`/dashboard/resumes/${resumeId}/report`);
+                } else if (resultId) {
+                  router.push(`/report/${resultId}?unlocked=true`);
                 } else {
-                  router.push('/results?test=true');
+                  router.push('/dashboard');
                 }
               }}
               className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
@@ -88,16 +253,16 @@ export default function PaymentForm() {
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-6">
               <CreditCard className="w-4 h-4 text-emerald-400" />
-              <span className="text-sm text-emerald-300 font-medium">Secure Payment</span>
+              <span className="text-sm text-emerald-300 font-medium">Secure Payment via Razorpay</span>
             </div>
             <h1 className="text-3xl font-bold text-white mb-3">Complete Your Purchase</h1>
             <p className="text-slate-400">
-              {planConfig.name} — <span className="text-white font-semibold">₹{planConfig.price}</span> {planConfig.period}
+              {plan.name} — <span className="text-white font-semibold">₹{plan.price}</span> {plan.period}
             </p>
           </div>
 
           <div className="space-y-4 mb-8 p-4 bg-slate-800/50 rounded-2xl border border-slate-700">
-            {planConfig.features.map((f, i) => (
+            {plan.features.map((f, i) => (
               <div key={i} className="flex items-center gap-3 text-slate-300 text-sm">
                 <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
                 <span>{f}</span>
@@ -116,6 +281,7 @@ export default function PaymentForm() {
                 required
                 className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
                 placeholder="John Doe"
+                disabled={loading}
               />
             </div>
 
@@ -129,7 +295,25 @@ export default function PaymentForm() {
                 required
                 className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
                 placeholder="john@example.com"
+                disabled={loading}
               />
+            </div>
+
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-slate-300 mb-2">Phone Number</label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                <input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  required
+                  className="w-full pl-12 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                  placeholder="9876543210"
+                  disabled={loading}
+                />
+              </div>
             </div>
 
             <div className="flex items-center gap-3 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
@@ -137,23 +321,29 @@ export default function PaymentForm() {
               <span className="text-sm text-slate-300">Card / UPI / Net Banking via Razorpay</span>
             </div>
 
+            {error && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-sm text-center">
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading || !email || !name}
-              className="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-emerald-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={loading || !email || !name || phone.length < 10}
+              className="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-emerald-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? 'Processing...' : `Pay ₹${planConfig.price} Securely`}
+              {loading ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /> Opening Razorpay...</>
+              ) : (
+                `Pay ₹${plan.price} Securely`
+              )}
             </button>
           </form>
 
           <div className="flex items-center justify-center gap-2 text-center mt-6">
             <Lock className="w-4 h-4 text-slate-500" />
-            <span className="text-xs text-slate-500">SSL encrypted • 30-day money-back guarantee</span>
+            <span className="text-xs text-slate-500">SSL encrypted • Secure Razorpay checkout</span>
           </div>
-        </div>
-
-        <div className="text-center mt-6 text-slate-500 text-sm">
-          <p>Demo mode — no real payment processed</p>
         </div>
       </div>
     </main>

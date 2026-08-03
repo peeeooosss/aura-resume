@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, Eye, Loader2, Target, TrendingUp, IndianRupee, ChevronDown, ChevronUp, Lock } from 'lucide-react';
+import { Upload, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, Eye, Loader2, Target, TrendingUp, IndianRupee, ChevronDown, ChevronUp, Lock, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import { generateAnalysisPDF, getPDFBlobURL, generateOptimizedResumePDF } from '@/lib/pdf/generateReport';
 import type { JobRolePotential } from '@/lib/types';
@@ -82,7 +82,6 @@ export function FixerPage() {
   const { toast } = useToast();
   const currentPlan = usePlan(s => s.currentPlan);
   const { refresh: refreshCredits } = useCredits();
-  const hasQuickAccess = (PLAN_TIER[currentPlan] ?? 0) >= (PLAN_TIER['quick'] ?? 0);
   const hasProAccess = (PLAN_TIER[currentPlan] ?? 0) >= (PLAN_TIER['pro'] ?? 0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -383,6 +382,40 @@ export function FixerPage() {
             </button>
           </div>
 
+          {!hasProAccess && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10 p-5">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Zap className="w-5 h-5 text-amber-400" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-amber-700 dark:text-amber-300 text-sm mb-1">
+                    Unlock Full Analysis
+                  </h4>
+                  <p className="text-amber-600 dark:text-amber-400 text-sm mb-3">
+                    Upgrade to <strong>Pro (₹499/3mo)</strong> or <strong>VIP (₹1,499/3mo)</strong> to unlock red flags, keyword gaps, suggestions, job role matching, and save resumes.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Link
+                      href="/plans?plan=pro"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold rounded-lg hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
+                    >
+                      View Plans
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                    <Link
+                      href="/"
+                      className="inline-flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-sm font-medium hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+                    >
+                      Quick Fix (₹49) only on landing page
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-6">
               <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6 text-center">
@@ -396,7 +429,7 @@ export function FixerPage() {
                 </div>
               </div>
 
-              <BlurGate hasAccess={hasQuickAccess} requiredPlan="quick">
+              <BlurGate hasAccess={hasProAccess} requiredPlan="pro">
                 {jrp && jrp.potentialRoles.length > 0 && (
                   <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
                     <h3 className="font-semibold text-surface-900 dark:text-white flex items-center gap-2 mb-4">
@@ -466,7 +499,7 @@ export function FixerPage() {
             </div>
 
             <div className="lg:col-span-2 space-y-6">
-              {hasQuickAccess && showPdfPreview && reportPdfUrl && (
+              {hasProAccess && showPdfPreview && reportPdfUrl && (
                 <div className="bg-white border border-surface-200 dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl overflow-hidden">
                   <div className="p-3 border-b border-surface-200 dark:border-slate-800 flex items-center justify-between">
                     <span className="text-sm font-medium text-surface-600 dark:text-slate-300">Report Preview</span>
@@ -476,7 +509,7 @@ export function FixerPage() {
                 </div>
               )}
 
-              <BlurGate hasAccess={hasQuickAccess} requiredPlan="quick">
+              <BlurGate hasAccess={hasProAccess} requiredPlan="pro">
                 {analysis.redFlags.length > 0 && (
                   <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
                     <h3 className="flex items-center gap-2 text-rose-400 font-semibold mb-4"><AlertTriangle className="w-5 h-5" /> Red Flags ({analysis.redFlags.length})</h3>
@@ -506,7 +539,7 @@ export function FixerPage() {
                 </div>
               )}
 
-              <BlurGate hasAccess={hasQuickAccess} requiredPlan="quick">
+              <BlurGate hasAccess={hasProAccess} requiredPlan="pro">
                 {analysis.keywordGaps.length > 0 && (
                   <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
                     <h3 className="flex items-center gap-2 text-amber-400 font-semibold mb-4"><TrendingUp className="w-5 h-5" /> Keyword Gaps</h3>
@@ -519,7 +552,7 @@ export function FixerPage() {
                 )}
               </BlurGate>
 
-              <BlurGate hasAccess={hasQuickAccess} requiredPlan="quick">
+              <BlurGate hasAccess={hasProAccess} requiredPlan="pro">
                 {analysis.suggestions.length > 0 && (
                   <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl p-6">
                     <h3 className="flex items-center gap-2 text-blue-400 font-semibold mb-4"><Sparkles className="w-5 h-5" /> Suggestions</h3>
@@ -535,7 +568,7 @@ export function FixerPage() {
                 )}
               </BlurGate>
 
-              {hasQuickAccess && fixedResume && (
+              {hasProAccess && fixedResume && (
                 <div className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-slate-800 rounded-2xl overflow-hidden">
                   <button
                     onClick={() => setShowFixedResume(!showFixedResume)}

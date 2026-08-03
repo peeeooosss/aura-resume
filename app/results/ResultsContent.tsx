@@ -304,8 +304,6 @@ export default function ResultsContent({ id, testMode }: Props) {
   const [result, setResult] = useState<DualAnalysisResult | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [generatingResume, setGeneratingResume] = useState(false);
-  const [progressStep, setProgressStep] = useState('');
 
   useEffect(() => {
     if (testMode) {
@@ -347,83 +345,22 @@ export default function ResultsContent({ id, testMode }: Props) {
     setLoading(false);
   }, [id, testMode]);
 
-  const handleGeneratePerfectResume = async () => {
-    if (!result?.resume) return;
+  const handleQuickFixPurchase = () => {
+    if (!result?.resume || !id) return;
+
+    const paymentUrl = `/payment?plan=quick-fix&resultId=${encodeURIComponent(id)}`;
 
     if (status !== 'authenticated') {
-      const currentUrl = `${window.location.pathname}${window.location.search}`;
-      router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+      router.push(`/login?redirect=${encodeURIComponent(paymentUrl)}`);
       return;
     }
 
-    setGeneratingResume(true);
-    const analysisId = id || `quick-${Date.now()}`;
+    router.push(paymentUrl);
+  };
 
-    try {
-      setProgressStep('Processing ₹49 payment...');
-      await new Promise(r => setTimeout(r, 800));
-      setProgressStep('Payment confirmed! Starting resume generation...');
-      await new Promise(r => setTimeout(r, 400));
-
-      const resumeText = result.resume.originalText;
-      if (!resumeText) {
-        setProgressStep('');
-        setGeneratingResume(false);
-        alert('Original resume text not available. Please re-upload your resume and try again.');
-        return;
-      }
-
-      setProgressStep('Sending to AI for optimization...');
-      await new Promise(r => setTimeout(r, 600));
-
-      setProgressStep('OPUS is analyzing structure & keywords...');
-      await new Promise(r => setTimeout(r, 400));
-
-      setProgressStep('Generating ATS-perfect version...');
-
-      const response = await fetch('/api/generate-resume', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          resumeText,
-          analysis: result.resume,
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Generation failed');
-      }
-
-      setProgressStep('Finalizing your report...');
-      await new Promise(r => setTimeout(r, 500));
-
-      const { optimizedResume } = data;
-
-      const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
-      analyses[analysisId] = {
-        ...(analyses[analysisId] || result),
-        unlockedTier: 'quick',
-        optimizedResumeText: optimizedResume,
-        purchasedAt: new Date().toISOString(),
-      };
-      localStorage.setItem('aura-analyses', JSON.stringify(analyses));
-
-      localStorage.setItem(`aura-unlocked-${analysisId}`, JSON.stringify({ tier: 'quick', at: Date.now() }));
-
-      setProgressStep('Redirecting to your detailed report...');
-      await new Promise(r => setTimeout(r, 800));
-
-      router.push(`/report/${analysisId}`);
-    } catch (error: any) {
-      console.error('Resume generation failed:', error);
-      setProgressStep('');
-      alert(error.message || 'Failed to generate perfect resume. Please try again.');
-    } finally {
-      setGeneratingResume(false);
-      setProgressStep('');
-    }
+  const handlePlanPurchase = (planSlug: string) => {
+    const paymentUrl = `/payment?plan=${planSlug}${id ? `&resultId=${encodeURIComponent(id)}` : ''}`;
+    router.push(paymentUrl);
   };
 
   if (loading) {
@@ -517,8 +454,7 @@ export default function ResultsContent({ id, testMode }: Props) {
               ]}
               cta="Perfect for a quick resume check before applying"
               highlighted={false}
-              onClick={handleGeneratePerfectResume}
-              disabled={generatingResume}
+              onClick={handleQuickFixPurchase}
             />
             <PricingCard
               tier="Pro Bundle"
@@ -536,7 +472,7 @@ export default function ResultsContent({ id, testMode }: Props) {
               cta="Complete job search optimization for 3 months"
               highlighted={true}
               badge={{ label: 'Most Popular', icon: <Star className="w-4 h-4 fill-current" /> }}
-              onClick={() => router.push(id ? `/payment?plan=pro-bundle&resultId=${id}` : '/payment?plan=pro-bundle')}
+              onClick={() => handlePlanPurchase('pro-bundle')}
             />
             <PricingCard
               tier="VIP Mentorship"
@@ -553,7 +489,7 @@ export default function ResultsContent({ id, testMode }: Props) {
               ]}
               cta="Personal 1-on-1 career coaching & strategy"
               highlighted={false}
-              onClick={() => router.push(id ? `/payment?plan=vip-mentorship&resultId=${id}` : '/payment?plan=vip-mentorship')}
+              onClick={() => handlePlanPurchase('vip-mentorship')}
             />
           </div>
         </div>
@@ -565,26 +501,6 @@ export default function ResultsContent({ id, testMode }: Props) {
           </p>
         </div>
       </div>
-
-      {generatingResume && progressStep && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-5 shadow-2xl shadow-indigo-500/10 max-w-sm">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
-              </div>
-              <div>
-                <p className="text-white font-semibold text-sm">Generating Resume</p>
-                <p className="text-slate-400 text-xs">OPUS AI working...</p>
-              </div>
-            </div>
-            <div className="w-full bg-slate-800 rounded-full h-1.5 mb-3">
-              <div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-1.5 rounded-full animate-pulse" style={{ width: '70%' }} />
-            </div>
-            <p className="text-slate-300 text-xs">{progressStep}</p>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

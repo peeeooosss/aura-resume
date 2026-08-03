@@ -71,11 +71,11 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } });
     const userPlan = user?.plan || 'free';
     const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };
-    const canSave = (PLAN_TIER[userPlan] ?? 0) >= (PLAN_TIER['pro'] ?? 0);
+    const canSave = (PLAN_TIER[userPlan] ?? 0) >= (PLAN_TIER['quick'] ?? 0);
 
     if (!canSave) {
       return NextResponse.json(
-        { error: 'Resume saving requires Pro or VIP plan', upgradeRequired: true },
+        { error: 'Resume saving requires Quick Fix, Pro, or VIP plan', upgradeRequired: true },
         { status: 403 }
       );
     }
