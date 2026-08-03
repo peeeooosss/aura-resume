@@ -6,20 +6,25 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, Target, Search, Map, Globe,
   Settings, ChevronLeft, ChevronRight, Menu, X,
-  Bell, User, LogOut, Shield, Zap, Sparkles, Users, Award,
+  Bell, User, LogOut, Shield, Zap, Sparkles, Users, Award, Coins,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import { usePlan } from '@/lib/hooks/usePlan';
+import { useCredits } from '@/lib/hooks/useCredits';
 import { NAV_ITEMS } from '@/lib/constants/nav';
+import { REFILL_THRESHOLD } from '@/lib/constants/credits';
 import { PlanBadge } from './PlanBadge';
+import { CreditRefillModal } from './CreditRefillModal';
 
 const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [refillOpen, setRefillOpen] = useState(false);
   const pathname = usePathname();
   const currentPlan = usePlan(s => s.currentPlan);
+  const { balance } = useCredits();
 
   return (
     <>
@@ -162,9 +167,30 @@ export function Sidebar() {
                           <ChevronRight className="w-4 h-4" />
                         </Link>
             </div>
+            {!collapsed && (
+              <div className="mt-2 px-3 py-2.5 rounded-xl bg-surface-100 dark:bg-slate-900/50 border border-surface-200 dark:border-slate-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Coins className={cn('w-4 h-4', balance <= REFILL_THRESHOLD ? 'text-rose-400' : 'text-amber-400')} />
+                    <span className="text-xs text-surface-500 dark:text-slate-500">Credits</span>
+                  </div>
+                  <span className={cn('font-bold text-sm', balance <= REFILL_THRESHOLD ? 'text-rose-500' : 'text-surface-900 dark:text-white')}>
+                    {balance}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setRefillOpen(true)}
+                  className="mt-2 w-full text-center text-xs font-semibold px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-500 dark:text-amber-400 hover:from-amber-500/30 hover:to-orange-500/30 transition-all"
+                >
+                  {balance <= REFILL_THRESHOLD ? 'Low — Refill Now' : 'Refill Credits'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </aside>
+
+      <CreditRefillModal open={refillOpen} onClose={() => setRefillOpen(false)} plan={currentPlan} />
     </>
   );
 }

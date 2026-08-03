@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { useCreditsStore } from '@/lib/hooks/useCredits';
 
 export interface JobMatch {
   id: string;
@@ -92,56 +93,51 @@ export function useJobMatches() {
 
     setIsLoading(true);
     setError(null);
-    setMatches([]);
     setLoadingSources([...SEARCH_SOURCES]);
 
-    const seenIds = new Set<string>();
-    const allJobs: JobMatch[] = [];
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
 
-    const fetchSource = async (source: string) => {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30000);
+      const res = await fetch('/api/jobs/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          searchTerm,
+          location: searchLocation,
+          resultsWanted: 30,
+          hoursOld: 48,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
 
-        const res = await fetch('/api/jobs/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            searchTerm,
-            location: searchLocation,
-            source,
-            resultsWanted: 20,
-            hoursOld: 48,
-          }),
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
+      const data = await res.json();
 
-        if (!res.ok) return;
-        const data = await res.json();
-
-        const newJobs = (data.jobs || []).filter((job: any) => {
-          if (seenIds.has(job.id)) return false;
-          seenIds.add(job.id);
-          return true;
-        });
-
-        if (newJobs.length > 0) {
-          const enriched = enrichJobsWithMatching(newJobs, skillList);
-          allJobs.push(...enriched);
-          setMatches([...allJobs]);
+      if (!res.ok) {
+        if (res.status === 402 || data.insufficientCredits) {
+          setError(`Insufficient credits. Job search costs 3 credits per search.`);
+        } else {
+          setError(data.error || 'Job search failed');
         }
-      } catch {
-        // Skip failed sources silently
-      } finally {
-        setLoadingSources(prev => prev.filter(s => s !== source));
+        setMatches([]);
+        setIsLoading(false);
+        setLoadingSources([]);
+        return;
       }
-    };
 
-    await Promise.allSettled(SEARCH_SOURCES.map(s => fetchSource(s)));
-
-    setIsLoading(false);
-    setLoadingSources([]);
+      const newJobs = (data.jobs || []).filter((job: any) => job?.id);
+      if (newJobs.length > 0) {
+        const enriched = enrichJobsWithMatching(newJobs, skillList);
+        setMatches(enriched);
+      }
+      useCreditsStore.getState().refresh();
+    } catch {
+      setError('Job search failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setLoadingSources([]);
+    }
   }, [searchSkills]);
 
   const filteredMatches = useMemo(() => {

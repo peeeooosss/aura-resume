@@ -4,9 +4,12 @@ import { useState, useCallback, useEffect } from 'react';
 import { FileSearch, FileText, AlertCircle, CheckCircle, XCircle, Sparkles, Download, Loader2, ArrowRight, IndianRupee } from 'lucide-react';
 import { generateOptimizedResumePDF, getPDFBlobURL } from '@/lib/pdf/generateReport';
 import { useResumes } from '@/lib/hooks/useResumes';
+import { useCredits } from '@/lib/hooks/useCredits';
+import Link from 'next/link';
 
 export default function ResumeJobCompare() {
   const { resumes } = useResumes();
+  const { refresh: refreshCredits } = useCredits();
   const [jobDescription, setJobDescription] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [company, setCompany] = useState('');
@@ -63,6 +66,7 @@ export default function ResumeJobCompare() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Comparison failed');
       setMatchResult(data);
+      refreshCredits();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Comparison failed');
     } finally {
@@ -96,6 +100,7 @@ export default function ResumeJobCompare() {
         generatedAt: new Date().toLocaleString(),
       });
       setTailoredPdfUrl(getPDFBlobURL(doc));
+      refreshCredits();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
     } finally {
@@ -220,6 +225,11 @@ export default function ResumeJobCompare() {
           <div className="flex items-center gap-3">
             <XCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
             <p className="text-rose-700 dark:text-rose-300">{error}</p>
+            {error.includes('Insufficient credits') && (
+              <Link href="/plans" className="ml-auto shrink-0 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold rounded-xl transition-all hover:shadow-lg hover:shadow-indigo-500/30">
+                Get More Credits
+              </Link>
+            )}
           </div>
         </div>
       )}

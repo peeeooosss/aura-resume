@@ -1,18 +1,41 @@
 export const CREDIT_COSTS = {
-  resume_analysis: 5,
-  linkedin_analysis: 10,
-  job_search: 2,
-  cover_letter: 5,
-  roadmap_generation: 120,
-  resume_fix: 3,
-  ai_interview: 8,
-  cold_email: 3,
+  resume_analysis: 8,
+  linkedin_analysis: 12,
+  job_search: 3,
+  cover_letter: 6,
+  roadmap_generation: 12,
+  resume_fix: 4,
+  ai_interview: 15,
+  cold_email: 5,
+  job_match: 10,
 } as const;
 
 export type CreditAction = keyof typeof CREDIT_COSTS;
 
+export const REFILL_OPTIONS = [
+  { amount: 50, proPrice: 49, vipPrice: 79 },
+  { amount: 100, proPrice: 99, vipPrice: 149 },
+  { amount: 200, proPrice: 189, vipPrice: 289 },
+  { amount: 500, proPrice: 449, vipPrice: 699 },
+] as const;
+
+export const REFILL_THRESHOLD = 50;
+
 export function getCreditCost(action: CreditAction): number {
   return CREDIT_COSTS[action];
+}
+
+export function getRefillOptions(plan: string) {
+  return REFILL_OPTIONS.map((option) => ({
+    amount: option.amount,
+    price: plan === 'vip' ? option.vipPrice : option.proPrice,
+  }));
+}
+
+export function getRefillPrice(plan: string, amount: number): number | null {
+  const option = REFILL_OPTIONS.find((o) => o.amount === amount);
+  if (!option) return null;
+  return plan === 'vip' ? option.vipPrice : option.proPrice;
 }
 
 export async function deductCredits(userId: string, action: CreditAction): Promise<number> {

@@ -8,6 +8,7 @@ import { generateAnalysisPDF, getPDFBlobURL, generateOptimizedResumePDF } from '
 import type { JobRolePotential } from '@/lib/types';
 import { useToast } from '@/components/ui/Toast';
 import { usePlan } from '@/lib/hooks/usePlan';
+import { useCredits } from '@/lib/hooks/useCredits';
 import Link from 'next/link';
 
 function isAllowedFile(file: File): boolean {
@@ -80,6 +81,7 @@ export function FixerPage() {
   const router = useRouter();
   const { toast } = useToast();
   const currentPlan = usePlan(s => s.currentPlan);
+  const { refresh: refreshCredits } = useCredits();
   const hasQuickAccess = (PLAN_TIER[currentPlan] ?? 0) >= (PLAN_TIER['quick'] ?? 0);
   const hasProAccess = (PLAN_TIER[currentPlan] ?? 0) >= (PLAN_TIER['pro'] ?? 0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -168,6 +170,7 @@ export function FixerPage() {
 
       setAnalysis(analysisData);
       setSelectedFile(null);
+      refreshCredits();
 
       const doc = generateAnalysisPDF({
         resume: {
@@ -200,7 +203,9 @@ export function FixerPage() {
           }),
         });
         const genData = await genRes.json();
-        if (genRes.ok && genData.optimizedResume) {
+        if (genRes.status === 402 || genData.insufficientCredits) {
+          toast('info', 'Analysis complete. Insufficient credits to generate the ATS-optimized rewrite (10 credits). Refill in the sidebar.');
+        } else if (genRes.ok && genData.optimizedResume) {
           setFixedResume(genData.optimizedResume);
           setShowFixedResume(true);
           toast('success', 'Resume analyzed and ATS-optimized version generated!');

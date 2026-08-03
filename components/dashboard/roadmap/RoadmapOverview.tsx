@@ -41,18 +41,18 @@ export function RoadmapOverview() {
           <div className="w-20 h-20 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-6">
             <Lock className="w-10 h-10 text-indigo-400" />
           </div>
-          <h2 className="text-2xl font-bold text-surface-900 dark:text-white mb-3">Roadmap Requires VIP</h2>
+          <h2 className="text-2xl font-bold text-surface-900 dark:text-white mb-3">Roadmap Requires Pro</h2>
           <p className="text-surface-500 dark:text-slate-400 mb-8 max-w-md mx-auto">
             Generate AI-powered 90-day career roadmaps with tasks, videos, quizzes, projects, and interview prep.
-            Upgrade to VIP to unlock.
+            Upgrade to Pro to unlock.
           </p>
           <div className="flex items-center justify-center gap-4">
             <button
-              onClick={() => router.push('/plans?plan=vip')}
+              onClick={() => router.push('/plans?plan=pro')}
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
             >
               <Sparkles className="w-5 h-5" />
-              Upgrade to VIP
+              Upgrade to Pro
             </button>
             <button
               onClick={() => router.push('/plans')}

@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { analyzeJobMatch } from '@/lib/ai/openrouter';
+import { prisma } from '@/lib/db';
+import { CREDIT_COSTS } from '@/lib/constants/credits';
+import { requireSessionUserId } from '@/lib/auth/getSessionUser';
 
 export async function POST(request: Request) {
   try {
+    const userId = await requireSessionUserId();
     const body = await request.json();
     const { jobDescription, resumeText } = body;
 
@@ -20,9 +24,31 @@ export async function POST(request: Request) {
       );
     }
 
+    const creditBalance = await prisma.creditBalance.findUnique({ where: { userId } });
+    if (!creditBalance || creditBalance.balance < CREDIT_COSTS.job_match) {
+      return NextResponse.json(
+        { error: 'Insufficient credits', insufficientCredits: true, required: CREDIT_COSTS.job_match, available: creditBalance?.balance || 0 },
+        { status: 402 }
+      );
+    }
+
     const result = await analyzeJobMatch(jobDescription.trim(), resumeText.trim());
 
-    return NextResponse.json(result);
+    await prisma.$transaction(async (tx) => {
+      await tx.creditBalance.update({
+        where: { userId },
+        data: { balance: { decrement: CREDIT_COSTS.job_match } },
+      });
+      await tx.usageRecord.create({
+        data: { userId, type: 'job_match', count: 1, modelUsed: 'google/gemini-2.5-flash-lite' },
+      });
+    });
+
+    return NextResponse.json({
+      ...result,
+      creditsUsed: CREDIT_COSTS.job_match,
+      creditsRemaining: (creditBalance?.balance || 0) - CREDIT_COSTS.job_match,
+    });
   } catch (error: any) {
     console.error('Job match analysis failed:', error?.message || error);
 

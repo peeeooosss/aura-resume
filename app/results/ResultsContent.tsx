@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { Check, Lock, Shield, ArrowLeft, Sparkles, FileText, Linkedin as LinkedinIcon, Link, Star, Zap, Users, ArrowRight, Target, Loader2 } from 'lucide-react';
 import type { DualAnalysisResult, SingleAnalysis } from '@/lib/types';
 import { generateMockAnalysis } from '@/lib/mockData';
@@ -299,6 +300,7 @@ interface Props {
 
 export default function ResultsContent({ id, testMode }: Props) {
   const router = useRouter();
+  const { status } = useSession();
   const [result, setResult] = useState<DualAnalysisResult | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -348,6 +350,12 @@ export default function ResultsContent({ id, testMode }: Props) {
   const handleGeneratePerfectResume = async () => {
     if (!result?.resume) return;
 
+    if (status !== 'authenticated') {
+      const currentUrl = `${window.location.pathname}${window.location.search}`;
+      router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+      return;
+    }
+
     setGeneratingResume(true);
     const analysisId = id || `quick-${Date.now()}`;
 
@@ -379,7 +387,6 @@ export default function ResultsContent({ id, testMode }: Props) {
         body: JSON.stringify({
           resumeText,
           analysis: result.resume,
-          userId: 'demo-user'
         })
       });
 

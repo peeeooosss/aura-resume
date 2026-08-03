@@ -32,7 +32,6 @@ export default function Home() {
 
     const formData = new FormData();
     formData.append('resume', selectedFile);
-    formData.append('userId', 'demo-user');
 
     try {
       const res = await fetch('/api/analyze', { method: 'POST', body: formData });

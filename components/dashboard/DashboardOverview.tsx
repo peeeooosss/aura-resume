@@ -189,10 +189,10 @@ export function DashboardOverview() {
           />
         </PlanGate>
         <PlanGate
-          requiredPlan="vip"
+          requiredPlan="pro"
           featureName="90-Day Roadmap"
           showUpgrade={false}
-          fallback={<LockedQuickAction icon={Map} title="Generate Roadmap" description="VIP plan required" requiredPlan="vip" />}
+          fallback={<LockedQuickAction icon={Map} title="Generate Roadmap" description="Pro plan required" requiredPlan="pro" />}
         >
           <QuickActionCard
             icon={Map}

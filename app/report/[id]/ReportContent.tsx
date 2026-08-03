@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import { ArrowLeft, Check, Shield, FileText, Download, Sparkles, Zap, Users, ArrowRight, Star, Lock, Target, Loader2, Eye } from 'lucide-react';
 import { generateAnalysisPDF, generateOptimizedResumePDF, getPDFBlobURL, type AnalysisReportData } from '@/lib/pdf/generateReport';
 import type { DualAnalysisResult, SingleAnalysis, JobRolePotential } from '@/lib/types';
@@ -146,6 +147,7 @@ function JobRolePotentialDisplay({ potential }: { potential: JobRolePotential })
 
 export default function ReportContent({ id }: { id: string }) {
   const router = useRouter();
+  const { status } = useSession();
   const [result, setResult] = useState<DualAnalysisResult | null>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -187,13 +189,17 @@ export default function ReportContent({ id }: { id: string }) {
       let optimizedText = analyses[id]?.optimizedResumeText;
 
       if (!optimizedText && result.resume?.originalText) {
+        if (status !== 'authenticated') {
+          const currentUrl = `${window.location.pathname}${window.location.search}`;
+          router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+          return;
+        }
         const response = await fetch('/api/generate-resume', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             resumeText: result.resume.originalText,
             analysis: result.resume,
-            userId: 'demo-user',
           }),
         });
         const data = await response.json();
@@ -219,7 +225,7 @@ export default function ReportContent({ id }: { id: string }) {
     } finally {
       setGeneratingResume(false);
     }
-  }, [result, id]);
+  }, [result, id, status, router]);
 
   useEffect(() => {
     if (result && isUnlocked) {

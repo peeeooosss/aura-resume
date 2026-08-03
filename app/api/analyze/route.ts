@@ -4,11 +4,11 @@ import { parseResumeFile, validateResumeText, cleanResumeText } from '@/lib/ai/p
 import { analyzeResume, analyzeLinkedIn, generateCoverLetter } from '@/lib/ai/openrouter';
 import { uploadFile, getResumeKey } from '@/lib/storage/r2';
 import { CREDIT_COSTS } from '@/lib/constants/credits';
-import { requireSessionUserId } from '@/lib/auth/getSessionUser';
+import { getSessionUserId } from '@/lib/auth/getSessionUser';
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireSessionUserId();
+    const userId = await getSessionUserId();
     const formData = await req.formData();
     const resumeFile = formData.get('resume') as File | null;
     const linkedinUrl = formData.get('linkedin') as string | null;
@@ -19,6 +19,39 @@ export async function POST(req: NextRequest) {
         { error: 'Provide resume or LinkedIn URL' },
         { status: 400 }
       );
+    }
+
+    // Anonymous demo analysis for the landing page teaser: no persistence, no credits.
+    if (!userId) {
+      if (!resumeFile) {
+        return NextResponse.json(
+          { error: 'Please sign in to analyze a LinkedIn profile.' },
+          { status: 401 }
+        );
+      }
+
+      const buffer = Buffer.from(await resumeFile.arrayBuffer());
+      let demoResumeText = await parseResumeFile(buffer, resumeFile.type);
+      demoResumeText = cleanResumeText(demoResumeText);
+
+      const textValidation = validateResumeText(demoResumeText);
+      if (!textValidation.valid) {
+        return NextResponse.json({ error: textValidation.error }, { status: 400 });
+      }
+
+      const demoAnalysis = await analyzeResume(demoResumeText);
+      const resumeAnalysis: any = demoAnalysis;
+      resumeAnalysis.source = 'resume';
+      resumeAnalysis.originalText = demoResumeText;
+
+      return NextResponse.json({
+        id: `demo-${Date.now()}`,
+        resume: resumeAnalysis,
+        linkedin: null,
+        coverLetter: null,
+        creditsUsed: 0,
+        creditsRemaining: null,
+      });
     }
 
     let resumeText = '';

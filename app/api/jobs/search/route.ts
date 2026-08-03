@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scrapeJobs } from 'ts-jobspy';
+import { prisma } from '@/lib/db';
+import { CREDIT_COSTS } from '@/lib/constants/credits';
+import { requireSessionUserId } from '@/lib/auth/getSessionUser';
 
 const VALID_SOURCES = ['indeed', 'linkedin'] as const;
 type ValidSource = typeof VALID_SOURCES[number];
@@ -15,11 +18,20 @@ interface JobSearchParams {
 
 export async function POST(req: NextRequest) {
   try {
+    const userId = await requireSessionUserId();
     const body = await req.json();
     const { searchTerm, location, source, ...params } = body as JobSearchParams;
 
     if (!searchTerm) {
       return NextResponse.json({ error: 'Search term required' }, { status: 400 });
+    }
+
+    const creditBalance = await prisma.creditBalance.findUnique({ where: { userId } });
+    if (!creditBalance || creditBalance.balance < CREDIT_COSTS.job_search) {
+      return NextResponse.json(
+        { error: 'Insufficient credits', insufficientCredits: true, required: CREDIT_COSTS.job_search, available: creditBalance?.balance || 0 },
+        { status: 402 }
+      );
     }
 
     const sites = source && VALID_SOURCES.includes(source)
@@ -62,10 +74,22 @@ export async function POST(req: NextRequest) {
       isSaved: false,
     }));
 
+    await prisma.$transaction(async (tx) => {
+      await tx.creditBalance.update({
+        where: { userId },
+        data: { balance: { decrement: CREDIT_COSTS.job_search } },
+      });
+      await tx.usageRecord.create({
+        data: { userId, type: 'job_search', count: 1, modelUsed: 'ts-jobspy' },
+      });
+    });
+
     return NextResponse.json({
       jobs: jobMatches,
       totalFound: jobMatches.length,
       source: source || 'mixed',
+      creditsUsed: CREDIT_COSTS.job_search,
+      creditsRemaining: (creditBalance?.balance || 0) - CREDIT_COSTS.job_search,
     });
   } catch (error) {
     console.error('Job search error:', error);
