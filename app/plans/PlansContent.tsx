@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Sparkles, Shield, Download, Zap, Sparkles as SparklesIcon, Users, Award, Star, X, Check, Lock, CreditCard, Mail, Linkedin, Briefcase, Mic, Target, Brain, GraduationCap, Handshake, ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Shield, Download, Sparkles as SparklesIcon, Users, Award, Star, X, Check, Lock, CreditCard, Mail, Linkedin, Briefcase, Mic, Target, Brain, GraduationCap, Handshake, ArrowRight, Loader2 } from 'lucide-react';
 import { usePlan } from '@/lib/hooks/usePlan';
 
 function FeatureIcon({ value }: { value: any }) {
@@ -27,18 +27,7 @@ const plans = [
     badge: null,
     monthlyEquiv: null,
   },
-  {
-    id: 'quick',
-    name: 'Quick Fix',
-    price: 49,
-    period: 'one-time',
-    bgColor: 'bg-emerald-500/10',
-    borderColor: 'border-emerald-500/30',
-    color: 'text-emerald-400',
-    icon: Zap,
-    badge: { label: 'Best Value', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
-    monthlyEquiv: 'One-time payment',
-  },
+
   {
     id: 'pro',
     name: 'Pro Bundle',
@@ -117,23 +106,7 @@ function getFeatureValue(planId: string, featureKey: string) {
       prioritySupport: false,
       unlimitedSupport: false,
     },
-    quick: {
-      atsScan: true,
-      redFlags: true,
-      redFlagDetails: true,
-      pdfReport: true,
-      aiRewrite: false,
-      coverLetter: false,
-      linkedinReview: false,
-      aiInterviewer: false,
-      jobMatch: false,
-      jobRoadmap: false,
-      mentoring: false,
-      salaryNegotiation: false,
-      recruiterOutreach: false,
-      prioritySupport: false,
-      unlimitedSupport: false,
-    },
+
     pro: {
       atsScan: true,
       redFlags: true,
@@ -226,11 +199,11 @@ export default function PlansContent() {
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Subscription Plans</h1>
           <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-            One-time payment for Quick Fix. Subscriptions billed quarterly. Cancel anytime.
+            Subscriptions billed quarterly. Cancel anytime.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-6 mb-16 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 mb-16 max-w-7xl mx-auto">
           {plans.map((plan) => (
             <div
               key={plan.id}
@@ -352,20 +325,20 @@ export default function PlansContent() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => handleActivatePlan('quick')}
+              onClick={() => handleActivatePlan('pro')}
               disabled={activating !== null}
               className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all disabled:opacity-50"
             >
-              {activating === 'quick' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-              {activating === 'quick' ? 'Activating...' : 'Start with Quick Fix (₹49)'}
+              {activating === 'pro' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+              {activating === 'pro' ? 'Activating...' : 'Get Started with Pro'}
             </button>
             <button
-              onClick={() => handleActivatePlan('pro')}
+              onClick={() => handleActivatePlan('vip')}
               disabled={activating !== null}
               className="inline-flex items-center gap-2 px-8 py-4 bg-slate-800 text-white font-semibold rounded-xl border border-slate-700 hover:bg-slate-700 transition-all disabled:opacity-50"
             >
-              {activating === 'pro' ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
-              {activating === 'pro' ? 'Activating...' : 'Upgrade to Pro Bundle'}
+              {activating === 'vip' ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
+              {activating === 'vip' ? 'Activating...' : 'Upgrade to VIP'}
             </button>
           </div>
         </div>
