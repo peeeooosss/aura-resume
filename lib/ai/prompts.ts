@@ -174,7 +174,7 @@ export function buildRoadmapPrompt(currentRole: string, goalRole: string, skills
 Current skills: ${skills.join(', ')}`;
 }
 
-export const ROADMAP_FROM_RESUME_PROMPT = `You are an expert career strategist. Create a complete 90-day career roadmap with tasks, videos, quizzes, projects, and AI interview questions based on the user's resume analysis.
+export const ROADMAP_FROM_RESUME_PROMPT = `You are an expert career strategist. Create a complete 90-day (3-month) career roadmap split into exactly 3 monthly phases for a user targeting \${recommendedRoleGuess}. Each phase is one month (4 weeks). The plan must be motivating, full of practical references, and embed AI interview prep throughout — not just learning but doing and practicing.
 
 Return ONLY valid JSON. No text before or after the JSON.
 
@@ -194,54 +194,67 @@ JSON structure:
   "phases": [
     {
       "phase": 1,
-      "title": "Foundation & Gap Analysis",
-      "weeks": "1-2",
-      "theme": "Understand gaps and build learning plan",
-      "milestone": { "title": "Gap analysis done", "description": "Identified top skill gaps and started learning" },
+      "title": "Month 1: Foundation & Gap Closure",
+      "weeks": "1-4",
+      "theme": "Close the biggest ATS gaps and lay the foundation",
+      "motivationalText": "Month 1 sets you up for everything. Treat these 4 weeks as your reset button.",
+      "milestone": {
+        "title": "Foundation locked in",
+        "description": "Closed the top 3 ATS gaps and built your first milestone project"
+      },
       "weeksData": [
         {
           "week": 1,
-          "title": "Assessment & Planning",
+          "title": "Week 1 — Assessment",
           "isUnlocked": true,
           "days": [
             {
               "day": 1,
-              "title": "Review Your Resume Analysis",
-              "description": "Study your resume score and identify top 3 areas to improve",
-              "duration": 30,
+              "title": "Review your resume analysis",
+              "description": "Study your ATS score and pin down the top 3 areas dragging you down.",
+              "duration": 45,
               "type": "LEARN",
-              "isCompleted": false
+              "isCompleted": false,
+              "resources": [
+                { "title": "Resume analysis guide", "url": "https://www.youtube.com/watch?v=REAL_ID" }
+              ]
             }
           ]
         }
       ],
       "phaseContent": {
         "videos": [
-          { "title": "How to Read Your ATS Resume Score", "url": "https://www.youtube.com/watch?v=REAL_ID", "description": "Understanding what each section of your resume analysis means" }
+          { "title": "Specific, relevant video", "url": "https://www.youtube.com/watch?v=REAL_ID", "description": "Description" }
+        ],
+        "researchResources": [
+          { "title": "Specific article/paper", "url": "https://...", "description": "Description", "type": "article" }
+        ],
+        "practicePlatforms": [
+          { "name": "LeetCode", "url": "https://leetcode.com", "description": "Practice data structures & algorithms" }
         ],
         "quiz": [
           {
-            "question": "What is the first step in career gap analysis?",
-            "options": ["Start a course", "Assess current skills", "Update resume", "Apply for jobs"],
+            "question": "?",
+            "options": ["a", "b", "c", "d"],
             "correctIndex": 1,
-            "explanation": "You must first understand where you stand before planning your learning path."
+            "explanation": "Educational explanation"
           }
         ],
         "projects": [
           {
-            "name": "Personal Learning Plan",
-            "description": "Create a structured 90-day learning roadmap document with weekly goals",
-            "techStack": ["Notion", "Google Sheets"],
-            "deliverables": ["Learning plan document", "Weekly goal tracker", "Resource list"],
-            "steps": ["List all skill gaps from your analysis", "Prioritize by importance", "Assign time estimates", "Create weekly schedule", "Set milestones for each week"],
+            "name": "Project name",
+            "description": "Description",
+            "techStack": ["Tech"],
+            "deliverables": ["Deliverable"],
+            "steps": ["Step 1"],
             "difficulty": "beginner"
           }
         ],
         "aiInterview": [
           {
-            "question": "Walk me through your approach to identifying skill gaps in your career.",
-            "expectedPoints": ["Self-assessment methods", "Using resume analysis tools", "Comparing against job descriptions", "Prioritizing gaps by market demand"],
-            "followUp": "How do you prioritize which gaps to address first?"
+            "question": "Role-specific interview question",
+            "expectedPoints": ["point 1", "point 2", "point 3"],
+            "followUp": "Follow-up question"
           }
         ]
       }
@@ -250,36 +263,48 @@ JSON structure:
 }
 
 Rules for ALL content:
-- Generate ALL 4 phases with ALL 90 days (Phase 1: days 1-14, Phase 2: days 15-28, Phase 3: days 29-56, Phase 4: days 57-90)
-- Each day has exactly 1 task (no resources/videos per task)
-- Task types: LEARN, BUILD, NETWORK, APPLY, INTERVIEW_PREP — distribute across phases
-- Duration: 30-240 minutes per task
-- All weeksData isUnlocked: true (no phase locking)
+- Exactly 3 phases. Phase 1 = weeks 1-4 (days 1-28), Phase 2 = weeks 5-8 (days 29-56), Phase 3 = weeks 9-12 (days 57-84).
+- Each day has exactly 1 task. Day numbers must be sequential and continuous: Phase 1 days 1-28, Phase 2 days 29-56, Phase 3 days 57-84. Week numbers MUST be 1-12 sequential and continuous.
+- Task types: LEARN, BUILD, NETWORK, APPLY, INTERVIEW_PREP — distribute evenly across all 3 phases; each phase must contain at least one of each type.
+- Duration: 30-240 minutes per task.
+- All weeksData[].isUnlocked = true.
+- Include resources[] (real YouTube/video links) on days where it adds value.
 
-Rules for videos (3-5 per phase):
-- Use REAL YouTube video IDs that are relevant to the phase topic
-- Format url as "https://www.youtube.com/watch?v=REAL_ID"
-- Titles must be specific and relevant to the phase theme
+Rules for videos (4-5 per phase):
+- Use REAL, relevant YouTube video IDs.
+- Format url as "https://www.youtube.com/watch?v=REAL_ID".
+- Titles must be specific and relevant to the phase theme.
+
+Rules for researchResources (4-5 per phase) NEW:
+- Provide real articles/docs/GitHub repos/practice links.
+- "type" is one of: article | docs | repo | tool.
+- Each must have a title, a real url, and a short description.
+
+Rules for practicePlatforms (3 per phase) NEW:
+- Real platforms: LeetCode, HackerRank, CodeSignal, GitHub, Stratascratch, Pramp, etc.
+- Include name, real url, and a short description of what to practice there.
 
 Rules for quiz (3 questions per phase):
-- 4 options each, one correct
-- Questions test knowledge relevant to the phase theme
-- Explanations must be educational and detailed
+- 4 options each, one correct.
+- Questions test knowledge relevant to the phase theme.
+- Explanations must be educational and detailed.
 
 Rules for projects (2 per phase):
-- Must be buildable within the phase timeframe
-- Include real tech stacks, specific deliverables, and step-by-step instructions
-- Difficulty should match the phase (Phase 1: beginner, Phase 2: intermediate, Phase 3: intermediate-advanced, Phase 4: advanced)
+- Buildable within the phase timeframe.
+- Real tech stacks, specific deliverables, step-by-step steps.
+- Difficulty: Month 1 = beginner, Month 2 = intermediate, Month 3 = advanced.
 
-Rules for AI interview (2 per phase):
-- Questions should be role-specific based on recommendedRole
-- expectedPoints: 3-5 specific talking points
-- followUp: one follow-up question
+Rules for AI interview (3 per phase) NEW:
+- One question per week of the month (3 total per phase is fine, 3 minimum).
+- Role-specific based on recommendedRole.
+- expectedPoints: 3-5 specific talking points.
+- followUp: one follow-up question.
+- Include a "motivation" note: keep answers energetic and frame challenges as growth.
 
 General:
-- currentStrengths and criticalGaps must come from the resume analysis
-- recommendedRole must match the user's actual skills
-- Day numbers sequential (1-90), weeks sequential (1-13)
+- currentStrengths and criticalGaps must come from the resume analysis.
+- recommendedRole must match the user's actual skills.
+- motivationalText and motivational notes should keep the user engaged.
 - Output ONLY the JSON object`;
 
 export function buildRoadmapFromResumePrompt(resumeText: string, analysis: any) {

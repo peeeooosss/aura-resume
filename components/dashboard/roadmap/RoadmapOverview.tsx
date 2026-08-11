@@ -139,14 +139,14 @@ export function RoadmapOverview() {
                     <Target className="w-4 h-4" />
                     <span>Phase</span>
                   </div>
-                  <p className="text-2xl font-bold text-surface-900 dark:text-white">{activeRoadmap.currentPhase}/4</p>
+                  <p className="text-2xl font-bold text-surface-900 dark:text-white">{activeRoadmap.currentPhase}/3</p>
                 </div>
                 <div className="bg-surface-100 dark:bg-slate-800/50 rounded-2xl p-4">
                   <div className="flex items-center gap-2 text-surface-500 dark:text-slate-400 text-sm mb-1">
                     <Calendar className="w-4 h-4" />
                     <span>Week</span>
                   </div>
-                  <p className="text-2xl font-bold text-surface-900 dark:text-white">{activeRoadmap.currentWeek}/13</p>
+                  <p className="text-2xl font-bold text-surface-900 dark:text-white">{activeRoadmap.currentWeek}/12</p>
                 </div>
                 <div className="bg-surface-100 dark:bg-slate-800/50 rounded-2xl p-4">
                   <div className="flex items-center gap-2 text-surface-500 dark:text-slate-400 text-sm mb-1">
@@ -187,9 +187,9 @@ export function RoadmapOverview() {
                         {roadmap.isActive && (
                           <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-full">Active</span>
                         )}
-                        <span className="text-surface-400 dark:text-slate-500 text-sm">
-                          Phase {roadmap.currentPhase}/4
-                        </span>
+                    <span className="text-surface-400 dark:text-slate-500 text-sm">
+                      Phase {roadmap.currentPhase ?? 1}/3
+                    </span>
                       </div>
                       <p className="font-medium text-surface-900 dark:text-white truncate">{roadmap.goalRole}</p>
                       <p className="text-surface-500 dark:text-slate-400 text-sm">

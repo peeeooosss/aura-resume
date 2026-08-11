@@ -79,8 +79,11 @@ export async function POST(req: NextRequest) {
           currentStrengths: roadmapResult.currentStrengths,
           criticalGaps: roadmapResult.criticalGaps as any,
           phases: roadmapResult.phases as any,
-          totalTasks: roadmapResult.totalTasks,
+           totalTasks: roadmapResult.totalTasks,
           endDate,
+           phase1Unlocked: true,
+          phase2Unlocked: true,
+          phase3Unlocked: true,
           aiGenerated: true,
         },
       });

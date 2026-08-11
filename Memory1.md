@@ -5574,3 +5574,88 @@ Pushed `71f5fc3` → `https://github.com/peeeooosss/aura-resume.git`
 
 ---
 
+## Fix PDF Parsing + Landing Page Quick Fix + RazorPay + Dashboard PRO/VIP Gating
+
+**Session Date:** 8/3/2026
+
+### Summary of Changes
+
+#### 1. PDF Parsing Fix (`lib/ai/parseResume.ts`)
+- Added fallback text extractor for malformed PDFs that throw `Illegal character: 41`
+- Primary parser (`pdf-parse-fork`) → on failure → `extractPdfTextFallback()` using a state machine to scan for `(text) Tj` and `[(text)] TJ` operators
+- Handles escaped parentheses, nested strings, octal escapes
+- Landing page error UX improved: replaced `alert()` with styled error banner in `app/page.tsx`
+
+#### 2. RazorPay Payment Integration (NEW)
+- **`app/api/payment/create-order/route.ts`** — Creates RazorPay order with `razorpay` npm package. Returns `orderId`, `amount`, `currency`, `keyId` for frontend checkout
+- **`app/api/payment/verify/route.ts`** — Verifies HMAC SHA256 signature. On success: activates plan on user, grants credits (200 for Quick Fix), creates Payment record, optionally generates optimized resume via AI and saves to DB. Returns `resumeId`
+- Keys: `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` from `.env`
+
+#### 3. Payment Form Rewrite (`app/payment/PaymentForm.tsx`)
+- Replaced mock payment with real RazorPay checkout
+- Collects Name, Email, Phone (`prefill` passed to RazorPay)
+- Dynamically loads `checkout.razorpay.com/v1/checkout.js` script
+- On success: verifies payment → stores unlock info in localStorage → redirects to `/dashboard/resumes/{resumeId}/report`
+- Supports `plan=quick-fix`, `plan=pro-bundle`, `plan=vip-mentorship` quer params
+
+#### 4. Landing Page Results (`app/results/ResultsContent.tsx`)
+- Quick Fix button now redirects: not authenticated → `/login?redirect=/payment?plan=quick-fix&resultId=XXX`, authenticated → `/payment?plan=quick-fix&resultId=XXX`
+- Pro/VIP cards link to payment page with proper plan slugs
+- Removed old inline `handleGeneratePerfectResume` (mock payment + direct AI call)
+- Removed floating progress UI
+
+#### 5. Dashboard Resume Fixer (`components/dashboard/fixer/FixerPage.tsx`)
+- **All gated sections now require PRO plan** (was Quick Fix): red flags, keyword gaps, suggestions, job role potential
+- Added amber banner for non-Pro users: *"Unlock Full Analysis — Upgrade to Pro (₹499/3mo) or VIP (₹1,499/3mo)"* + *"Quick Fix (₹49) only on landing page →"* with link to `/`
+- `BlurGate` `requiredPlan` changed from `"quick"` → `"pro"` everywhere
+- Removed `hasQuickAccess` — only `hasProAccess` remains
+
+#### 6. Fixer API — Remove Auto-Save (`app/api/resume/fix/route.ts`)
+- Removed auto-creation of child `Resume` record (`resume.create` with `parentId`)
+- Now just returns: `{ optimizedResume, pdfUrl, tokensUsed, creditsUsed, creditsRemaining }`
+- Credits still decremented for the AI call
+
+#### 7. Resume Saving — Allow Quick Fix (`app/api/resumes/route.ts`)
+- POST plan check changed from `>= pro` to `>= quick`
+- Quick Fix buyers can now save resumes to "My Resumes"
+
+### Deployment
+- Committed `5895250` and deployed to Vercel production
+- URL: `https://career.tryauraai.in`
+- Two new serverless functions: `api/payment/create-order`, `api/payment/verify`
+
+### Flow Architecture
+
+```
+Landing Page:
+  Upload PDF → Demo Analysis (/api/analyze, no auth)
+  → /results?id=demo-XXX (score visible, red flags blurred)
+  → ₹49 Quick Fix CTA
+  → /login?redirect=/payment?plan=quick-fix&resultId=XXX
+  → Login/Signup
+  → /payment (Name, Email, Phone → RazorPay checkout)
+  → Verify → Activate Plan + 200 credits + Generate & Save Optimized Resume
+  → /dashboard/resumes/{id}/report (full analysis + downloadable PDF)
+
+Dashboard:
+  Resume Fixer → Upload → /api/analyze (auth, credits)
+  → Analysis (strengths visible, rest blurred behind PRO/VIP gate)
+  → Banner: "Upgrade to Pro/VIP" + "Quick Fix on landing page →"
+  → Pro/VIP users: full analysis + download optimized resume + save to My Resumes
+```
+
+### Files Changed
+| File | Action |
+|------|--------|
+| `lib/ai/parseResume.ts` | Added fallback PDF extractor |
+| `app/page.tsx` | Styled error banner instead of alert |
+| `app/api/payment/create-order/route.ts` | NEW — RazorPay order creation |
+| `app/api/payment/verify/route.ts` | NEW — RazorPay verification + plan activation |
+| `app/payment/PaymentForm.tsx` | Real RazorPay checkout |
+| `app/results/ResultsContent.tsx` | Payment redirect flow |
+| `components/dashboard/fixer/FixerPage.tsx` | PRO/VIP gating, landing page link |
+| `app/api/resume/fix/route.ts` | Remove auto-save |
+| `app/api/resumes/route.ts` | Quick Fix users can save |
+
+---
+

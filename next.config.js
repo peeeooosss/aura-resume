@@ -2,7 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  output: 'standalone',
   env: {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3333',
   },

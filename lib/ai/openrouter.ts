@@ -716,7 +716,7 @@ export async function generateRoadmapFromResume(
   const { content, tokensUsed, finishReason } = await callOpenRouter([
     { role: 'system', content: ROADMAP_FROM_RESUME_PROMPT },
     { role: 'user', content: buildRoadmapFromResumePrompt(resumeText, analysis) },
-  ], { model: 'google/gemini-2.5-flash', temperature: 0.4, maxTokens: 16000, expectJson: true });
+  ],   { model: 'google/gemini-2.5-flash', temperature: 0.4, maxTokens: 20000, expectJson: true });
 
   if (finishReason === 'length') {
     console.error('Roadmap generation truncated at', tokensUsed, 'tokens.');

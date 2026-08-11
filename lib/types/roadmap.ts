@@ -8,6 +8,12 @@ export interface RoadmapDay {
   type: TaskType;
   isCompleted: boolean;
   completedAt?: string;
+  resources?: DayResource[];
+}
+
+export interface DayResource {
+  title: string;
+  url: string;
 }
 
 export interface RoadmapWeek {
@@ -19,6 +25,19 @@ export interface RoadmapWeek {
 
 export interface PhaseVideo {
   title: string;
+  url: string;
+  description: string;
+}
+
+export interface PhaseResearchResource {
+  title: string;
+  url: string;
+  description: string;
+  type: 'article' | 'docs' | 'repo' | 'tool';
+}
+
+export interface PhasePracticePlatform {
+  name: string;
   url: string;
   description: string;
 }
@@ -43,10 +62,13 @@ export interface PhaseAIInterview {
   question: string;
   expectedPoints: string[];
   followUp?: string;
+  motivation?: string;
 }
 
 export interface PhaseContent {
   videos: PhaseVideo[];
+  researchResources: PhaseResearchResource[];
+  practicePlatforms: PhasePracticePlatform[];
   quiz: PhaseQuizQuestion[];
   projects: PhaseProject[];
   aiInterview: PhaseAIInterview[];
@@ -64,6 +86,7 @@ export interface RoadmapPhase {
     reward?: string;
   };
   phaseContent?: PhaseContent;
+  motivationalText?: string;
 }
 
 export interface SkillGap {
