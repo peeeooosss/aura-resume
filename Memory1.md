@@ -5659,3 +5659,109 @@ Dashboard:
 
 ---
 
+## Roadmap Rewrite + Build Fix + Credits Rebalance + Fixed Resume Preview
+
+**Session Date:** 8/11/2026
+
+### Summary of Changes
+
+#### 1. Roadmap Rewrite (3-phase monthly)
+- Rewrote `ROADMAP_FROM_RESUME_PROMPT` in `lib/ai/prompts.ts`: 3 phases over 12 weeks (3 months)
+- Added `researchResources`, `practicePlatforms`, `dayResources`, `motivationalText` fields
+- Extended types in `lib/types/roadmap.ts` (`DayResource`, `PhaseResearchResource`, `PhasePracticePlatform`)
+- Created `ResearchSection.tsx` and `PracticePlatformSection.tsx` components
+- Rewrote `RoadmapDetail.tsx`: 3 collapsible month panels, 7 sub-tabs (Tasks/Videos/Research/Practice/Quiz/Projects/AI Interview), phase progress bars, motivational banner, sidebar for strengths/gaps/milestones
+- Updated `RoadmapOverview.tsx`: Phase X/3, Week X/12 labels
+- All phases unlocked at creation in `app/api/roadmap/route.ts`
+
+#### 2. Build Fix — Remove standalone output
+- Root cause: `output: 'standalone'` in `next.config.js` caused `ETIMEDOUT` during `collect-build-traces` (vercel/nft read timeout on Neon cloud files)
+- Removed `output: 'standalone'` — build now completes in ~60s
+- Fixed type error: `currentRoadmap` → `roadmap.currentPhase` in `RoadmapOverview.tsx`
+
+#### 3. Quick Fix (₹49) Billing Restriction
+- Removed Quick Fix plan card from `app/plans/PlansContent.tsx`
+- Grid changed from 4 → 3 columns (Free/Pro/VIP)
+- Bottom CTA changed from "Start with Quick Fix" → "Get Started with Pro" / "Upgrade to VIP"
+- Quick Fix still available on landing page (`/payment?plan=quick-fix`) and fixer page
+
+#### 4. Credit Costs Rebalance (2.5–3.5× increase)
+- Updated `CREDIT_COSTS` in `lib/constants/credits.ts`:
+
+| Action | Old | New |
+|---|---|---|
+| resume_analysis | 8 | **25** |
+| linkedin_analysis | 12 | **30** |
+| job_search | 3 | **10** |
+| cover_letter | 6 | **20** |
+| roadmap_generation | 12 | **30** |
+| resume_fix | 4 | **15** |
+| ai_interview | 15 | **50** |
+| cold_email | 5 | **15** |
+| job_match | 10 | **20** |
+
+- Trimmed `getInitialCredits`: free 50→25, quick 200→150. Pro 900, VIP 1800 unchanged.
+- Effect: Pro 900cr lasts ~1 month of real use → drives refills + VIP upsells
+- Fixed credit note in `InterviewSetup.tsx`: "~8 credits" → dynamic `{CREDIT_COSTS.ai_interview} credits`
+
+#### 5. Pending Pricing Plan (not yet implemented)
+Plan confirmed with user but NOT built:
+- Pro: Rs199/mo OR Rs499/3mo; VIP "Aura Elite": Rs499/mo OR Rs1299/3mo
+- Monthly/Quarterly toggle on billing page
+- Pro gets 3 free AI interviews/month, then 15 credits each; VIP unlimited
+
+#### 6. Fixed Resume Preview + Download in My Resumes
+- **Problem**: Fixed resumes saved to "My Resumes" only stored the original text — the AI-optimized text was lost once the fixer page was closed. No way to preview/download later.
+- **Schema**: Added `optimizedText String? @db.Text` to `Resume` model in Prisma
+- **API**: `/api/resumes` POST accepts/stores `optimizedText`; GET and `[id]` routes return it
+- **FixerPage**: `handleSaveToResumes` now sends `optimizedText: fixedResume` for persisted fixed text
+- **ResumesPage UI**:
+  - "Preview Fixed" button in card dropdown — opens a modal with the optimized text
+  - "Download PDF" button — generates `generateOptimizedResumePDF` client-side via jsPDF
+  - Legacy fixed resumes (no optimizedText) show "Fixed version unavailable — Re-run Fixer" link
+
+#### 7. AI Interview Verification
+Confirmed existing AI Interview feature:
+- Resume-aware questions via resume.rawText + targetRole
+- 10 questions with progressive difficulty, categories, expected points
+- Voice or text input per question
+- Per-answer AI evaluation (0-100 score, coaching feedback, follow-up questions)
+- Full conversation saved to `interviewSession.questions` array in DB
+- Final report: overallScore, 4 sub-scores, strengths, improvements, per-question breakdown
+- Model: `google/gemini-2.5-flash-lite` (consistent across all 3 functions)
+- VIP-only gate (PLAN_TIER >= vip) in `/api/interview/start`
+
+### Files Changed
+| File | Action |
+|------|--------|
+| `lib/ai/prompts.ts` | Rewrote ROADMAP_FROM_RESUME_PROMPT (3-phase) |
+| `lib/types/roadmap.ts` | New types: DayResource, PhaseResearchResource, PhasePracticePlatform |
+| `lib/ai/openrouter.ts` | maxTokens 16000→20000 for roadmap |
+| `app/api/roadmap/route.ts` | Unlock all phases at creation |
+| `components/dashboard/roadmap/RoadmapDetail.tsx` | 3 collapsible month panels + 7 tabs |
+| `components/dashboard/roadmap/RoadmapOverview.tsx` | Phase/week labels, currentRoadmap fix |
+| `components/dashboard/roadmap/ResearchSection.tsx` | NEW — research resource cards |
+| `components/dashboard/roadmap/PracticePlatformSection.tsx` | NEW — practice platform grid |
+| `next.config.js` | Removed `output: 'standalone'` (fixes build hang) |
+| `app/plans/PlansContent.tsx` | Remove Quick Fix from billing grid |
+| `lib/constants/credits.ts` | 2.5-3.5× credit cost increase, trim free/quick grants |
+| `components/dashboard/interview/InterviewSetup.tsx` | Dynamic credit cost display |
+| `prisma/schema.prisma` | Added `optimizedText` to Resume model |
+| `app/api/resumes/route.ts` | POST accepts/saves optimizedText |
+| `app/api/resumes/[id]/route.ts` | GET returns optimizedText |
+| `components/dashboard/fixer/FixerPage.tsx` | Persist optimizedText on save |
+| `components/dashboard/resumes/ResumesPage.tsx` | Preview modal + Download PDF for fixed resumes |
+| `prisma/migrations/20260811233439_add_resume_optimized_text/migration.sql` | NEW — DB migration |
+
+### Commits
+- `09de2cf` — Roadmap rewrite (3-phase), standalone removal
+- `9be5fdb` — Quick Fix billing restriction
+- `ab122a1` — Credit costs rebalance
+- `4c19bfe` — Fixed resume preview + download
+
+### Outstanding
+- Pricing page with monthly/quarterly toggle and Pro/VIP restructure (plan confirmed, not built)
+- AI Interview gate relaxation (Pro users 3 free/mo) — plan confirmed, not built
+
+---
+
