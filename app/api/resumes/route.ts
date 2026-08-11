@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   try {
     const userId = await requireSessionUserId();
     const body = await req.json();
-    const { title, rawText, status, atsScore, strengths, redFlags, suggestions, keywordGaps, jobRolePotential, parentId } = body;
+    const { title, rawText, optimizedText, status, atsScore, strengths, redFlags, suggestions, keywordGaps, jobRolePotential, parentId } = body;
 
     if (!title) {
       return NextResponse.json({ error: 'title is required' }, { status: 400 });
@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
           title,
           fileUrl: '',
           rawText: rawText || '',
+          optimizedText: optimizedText || undefined,
           status: status || 'analyzed',
           parentId: parentId || null,
         },

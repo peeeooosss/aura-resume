@@ -50,6 +50,7 @@ export async function GET(
       title: resume.title,
       fileUrl: resume.fileUrl,
       rawText: resume.rawText,
+      optimizedText: resume.optimizedText,
       status: resume.status,
       version: resume.version,
       createdAt: resume.createdAt.toISOString(),

@@ -39,8 +39,9 @@ model Resume {
   title     String
   fileUrl   String
   fileKey   String?
-  rawText   String?    @db.Text
-  status    String     @default("uploaded")
+rawText        String?   @db.Text
+  optimizedText  String?   @db.Text
+  status         String    @default("uploaded")
   version   Int        @default(1)
   parentId  String?
   parent    Resume?    @relation("ResumeVersions", fields: [parentId], references: [id], onDelete: SetNull)

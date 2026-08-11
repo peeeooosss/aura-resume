@@ -232,6 +232,7 @@ export function FixerPage() {
         body: JSON.stringify({
           title: selectedFile ? selectedFile.name.replace(/\.[^/.]+$/, '') : 'My Resume',
           rawText: analysis.originalText,
+          optimizedText: fixedResume || undefined,
           status: fixedResume ? 'fixed' : 'analyzed',
           atsScore: fixedResume ? 95 : analysis.score,
           strengths: analysis.strengths,

@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useResumes } from '@/lib/hooks/useResumes';
 import { usePlan } from '@/lib/hooks/usePlan';
-import { FileText, Trash2, Star, Shield, Sparkles, Eye, Wrench, MoreHorizontal, FilePen, ExternalLink, Lock } from 'lucide-react';
+import { FileText, Trash2, Star, Shield, Sparkles, Eye, Wrench, MoreHorizontal, FilePen, ExternalLink, Lock, Download, X } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import { formatDate } from '@/lib/utils/helpers';
+import { generateOptimizedResumePDF } from '@/lib/pdf/generateReport';
 
 type FilterTab = 'all' | 'uploaded' | 'analyzed' | 'fixed';
 
@@ -143,6 +144,16 @@ function getStatusBadge(status: string) {
 function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete, isMenuOpen, onToggleMenu, router }: any) {
   const badge = getStatusBadge(resume.status);
   const hasAnalysis = resume.atsScore !== null && resume.atsScore !== undefined;
+  const hasOptimizedText = resume.optimizedText && resume.optimizedText.trim().length > 0;
+  const [showPreview, setShowPreview] = useState(false);
+
+  const handleDownloadPDF = () => {
+    if (!resume.optimizedText) return;
+    const doc = generateOptimizedResumePDF(resume.optimizedText, {
+      generatedAt: new Date().toLocaleString(),
+    });
+    doc.save(`ATS-Optimized-Resume-${Date.now()}.pdf`);
+  };
 
   return (
     <div className={cn(
@@ -207,6 +218,37 @@ function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete, isMenuOpen, onT
                         <FilePen className="w-4 h-4 text-surface-400" />
                         Generate Cover Letter
                       </button>
+                    </>
+                  )}
+                  {resume.status?.toLowerCase() === 'fixed' && (
+                    <>
+                      <div className="border-t border-surface-200 dark:border-slate-800 my-1" />
+                      {hasOptimizedText ? (
+                        <>
+                          <button
+                            onClick={() => { onToggleMenu(null); setShowPreview(true); }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-surface-700 dark:text-slate-300 hover:bg-surface-100 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            <Eye className="w-4 h-4 text-indigo-400" />
+                            Preview Fixed
+                          </button>
+                          <button
+                            onClick={() => { onToggleMenu(null); handleDownloadPDF(); }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-surface-700 dark:text-slate-300 hover:bg-surface-100 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            <Download className="w-4 h-4 text-emerald-400" />
+                            Download PDF
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => { onToggleMenu(null); router.push(`/dashboard/fixer?resumeId=${resume.id}&source=resumes`); }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-amber-400 hover:bg-amber-500/10 transition-colors"
+                        >
+                          <Wrench className="w-4 h-4" />
+                          Fixed version unavailable — Re-run Fixer
+                        </button>
+                      )}
                     </>
                   )}
                   <div className="border-t border-surface-200 dark:border-slate-800 my-1" />
@@ -304,6 +346,39 @@ function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete, isMenuOpen, onT
           </Link>
         )}
       </div>
+
+      {showPreview && resume.optimizedText && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 border border-surface-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-surface-200 dark:border-slate-800">
+              <div>
+                <h3 className="text-lg font-bold text-surface-900 dark:text-white">Fixed Resume Preview</h3>
+                <p className="text-sm text-surface-400 dark:text-slate-500">{resume.fileName || resume.title}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDownloadPDF}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-medium rounded-xl hover:shadow-lg transition-all text-sm"
+                >
+                  <Download className="w-4 h-4" />
+                  Download PDF
+                </button>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="p-2 rounded-xl text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <pre className="whitespace-pre-wrap font-sans text-sm text-surface-700 dark:text-slate-300 leading-relaxed">
+                {resume.optimizedText}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
