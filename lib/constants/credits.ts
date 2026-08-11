@@ -1,13 +1,13 @@
 export const CREDIT_COSTS = {
-  resume_analysis: 8,
-  linkedin_analysis: 12,
-  job_search: 3,
-  cover_letter: 6,
-  roadmap_generation: 12,
-  resume_fix: 4,
-  ai_interview: 15,
-  cold_email: 5,
-  job_match: 10,
+  resume_analysis: 25,
+  linkedin_analysis: 30,
+  job_search: 10,
+  cover_letter: 20,
+  roadmap_generation: 30,
+  resume_fix: 15,
+  ai_interview: 50,
+  cold_email: 15,
+  job_match: 20,
 } as const;
 
 export type CreditAction = keyof typeof CREDIT_COSTS;
@@ -83,9 +83,9 @@ export async function addCredits(userId: string, amount: number): Promise<number
 export function getInitialCredits(plan: string): number {
   switch (plan) {
     case 'free':
-      return 50;
+      return 25;
     case 'quick':
-      return 200;
+      return 150;
     case 'pro':
       return 900;
     case 'vip':

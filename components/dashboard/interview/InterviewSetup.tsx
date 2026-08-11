@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Mic, Zap, ArrowRight, ChevronDown, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import type { InterviewType, InterviewDifficulty } from '@/lib/types/interview';
+import { CREDIT_COSTS } from '@/lib/constants/credits';
 
 interface Resume {
   id: string;
@@ -214,7 +215,7 @@ export function InterviewSetup({ onStart, loading, error }: InterviewSetupProps)
       </button>
 
       <p className="text-center text-surface-400 dark:text-slate-500 text-sm">
-        10 questions • ~8 credits • Voice or text input
+        10 questions • {CREDIT_COSTS.ai_interview} credits • Voice or text input
       </p>
     </div>
   );
