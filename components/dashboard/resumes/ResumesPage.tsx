@@ -9,15 +9,38 @@ import { FileText, Trash2, Star, Shield, Sparkles, Eye, Wrench, MoreHorizontal, 
 import { cn } from '@/lib/utils/helpers';
 import { formatDate } from '@/lib/utils/helpers';
 import { generateOptimizedResumePDF } from '@/lib/pdf/generateReport';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 
 type FilterTab = 'all' | 'uploaded' | 'analyzed' | 'fixed';
 
 export function ResumesPage() {
   const router = useRouter();
   const { resumes, setPrimary, deleteResume, loading } = useResumes();
+  const { toast } = useToast();
   const currentPlan = usePlan(s => s.currentPlan);
   const [filter, setFilter] = useState<FilterTab>('all');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleSetPrimary = async (id: string) => {
+    const ok = await setPrimary(id);
+    toast(ok ? 'success' : 'error', ok ? 'Primary resume updated' : 'Failed to set primary resume');
+  };
+
+  const handleDeleteRequest = (id: string) => {
+    setPendingDeleteId(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    setDeleting(true);
+    const ok = await deleteResume(pendingDeleteId);
+    setDeleting(false);
+    setPendingDeleteId(null);
+    toast(ok ? 'success' : 'error', ok ? 'Resume deleted' : 'Failed to delete resume');
+  };
 
   const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };
   const canSave = (PLAN_TIER[currentPlan] ?? 0) >= (PLAN_TIER['pro'] ?? 0);
@@ -120,8 +143,8 @@ export function ResumesPage() {
               key={resume.id}
               resume={resume}
               isPrimary={resume.isPrimary}
-              onSetPrimary={setPrimary}
-              onDelete={deleteResume}
+              onSetPrimary={handleSetPrimary}
+              onDeleteRequest={handleDeleteRequest}
               isMenuOpen={openMenuId === resume.id}
               onToggleMenu={setOpenMenuId}
               router={router}
@@ -129,6 +152,16 @@ export function ResumesPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Delete Resume?"
+        message="This will permanently delete the resume and all of its associated analyses, roadmaps, and interview sessions. This action cannot be undone."
+        confirmLabel="Delete Resume"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 }
@@ -141,7 +174,7 @@ function getStatusBadge(status: string) {
   return { label: s, color: 'text-slate-400 bg-surface-100 dark:bg-slate-800 border-surface-200 dark:border-slate-700' };
 }
 
-function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete, isMenuOpen, onToggleMenu, router }: any) {
+function ResumeCard({ resume, isPrimary, onSetPrimary, onDeleteRequest, isMenuOpen, onToggleMenu, router }: any) {
   const badge = getStatusBadge(resume.status);
   const hasAnalysis = resume.atsScore !== null && resume.atsScore !== undefined;
   const hasOptimizedText = resume.optimizedText && resume.optimizedText.trim().length > 0;
@@ -262,7 +295,7 @@ function ResumeCard({ resume, isPrimary, onSetPrimary, onDelete, isMenuOpen, onT
                     </button>
                   )}
                   <button
-                    onClick={() => { onToggleMenu(null); onDelete(resume.id); }}
+                    onClick={() => { onToggleMenu(null); onDeleteRequest(resume.id); }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />

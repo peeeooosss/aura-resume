@@ -5,6 +5,7 @@ import { FileText, Zap, ArrowRight, Sparkles, AlertTriangle, Check, History, Rot
 import { cn } from '@/lib/utils/helpers';
 import { usePlan } from '@/lib/hooks/usePlan';
 import { getPlanDefinition, canAccessFeature } from '@/lib/constants/plans';
+import { useCreditsStore } from '@/lib/hooks/useCredits';
 
 interface Template {
   id: string;
@@ -196,6 +197,7 @@ export function TemplatesPage() {
       setTemplates([{ ...data, id: data.id || `template_${Date.now()}` }, ...templates]);
       setNewJDText('');
       setNewJDUrl('');
+      useCreditsStore.getState().refresh();
     } catch (e) {
       console.error(e);
     } finally {

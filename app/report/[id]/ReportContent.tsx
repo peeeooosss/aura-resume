@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { ArrowLeft, Check, Shield, FileText, Download, Sparkles, Zap, Users, ArrowRight, Star, Lock, Target, Loader2, Eye } from 'lucide-react';
 import { generateAnalysisPDF, generateOptimizedResumePDF, getPDFBlobURL, type AnalysisReportData } from '@/lib/pdf/generateReport';
 import type { DualAnalysisResult, SingleAnalysis, JobRolePotential } from '@/lib/types';
+import { useCreditsStore } from '@/lib/hooks/useCredits';
 
 function getScoreColor(score: number): string {
   if (score >= 80) return 'text-emerald-400';
@@ -207,6 +208,7 @@ export default function ReportContent({ id }: { id: string }) {
         optimizedText = data.optimizedResume;
         analyses[id].optimizedResumeText = optimizedText;
         localStorage.setItem('aura-analyses', JSON.stringify(analyses));
+        useCreditsStore.getState().refresh();
       }
 
       if (!optimizedText) {

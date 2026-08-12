@@ -116,7 +116,7 @@ export function useJobMatches() {
 
       if (!res.ok) {
         if (res.status === 402 || data.insufficientCredits) {
-          setError(`Insufficient credits. Job search costs 3 credits per search.`);
+          setError(`Insufficient credits. Job search costs 10 credits per search.`);
         } else {
           setError(data.error || 'Job search failed');
         }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Linkedin, Zap, ArrowRight, Sparkles, AlertTriangle, Check, X, Lock, RotateCcw, History, Lightbulb, AlertCircle, Target, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import { usePlan } from '@/lib/hooks/usePlan';
+import { useCreditsStore } from '@/lib/hooks/useCredits';
 
 interface PriorityAction {
   area: string;
@@ -393,6 +394,7 @@ export function LinkedInAnalyserPage() {
 
       setResults(analysis);
       setLinkedinUrl('');
+      useCreditsStore.getState().refresh();
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : 'Analysis failed. Please try again.');

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import type { InterviewType, InterviewDifficulty, InterviewQuestion } from '@/lib/types/interview';
+import { useCreditsStore } from './useCredits';
 
 interface InterviewSessionData {
   id: string;
@@ -57,6 +58,7 @@ export function useInterview() {
       };
 
       setActiveInterview(session);
+      useCreditsStore.getState().refresh();
       return session;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to start interview';

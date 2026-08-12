@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Github, Chrome, Loader2 } from 'lucide-react';
 import { usePlan } from '@/lib/hooks/usePlan';
+import { useCreditsStore } from '@/lib/hooks/useCredits';
 
 export default function LoginContent() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function LoginContent() {
       });
       if (res.ok) {
         setPlan(planId as any);
+        useCreditsStore.getState().refresh();
       }
     } catch {
       // Ignore activation errors

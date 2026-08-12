@@ -43,6 +43,7 @@ rawText        String?   @db.Text
   optimizedText  String?   @db.Text
   status         String    @default("uploaded")
   version   Int        @default(1)
+  isPrimary Boolean    @default(false)
   parentId  String?
   parent    Resume?    @relation("ResumeVersions", fields: [parentId], references: [id], onDelete: SetNull)
   children  Resume[]   @relation("ResumeVersions")

@@ -57,12 +57,30 @@ export function useResumes() {
     setResumes(prev => prev.map(r => r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r));
   }, []);
 
-  const deleteResume = useCallback((id: string) => {
-    setResumes(prev => prev.filter(r => r.id !== id));
+  const deleteResume = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/resumes/${id}`, { method: 'DELETE' });
+      if (!res.ok) return false;
+      setResumes(prev => prev.filter(r => r.id !== id));
+      return true;
+    } catch {
+      return false;
+    }
   }, []);
 
-  const setPrimary = useCallback((id: string) => {
-    setResumes(prev => prev.map(r => ({ ...r, isPrimary: r.id === id })));
+  const setPrimary = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/resumes/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPrimary: true }),
+      });
+      if (!res.ok) return false;
+      setResumes(prev => prev.map(r => ({ ...r, isPrimary: r.id === id })));
+      return true;
+    } catch {
+      return false;
+    }
   }, []);
 
   const getPrimary = useCallback(() => {

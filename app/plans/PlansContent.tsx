@@ -4,6 +4,7 @@ import { Fragment, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Sparkles, Shield, Download, Sparkles as SparklesIcon, Users, Award, Star, X, Check, Lock, CreditCard, Mail, Linkedin, Briefcase, Mic, Target, Brain, GraduationCap, Handshake, ArrowRight, Loader2 } from 'lucide-react';
 import { usePlan } from '@/lib/hooks/usePlan';
+import { useCreditsStore } from '@/lib/hooks/useCredits';
 
 function FeatureIcon({ value }: { value: any }) {
   if (value === true) return <Check className="w-5 h-5 text-emerald-400" />;
@@ -168,6 +169,7 @@ export default function PlansContent() {
 
       if (res.ok) {
         setPlan(planId as any);
+        useCreditsStore.getState().refresh();
         router.push('/dashboard');
       } else if (res.status === 401) {
         router.push(`/login?redirect=/plans&plan=${planId}`);

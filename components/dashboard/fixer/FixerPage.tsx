@@ -203,10 +203,11 @@ export function FixerPage() {
         });
         const genData = await genRes.json();
         if (genRes.status === 402 || genData.insufficientCredits) {
-          toast('info', 'Analysis complete. Insufficient credits to generate the ATS-optimized rewrite (10 credits). Refill in the sidebar.');
+          toast('info', 'Analysis complete. Insufficient credits to generate the ATS-optimized rewrite (20 credits). Refill in the sidebar.');
         } else if (genRes.ok && genData.optimizedResume) {
           setFixedResume(genData.optimizedResume);
           setShowFixedResume(true);
+          refreshCredits();
           toast('success', 'Resume analyzed and ATS-optimized version generated!');
         } else {
           toast('success', 'Resume analyzed successfully!');

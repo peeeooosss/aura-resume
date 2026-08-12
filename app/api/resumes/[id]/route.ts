@@ -53,6 +53,7 @@ export async function GET(
       optimizedText: resume.optimizedText,
       status: resume.status,
       version: resume.version,
+      isPrimary: resume.isPrimary,
       createdAt: resume.createdAt.toISOString(),
       updatedAt: resume.updatedAt.toISOString(),
       parent: resume.parent,
@@ -75,6 +76,43 @@ export async function GET(
   } catch (error) {
     console.error('Failed to fetch resume:', error);
     return NextResponse.json({ error: 'Failed to fetch resume' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { isPrimary } = body;
+    if (typeof isPrimary !== 'boolean') {
+      return NextResponse.json({ error: 'isPrimary is required' }, { status: 400 });
+    }
+
+    const resume = await prisma.resume.findFirst({ where: { id: params.id, userId } });
+    if (!resume) {
+      return NextResponse.json({ error: 'Resume not found' }, { status: 404 });
+    }
+
+    if (isPrimary) {
+      await prisma.$transaction([
+        prisma.resume.updateMany({ where: { userId, isPrimary: true }, data: { isPrimary: false } }),
+        prisma.resume.update({ where: { id: params.id }, data: { isPrimary: true } }),
+      ]);
+    } else {
+      await prisma.resume.update({ where: { id: params.id }, data: { isPrimary: false } });
+    }
+
+    return NextResponse.json({ success: true, isPrimary });
+  } catch (error) {
+    console.error('Failed to update resume:', error);
+    return NextResponse.json({ error: 'Failed to update resume' }, { status: 500 });
   }
 }
 

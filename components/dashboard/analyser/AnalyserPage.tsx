@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Upload, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, History, Repeat, Linkedin, RotateCcw, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
+import { useCreditsStore } from '@/lib/hooks/useCredits';
 
 interface SingleAnalysis {
   source: 'resume' | 'linkedin';
@@ -177,6 +178,7 @@ export function AnalyserPage() {
       setLinkedinUrl('');
       setSelectedFile(null);
       setLinkedinUrl('');
+      useCreditsStore.getState().refresh();
     } catch {
       setLoading(false);
     }

@@ -5892,3 +5892,51 @@ Confirmed existing AI Interview feature:
 
 ---
 
+**Session Date:** 8/12/2026
+
+### Summary of Changes
+
+#### 1. Resume deletion now hits the DB (`lib/hooks/useResumes.ts`, `app/api/resumes/[id]/route.ts`)
+- `deleteResume` was client-only (filtered React state; row reappeared on reload). It now calls `DELETE /api/resumes/[id]` (DB-safe, cascades Analysis/Roadmap/InterviewSession; JobMatch/Portfolio SetNull) and removes from state only on `res.ok`. `setPrimary` likewise calls `PATCH /api/resumes/[id]` with `{ isPrimary: true }`.
+- Added confirmation modal before deleting in both `ResumesPage` and `ResumeDetail` via new `components/ui/ConfirmDialog.tsx` (destructive styling, loading spinner, escape hatch via cancel).
+
+#### 2. "Make Primary" persists to DB (`prisma/schema.prisma` + migration + PATCH endpoint)
+- Added `isPrimary Boolean @default(false)` to `Resume`; new migration `20260812220000_add_resume_primary`.
+- **Baseline fix:** Neon DB had no `_prisma_migrations` table (set up via `db push`), so `migrate deploy` failed with P3005. Created `_prisma_migrations` and inserted the 2 existing migrations (`20260727195634_add_credit_balance`, `20260811233439_add_resume_optimized_text`) as applied, then `migrate deploy` applied the new migration cleanly.
+- `PATCH /api/resumes/[id]` validates ownership then, when setting primary, `$transaction([updateMany(isPrimary=false) on user resumes, update(target)] )`. `GET` includes `isPrimary` in its result; `GET /api/resumes` spreads `...r` so it flows automatically.
+
+#### 3. Credits/plan always re-sync from DB (`lib/hooks/useCredits.ts`, `usePlanSync.ts`, spend sites)
+- `useCreditsStore.refresh()` now also reads `plan` from `GET /api/credits` and calls `usePlan.getState().setPlan()` (previously balance-only). `usePlanSync` delegates to `refresh()` and adds `visibilitychange`/`focus` listeners so returning to the tab re-syncs.
+- Added `useCreditsStore.getState().refresh()` after spends/activations that previously left the sidebar stale: AnalyserPage, landing `app/page.tsx`, LinkedInAnalyserPage, TemplatesPage (cover letter), `useRoadmap` (generateRoadmap), `useInterview` (startInterview), ReportContent (optimized-resume generation), PlansContent + LoginContent (plan activation). PaymentForm/useJobMatches/FixerPage/ResumeJobCompare already refreshed.
+- Fixed stale cost texts: FixerPage ATS-rewrite toast "(10 credits)" → "(20 credits)" (real cost `job_match`=20) + added refresh after the rewrite spend; `useJobMatches` error "3 credits" → "10 credits" (`job_search`=10).
+
+### Notable Details / Decisions
+- Upgrade path still resets credit balance to the plan grant (per user decision); the plan-sync path also sets the plan so the UI tier + balance stay consistent with the DB.
+- Deleted temp debug script `scripts/checkColumn.ts`.
+- `animate-fade-in` class is used but not defined in the Tailwind config (pre-existing in ResumesPage dropdown; harmless).
+
+### Files Changed
+| File | Action |
+|------|--------|
+| `lib/hooks/useResumes.ts` | async `deleteResume`/`setPrimary` against API |
+| `components/ui/ConfirmDialog.tsx` | NEW reusable delete-confirm modal |
+| `components/dashboard/resumes/ResumesPage.tsx` | confirm dialog, toast, primary/delete handlers |
+| `components/dashboard/resumes/ResumeDetail.tsx` | confirm dialog, toast, router push after delete |
+| `prisma/schema.prisma` | `isPrimary` column |
+| `prisma/migrations/20260812220000_add_resume_primary/` | NEW migration (applied) |
+| `app/api/resumes/[id]/route.ts` | PATCH handler + `isPrimary` in GET |
+| `lib/hooks/useCredits.ts` | refresh() syncs plan too |
+| `lib/hooks/usePlanSync.ts` | delegates to refresh() + focus/visibility listeners |
+| `lib/hooks/useRoadmap.ts`, `useInterview.ts`, `useJobMatches.ts` | refresh + cost text fix |
+| `app/page.tsx`, `app/plans/PlansContent.tsx`, `app/login/LoginContent.tsx`, `app/report/[id]/ReportContent.tsx` | refresh after spend/activation |
+| `components/dashboard/analyser/AnalyserPage.tsx`, `linkedin/LinkedInAnalyserPage.tsx`, `templates/TemplatesPage.tsx`, `fixer/FixerPage.tsx` | refresh after spend + cost text fix |
+| `scripts/checkColumn.ts` | DELETED (temp debug) |
+
+### Verified
+- `_prisma_migrations` baselined + `migrate deploy` applied `20260812220000_add_resume_primary` (column verified in DB before deleting check script)
+- `npx tsc --noEmit` clean
+- `npm run build` succeeds
+
+---
+
+

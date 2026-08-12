@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { RoadmapData, RoadmapPhase, RoadmapWeek, RoadmapDay, SkillGap } from '@/lib/types/roadmap';
+import { useCreditsStore } from './useCredits';
 
 export type { RoadmapData, RoadmapPhase, RoadmapWeek, RoadmapDay, SkillGap };
 
@@ -63,6 +64,7 @@ export function useRoadmap(roadmapId?: string) {
         throw new Error(data.error || 'Roadmap generation failed');
       }
 
+      useCreditsStore.getState().refresh();
       await fetchRoadmaps();
       return data;
     } catch (err: any) {

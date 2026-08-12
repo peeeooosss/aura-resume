@@ -4,7 +4,10 @@
 import { useState } from 'react';
 import { useResumes } from '@/lib/hooks/useResumes';
 import { usePlan } from '@/lib/hooks/usePlan';
+import { useRouter } from 'next/navigation';
 import { formatDate } from '@/lib/utils/helpers';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 import {
   FileText, ArrowLeft, Star, Shield, Sparkles, ChevronDown,
   ChevronUp, AlertTriangle, CheckCircle, TrendingUp, Target,
@@ -19,12 +22,34 @@ type Tab = 'overview' | 'sections' | 'ats' | 'optimize';
 export default function ResumeDetail({ params }: { params: { id: string } }) {
   const { id } = params;
   const { resumes, deleteResume, setPrimary } = useResumes();
+  const { toast } = useToast();
+  const router = useRouter();
   const currentPlan = usePlan(s => s.currentPlan);
   const resume = resumes.find(r => r.id === id);
 
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [rewriting, setRewriting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleSetPrimary = async () => {
+    const ok = await setPrimary(id);
+    toast(ok ? 'success' : 'error', ok ? 'Primary resume updated' : 'Failed to set primary resume');
+  };
+
+  const handleConfirmDelete = async () => {
+    setDeleting(true);
+    const ok = await deleteResume(id);
+    setDeleting(false);
+    setConfirmDelete(false);
+    if (ok) {
+      toast('success', 'Resume deleted');
+      router.push('/resumes');
+    } else {
+      toast('error', 'Failed to delete resume');
+    }
+  };
 
   if (!resume) {
     return (
@@ -99,7 +124,7 @@ export default function ResumeDetail({ params }: { params: { id: string } }) {
           )}
           {!resume.isPrimary && (
             <button
-              onClick={() => setPrimary(resume.id)}
+              onClick={handleSetPrimary}
               className="p-2 rounded-xl bg-surface-100 dark:bg-slate-800/50 hover:bg-surface-200 dark:hover:bg-slate-800 text-surface-500 dark:text-slate-400 hover:text-amber-400 transition-colors"
               title="Set as Primary"
             >
@@ -107,7 +132,7 @@ export default function ResumeDetail({ params }: { params: { id: string } }) {
             </button>
           )}
           <button
-            onClick={() => deleteResume(resume.id)}
+            onClick={() => setConfirmDelete(true)}
             className="p-2 rounded-xl bg-surface-100 dark:bg-slate-800/50 hover:bg-surface-200 dark:hover:bg-slate-800 text-surface-500 dark:text-slate-400 hover:text-rose-400 transition-colors"
             title="Delete Resume"
           >
@@ -505,6 +530,16 @@ export default function ResumeDetail({ params }: { params: { id: string } }) {
           </section>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete Resume?"
+        message="This will permanently delete this resume and all of its associated analyses, roadmaps, and interview sessions. This action cannot be undone."
+        confirmLabel="Delete Resume"
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }

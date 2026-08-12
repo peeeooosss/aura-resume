@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Upload, Zap, ArrowRight, Sparkles, FileText } from 'lucide-react';
 import Link from 'next/link';
+import { useCreditsStore } from '@/lib/hooks/useCredits';
 
 export default function Home() {
   const router = useRouter();
@@ -56,6 +57,7 @@ export default function Home() {
         creditsUsed: data.creditsUsed,
         creditsRemaining: data.creditsRemaining,
       }));
+      useCreditsStore.getState().refresh();
       router.push(`/results?id=${data.id}`);
     } catch {
       setError('Network error. Please check your connection and try again.');
