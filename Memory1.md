@@ -5939,4 +5939,35 @@ Confirmed existing AI Interview feature:
 
 ---
 
+**Session Date:** 8/13/2026
+
+### Summary of Changes
+
+#### 1. Deployed the pending resume/credits fixes + verified reported bugs (`bbdd616..c4fd370` pushed)
+- Pushed `dd1e356` (resume delete/primary + credits/plan sync) and `c4fd370` (ResumeDetail redirect) to `origin main` → Vercel auto-deploy.
+- **"4 skills detected"** bug: deployed code counted `resume.strengths` (4 analysis sentences) as skills. `HEAD` uses `getResumeSkills()`/`extractSkillsFromText` (`lib/ai/extractSkills.ts`) — verified 14 real skills extracted from the fixed DB resume (`optimizedText`=14, `rawText`=9). Fixed in the deployed build.
+- **Delete not working** bug: deployed `deleteResume` was client-only. `HEAD` calls `DELETE /api/resumes/[id]`. FK audit confirmed Analysis/Roadmap/InterviewSession CASCADE, JobMatch/Portfolio SET NULL, `parentId` SET NULL; delete tested in a rolled-back transaction (nothing removed).
+- **ResumeDetail 404**: `router.push('/resumes')` + two `href="/resumes"` (route is `/dashboard/resumes`) → fixed in `c4fd370`.
+
+#### 2. Cover letter "Application error" (`lib/ai/openrouter.ts`, `components/dashboard/templates/TemplatesPage.tsx`)
+- Root-cause path: `POST /api/templates` → `generateCoverLetter` → `callOpenRouter(expectJson:true)` (already runs `extractJsonFromResponse`, incl. truncated-JSON recovery) → `JSON.parse(content)`. Parse failures threw the generic `'AI returned invalid data. Please try again.'`.
+- `generateCoverLetter` catch now preserves the real error message (`e instanceof Error ? e.message : '...'`) instead of swallowing it.
+- `TemplatesPage` `handleGenerate` failures were silent (`console.error` only) → added `genError` state rendered as an `AlertTriangle` banner above the Generate button.
+- Early retry attempts (`SIMPLE_COVER_LETTER_PROMPT` + prompt duplication in wrong scopes) broke the file and were discarded via `git checkout lib/ai/openrouter.ts`; final change is the minimal catch-message improvement + UI error.
+
+#### 3. Job titles link to the original postings (`JobBrowserPage.tsx`, `JobMatchesPage.tsx`)
+- Titles previously linked to the internal `/dashboard/jobs/[id]` detail page. The search API already returns `applyUrl` (`job.jobUrl` from ts-jobspy, i.e. the real Indeed/LinkedIn URL).
+- Titles are now `<a href={job.applyUrl} target="_blank" rel="noopener noreferrer">` in both Job Search (`JobBrowserPage`) and Job Match (`JobMatchesPage`) cards, falling back to the internal detail link when `applyUrl` is empty.
+
+### Commits
+- `bc62a1c` fix: improve cover letter error handling and make job titles link to original postings
+- `4844e33` fix: surface cover letter generation errors in the UI
+
+### Verified
+- `npx tsc --noEmit` clean
+- `npm run build` succeeds
+- Pushed `bc62a1c`, `4844e33` to `origin main` → Vercel auto-deploy
+
+---
+
 
