@@ -45,7 +45,7 @@ export default function ResumeDetail({ params }: { params: { id: string } }) {
     setConfirmDelete(false);
     if (ok) {
       toast('success', 'Resume deleted');
-      router.push('/resumes');
+      router.push('/dashboard/resumes');
     } else {
       toast('error', 'Failed to delete resume');
     }
@@ -58,7 +58,7 @@ export default function ResumeDetail({ params }: { params: { id: string } }) {
         <h1 className="text-2xl font-bold text-surface-900 dark:text-white mb-2">Resume Not Found</h1>
         <p className="text-surface-500 dark:text-slate-400 mb-6">The resume you're looking for doesn't exist.</p>
         <Link
-          href="/resumes"
+          href="/dashboard/resumes"
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-surface-100 hover:bg-surface-200 text-surface-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white font-medium rounded-xl transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -93,7 +93,7 @@ export default function ResumeDetail({ params }: { params: { id: string } }) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link
-            href="/resumes"
+            href="/dashboard/resumes"
             className="p-2 rounded-xl bg-surface-100 dark:bg-slate-800/50 hover:bg-surface-200 dark:hover:bg-slate-800 text-surface-500 dark:text-slate-400 hover:text-surface-900 dark:text-white transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
