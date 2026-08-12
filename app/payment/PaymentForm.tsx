@@ -3,6 +3,9 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, CreditCard, Lock, CheckCircle, Loader2, Phone } from 'lucide-react';
+import { usePlan } from '@/lib/hooks/usePlan';
+import { useCreditsStore } from '@/lib/hooks/useCredits';
+import type { PlanId } from '@/lib/constants/plans';
 
 declare global {
   interface Window {
@@ -168,6 +171,8 @@ export default function PaymentForm() {
             }
 
             setResumeId(verifyData.resumeId);
+            usePlan.getState().setPlan(plan.planId as PlanId);
+            useCreditsStore.getState().refresh();
             setLoading(false);
             setStep('success');
           } catch (err: any) {

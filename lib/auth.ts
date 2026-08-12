@@ -80,8 +80,10 @@ export const authOptions = {
     async jwt({ token, user }: { token: any; user: any }) {
       if (user) {
         token.id = user.id;
+      }
+      if (token.id) {
         const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
+          where: { id: token.id },
           select: { username: true, onboarded: true, plan: true },
         });
         token.username = dbUser?.username ?? null;

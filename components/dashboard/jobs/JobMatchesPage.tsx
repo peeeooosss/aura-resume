@@ -6,6 +6,7 @@ import { useResumes } from '@/lib/hooks/useResumes';
 import { Target, Heart, ExternalLink, MapPin, Briefcase, ArrowRight, CheckCircle, Clock, Star, Loader2, AlertCircle, IndianRupee, FileText, ChevronRight, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import Link from 'next/link';
+import { getResumeSkills, getResumeSearchTerm } from '@/lib/ai/extractSkills';
 
 const STORAGE_KEY = 'aura-job-match-resume-id';
 
@@ -19,14 +20,7 @@ export function JobMatchesPage() {
 
   const selectedResume = useMemo(() => resumes.find(r => r.id === selectedResumeId), [resumes, selectedResumeId]);
 
-  const selectedResumeSkills = useMemo(() => {
-    if (!selectedResume) return [];
-    const fromStrengths = selectedResume.strengths;
-    const fromRolePotential = selectedResume.jobRolePotential?.skillsGap?.map((g: any) => g.skill) || [];
-    const fromRequiredSkills = (selectedResume.jobRolePotential?.potentialRoles || []).flatMap((r: any) => r.requiredSkills || []);
-    const combined = [...(fromStrengths || []), ...fromRolePotential, ...fromRequiredSkills];
-    return Array.from(new Set(combined));
-  }, [selectedResume]);
+  const selectedResumeSkills = useMemo(() => getResumeSkills(selectedResume), [selectedResume]);
 
   useEffect(() => {
     if (loadingResumes || resumes.length === 0) return;
@@ -50,7 +44,7 @@ export function JobMatchesPage() {
     if (!selectedResume) return;
     setSearching(true);
     localStorage.setItem(STORAGE_KEY, selectedResumeId);
-    await searchRealJobs('software engineer developer', 'India', selectedResumeSkills);
+    await searchRealJobs(getResumeSearchTerm(selectedResume), 'India', selectedResumeSkills);
     setHasSearched(true);
     setSearching(false);
   };
@@ -111,7 +105,7 @@ export function JobMatchesPage() {
             <div className="space-y-3 mb-6">
               {resumes.map(resume => {
                 const isSelected = resume.id === selectedResumeId;
-                const skillCount = Array.from(new Set([...(resume.strengths || []), ...((resume.jobRolePotential?.potentialRoles || []).flatMap((r: any) => r.requiredSkills || [])), ...((resume.jobRolePotential?.skillsGap || []).map((g: any) => g.skill))])).length;
+                const skillCount = getResumeSkills(resume).length;
 
                 return (
                   <button
