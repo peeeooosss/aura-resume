@@ -268,11 +268,15 @@ Rules for ALL content:
 - Task types: LEARN, BUILD, NETWORK, APPLY, INTERVIEW_PREP — distribute evenly across all 3 phases; each phase must contain at least one of each type.
 - Duration: 30-240 minutes per task.
 - All weeksData[].isUnlocked = true.
-- Include resources[] (real YouTube/video links) on days where it adds value.
+- Include resources[] on days where it adds value.
+
+CRITICAL RULE — Links:
+- NEVER invent or guess URLs. Every url field you emit WILL be checked and, if broken, replaced automatically by the system. It is far better to leave a url empty ("") than to fabricate one.
+- Do not use placeholder IDs like REAL_ID or fake domains. Only include a YouTube URL if you are confident the video exists.
+- YouTube urls must use the format "https://www.youtube.com/watch?v=REAL_ID".
 
 Rules for videos (4-5 per phase):
-- Use REAL, relevant YouTube video IDs.
-- Format url as "https://www.youtube.com/watch?v=REAL_ID".
+- Use REAL, relevant YouTube videos. Only include a video if you are confident the exact ID is valid — broken ones are dropped/replaced anyway, so prefer fewer, certain videos over many made-up ones.
 - Titles must be specific and relevant to the phase theme.
 
 Rules for researchResources (4-5 per phase) NEW:

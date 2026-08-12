@@ -5765,3 +5765,130 @@ Confirmed existing AI Interview feature:
 
 ---
 
+## Remove LinkedIn Analyser from Sidebar + Fix Job Matches "Find Matches" Button
+
+**Session Date:** 8/12/2026
+
+### Summary of Changes
+
+#### 1. Removed LinkedIn Analyser + Analysis History from Sidebar (`lib/constants/nav.ts`)
+- Deleted `LinkedIn Analyser` (`/dashboard/linkedin`) and `Analysis History` (`/dashboard/linkedin/history`) nav items from the "Core" section
+- Removed now-unused `Linkedin` and `Clock` lucide imports from `nav.ts`
+- Removed unused `Users` lucide import in `components/dashboard/Sidebar.tsx`
+- Note: the `/dashboard/linkedin` and `/dashboard/linkedin/history` page files still exist — they are just no longer reachable from the sidebar
+
+#### 2. Fixed Job Matches "Find Matches" Button (`components/dashboard/jobs/JobMatchesPage.tsx`)
+- **Root cause**: `selectedResumeSkills` read `selectedResume.analysis?.strengths` and `selectedResume.skills`, but the `/api/resumes` endpoint flattens analysis data onto the resume object as `strengths` (no `analysis` or `skills` fields). Skills were always empty → button permanently `disabled` → "Find Matches" appeared broken. Regression from commit `447579f`.
+- Fixed skill extraction to use `selectedResume.strengths` plus fallback skills from `jobRolePotential` (`skillsGap[].skill` and `potentialRoles[].requiredSkills`)
+- Updated resume-card skill count to use the same real fields
+- Relaxed the button's `disabled` condition and `handleFindMatches` guard to only require a selected resume — search now always runs even when no skills are detected (jobs fetched without skill enrichment), per user preference
+- Added a hint box when no skills are detected: *"No skills detected for this resume. Jobs will still be searched without skill matching."*
+- Removed unused destructured vars (`savedOnly`, `setSavedOnly`, `hasResumeSkills`) from `useJobMatches()`
+
+### Files Changed
+| File | Action |
+|------|--------|
+| `lib/constants/nav.ts` | Removed LinkedIn Analyser + Analysis History items, cleaned imports |
+| `components/dashboard/Sidebar.tsx` | Removed unused `Users` import |
+| `components/dashboard/jobs/JobMatchesPage.tsx` | Fixed skill extraction, enabled Find Matches, no-skills hint |
+
+### Commits
+- `bbdd616` — Fix job matches Find Matches button, remove LinkedIn analyser from sidebar
+
+### Verified
+- `npx tsc --noEmit` clean
+- `npm run build` succeeds
+
+---
+
+## Job Matches Use ATS-Optimized Resume Skills + Fix Plan/Credits Persistence
+
+**Session Date:** 8/12/2026
+
+### Summary of Changes
+
+#### 1. New client-safe skill extraction util (`lib/ai/extractSkills.ts`)
+- `extractSkillsFromText(text)` — parses the `## SKILLS` / "TECHNICAL SKILLS" / "CORE COMPETENCIES" section (splits on commas, `•`, `|`, `;`, `/`, newlines, bullets; stops at next known section heading), plus scans the full text with a curated keyword regex list (canonical names, e.g. `Node.js`, `CI/CD`, `React Native`), filters stop-words, dedupes case-insensitively, caps ~30
+- `getResumeSkills(resume)` — extracts from `resume.optimizedText` (ATS-fixed resume) → fallback `resume.rawText`, then merges `jobRolePotential.skillsGap[].skill` + `potentialRoles[].requiredSkills` + `strengths` (run through the keyword scanner); caps ~40
+- `getResumeSearchTerm(resume)` — top `potentialRoles[0].title` + top 2 skills, fallback `'software engineer developer'`
+- Deliberately does NOT include the old whole-text PascalCase pass from `DashboardOverview` (it produced noise like `John`, `SUMMARY`, `Built`)
+
+#### 2. Job Matches now uses optimized-resume skills (`components/dashboard/jobs/JobMatchesPage.tsx`)
+- `selectedResumeSkills` memo → `getResumeSkills(selectedResume)`
+- `handleFindMatches` → `searchRealJobs(getResumeSearchTerm(selectedResume), 'India', selectedResumeSkills)` (was hardcoded `'software engineer developer'`)
+- Resume-card `skillCount` → `getResumeSkills(resume).length`
+
+#### 3. Plan + credits now persist across refresh (DB is source of truth)
+- **Root cause**: `lib/auth.ts` jwt callback only read `plan` from the DB when `user` was present (i.e., at sign-in). After buying Pro mid-session, the JWT kept stale `'free'`, and `usePlanSync` overwrote the correct localStorage plan with it on every load. Credits were always correct in the DB (`/api/credits` GET preserves balance) — the "increasing credits" symptom was a Free plan displaying the paid balance.
+- `lib/auth.ts` — jwt callback now re-reads `plan`/`username`/`onboarded` from the DB on every call via `token.id`
+- `lib/hooks/usePlanSync.ts` — on authenticated mount, fetches `GET /api/credits` (returns `{ plan, balance }` from DB) and applies both to the `usePlan` store and `useCreditsStore`
+- `app/payment/PaymentForm.tsx` — after successful `/api/payment/verify`, immediately `usePlan.getState().setPlan(plan.planId as PlanId)` + `useCreditsStore.getState().refresh()` so the dashboard updates instantly with no refresh flicker
+
+### Files Changed
+| File | Action |
+|------|--------|
+| `lib/ai/extractSkills.ts` | NEW — skill extraction + search term utils |
+| `components/dashboard/jobs/JobMatchesPage.tsx` | Use `getResumeSkills` + `getResumeSearchTerm` |
+| `lib/auth.ts` | jwt callback always refreshes plan/username/onboarded from DB |
+| `lib/hooks/usePlanSync.ts` | Sync plan + credits from `/api/credits` on load |
+| `app/payment/PaymentForm.tsx` | Update plan + credits stores right after payment verify |
+
+### Notes / Outstanding
+- Not yet applied: reusing `getResumeSkills` inside `components/dashboard/DashboardOverview.tsx` (planned, unconfirmed)
+- Plan expiry (3-month) is not tracked anywhere in the DB — out of scope
+- Pre-existing build warnings: `/api/linkedin/history` + `/api/user/export` static-gen "Dynamic server usage" logs are unrelated to these changes
+
+### Verified
+- `npx tsc --noEmit` clean
+- `npm run build` succeeds
+- `ts-node` sanity check of extraction logic (section parsing, canonical names, `.NET`, search term, fallback)
+
+---
+
+## Fix Broken/Hallucinated Links in 90-Day Roadmaps (Deterministic Repair Layer)
+
+**Session Date:** 8/12/2026
+
+### Summary of Changes
+
+#### 1. New verified-link catalog + repair layer (`lib/ai/roadmapLinks.ts`, NEW)
+- `TOPICS` catalog with per-topic `keywords` + curated, oembed-verified YouTube videos (22 IDs verified live via `youtube.com/oembed`) + `articles` + `practicePlatforms`; `GENERAL_TOPIC` fallback (STAR-method interview video); `PLATFORM_CANONICAL` map (leetcode, pramp, mdn, freecodecamp, roadmap.sh, etc.)
+- `verifyYoutubeId(id)` / `verifyHttpUrl(url)` — HTTP checks (5-7s timeout, module-level promise cache)
+- `sanitizeUrl`, `extractYouTubeId`, `matchTopic` (keyword scoring), `pickVideo`, `pickPlatform`
+- `repairVideoEntry` / `repairResourceEntry` / `repairPlatformEntry` — validate each link; if broken, replace with a topic-matched verified catalog item (or drop if nothing matches); normalize YouTube URLs to `https://www.youtube.com/watch?v=<id>`
+- `repairRoadmap`/`repairRoadmapLinks(roadmap)` — walks `phases[].weeksData[].days[].resources`, `phaseContent.videos`, `researchResources`, `practicePlatforms` concurrently, returns `{ roadmap, stats: {checked, kept, replaced, dropped} }`, recomputes `totalTasks`
+
+#### 2. Wired into generation (`lib/ai/openrouter.ts`, `app/api/roadmap/route.ts`)
+- `generateRoadmapFromResume` now runs `repairRoadmapLinks` on the parsed phases before returning (server-only, free HTTP checks, no LLM tokens)
+- Roadmap model switched `google/gemini-2.5-flash` → `google/gemini-2.5-pro` (~$0.13/roadmap at 4.5K in / 12K out; 66K output cap suits long JSON; Pro/VIP-gated at 120 credits, margins hold). Updated `modelUsed` in `route.ts`
+- Hardened `ROADMAP_FROM_RESUME_PROMPT` (prompts.ts): "NEVER invent or guess URLs … leave url empty rather than fabricate; broken links are auto-replaced" + only include YouTube IDs you are confident exist
+
+#### 3. One-time repair script (`scripts/repairRoadmapLinks.ts`, NEW + `package.json` script)
+- `npm run repair:roadmaps` (uses `ts-node` with `TS_NODE_COMPILER_OPTIONS='{"module":"commonjs","moduleResolution":"node"}'` — required because root tsconfig uses `module: esnext` which makes ts-node emit ESM that Node can't resolve without extensions)
+- Flags: `--dry-run`/`-n` (default), `--yes`/`-y` to write; deep-equal change detection (order-insensitive, since `repairVideoEntry` rebuilds objects with `{title,url,description}` key order vs stored `{url,title}`)
+- Ran on the one existing roadmap ("90-Day Roadmap: AI/ML Engineer"): 60 links → 22 kept, 38 replaced, 0 dropped; re-run idempotent (0 changes)
+
+### Notable Details / Decisions
+- Verified facts: LLMs hallucinate URLs even with strong models; the deterministic repair layer is the real guarantee. The catalog + validation is the source of truth.
+- Fixed catalog bug: REST API candidate `duSg0OgZh2Y` was 404 → replaced with `iYM2zFP3Zn0` (Traversy "HTTP Crash Course & Exploration"); DSA video `t2CEgPsws3U` verified live
+- Expanded ML/data keywords (gan, transformer, attention, llm, sagemaker, mlops, spark, data lake/warehouse, etl, …) so replacements map to relevant ML/data-science videos instead of the generic STAR-method fallback
+- Known limitation (out of scope): multiple broken videos in one phase can be replaced by the same catalog video; dedup per phase is a possible future improvement
+
+### Files Changed
+| File | Action |
+|------|--------|
+| `lib/ai/roadmapLinks.ts` | NEW — verified catalog + repair layer |
+| `lib/ai/openrouter.ts` | gemini-2.5-pro + `repairRoadmapLinks` call |
+| `lib/ai/prompts.ts` | Hardened link rules |
+| `app/api/roadmap/route.ts` | `modelUsed` → gemini-2.5-pro |
+| `scripts/repairRoadmapLinks.ts` | NEW — one-time repair script |
+| `package.json` | `repair:roadmaps` script |
+
+### Verified
+- `npx tsc --noEmit` clean
+- `npm run build` succeeds
+- `npm run repair:roadmaps -- --dry-run` idempotent after applying `--yes` on existing roadmap
+- All catalog YouTube IDs oembed-verified (HTTP 200)
+
+---
+

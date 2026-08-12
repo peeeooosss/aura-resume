@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       });
 
       await tx.usageRecord.create({
-        data: { userId, type: 'roadmap', count: 1, modelUsed: 'google/gemini-2.5-flash' },
+        data: { userId, type: 'roadmap', count: 1, modelUsed: 'google/gemini-2.5-pro' },
       });
 
       return roadmap;

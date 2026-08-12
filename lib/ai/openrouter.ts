@@ -2,6 +2,7 @@ import { buildResumeAnalysisPrompt, buildLinkedInAnalysisPrompt, buildCoverLette
 import type { JobRolePotential } from '@/lib/types';
 import type { RoadmapGenerationResult } from '@/lib/types/roadmap';
 import type { InterviewQuestion, InterviewScores, FinalReport } from '@/lib/types/interview';
+import { repairRoadmapLinks } from './roadmapLinks';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -716,7 +717,7 @@ export async function generateRoadmapFromResume(
   const { content, tokensUsed, finishReason } = await callOpenRouter([
     { role: 'system', content: ROADMAP_FROM_RESUME_PROMPT },
     { role: 'user', content: buildRoadmapFromResumePrompt(resumeText, analysis) },
-  ],   { model: 'google/gemini-2.5-flash', temperature: 0.4, maxTokens: 20000, expectJson: true });
+  ],   { model: 'google/gemini-2.5-pro', temperature: 0.4, maxTokens: 20000, expectJson: true });
 
   if (finishReason === 'length') {
     console.error('Roadmap generation truncated at', tokensUsed, 'tokens.');
@@ -737,12 +738,15 @@ export async function generateRoadmapFromResume(
       phaseContent: phase.phaseContent || { videos: [], quiz: [], projects: [], aiInterview: [] },
     }));
 
+    const { roadmap: repairedRoadmap } = await repairRoadmapLinks({ ...parsed, phases });
+    const repairedPhases = repairedRoadmap.phases || phases;
+
     return {
       recommendedRole: parsed.recommendedRole,
       currentStrengths: parsed.currentStrengths || [],
       criticalGaps: parsed.criticalGaps || [],
-      phases,
-      totalTasks: phases.reduce((acc: number, phase: any) =>
+      phases: repairedPhases,
+      totalTasks: repairedPhases.reduce((acc: number, phase: any) =>
         acc + (phase.weeksData?.reduce((wAcc: number, week: any) =>
           wAcc + (week.days?.length || 0), 0) || 0), 0) || 0,
       tokensUsed,
