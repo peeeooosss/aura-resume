@@ -10,7 +10,7 @@ import Link from 'next/link';
 const STORAGE_KEY = 'aura-job-match-resume-id';
 
 export function JobMatchesPage() {
-  const { matches, savedOnly, setSavedOnly, toggleSave, stats, isLoading, error, searchRealJobs, setFilters, hasResumeSkills } = useJobMatches();
+  const { matches, toggleSave, stats, isLoading, error, searchRealJobs, setFilters } = useJobMatches();
   const { resumes, loading: loadingResumes } = useResumes();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedResumeId, setSelectedResumeId] = useState<string>('');
@@ -21,9 +21,10 @@ export function JobMatchesPage() {
 
   const selectedResumeSkills = useMemo(() => {
     if (!selectedResume) return [];
-    const fromAnalysis = selectedResume.analysis?.strengths;
-    const directSkills = selectedResume.skills;
-    const combined = [...(directSkills || []), ...(fromAnalysis || [])];
+    const fromStrengths = selectedResume.strengths;
+    const fromRolePotential = selectedResume.jobRolePotential?.skillsGap?.map((g: any) => g.skill) || [];
+    const fromRequiredSkills = (selectedResume.jobRolePotential?.potentialRoles || []).flatMap((r: any) => r.requiredSkills || []);
+    const combined = [...(fromStrengths || []), ...fromRolePotential, ...fromRequiredSkills];
     return Array.from(new Set(combined));
   }, [selectedResume]);
 
@@ -46,7 +47,7 @@ export function JobMatchesPage() {
   }, []);
 
   const handleFindMatches = async () => {
-    if (!selectedResume || selectedResumeSkills.length === 0) return;
+    if (!selectedResume) return;
     setSearching(true);
     localStorage.setItem(STORAGE_KEY, selectedResumeId);
     await searchRealJobs('software engineer developer', 'India', selectedResumeSkills);
@@ -110,7 +111,7 @@ export function JobMatchesPage() {
             <div className="space-y-3 mb-6">
               {resumes.map(resume => {
                 const isSelected = resume.id === selectedResumeId;
-                const skillCount = Array.from(new Set([...(resume.skills || []), ...(resume.analysis?.strengths || [])])).length;
+                const skillCount = Array.from(new Set([...(resume.strengths || []), ...((resume.jobRolePotential?.potentialRoles || []).flatMap((r: any) => r.requiredSkills || [])), ...((resume.jobRolePotential?.skillsGap || []).map((g: any) => g.skill))])).length;
 
                 return (
                   <button
@@ -154,7 +155,7 @@ export function JobMatchesPage() {
               })}
             </div>
 
-            {selectedResume && selectedResumeSkills.length > 0 && (
+            {selectedResume && selectedResumeSkills.length > 0 ? (
               <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mb-6">
                 <p className="text-emerald-400 text-sm font-medium">
                   {selectedResumeSkills.length} skills will be used for matching
@@ -172,11 +173,17 @@ export function JobMatchesPage() {
                   )}
                 </div>
               </div>
-            )}
+            ) : selectedResume ? (
+              <div className="p-4 bg-slate-500/10 border border-slate-500/20 rounded-xl mb-6">
+                <p className="text-slate-400 text-sm font-medium">
+                  No skills detected for this resume. Jobs will still be searched without skill matching.
+                </p>
+              </div>
+            ) : null}
 
             <button
               onClick={handleFindMatches}
-              disabled={!selectedResumeId || selectedResumeSkills.length === 0 || searching}
+              disabled={!selectedResumeId || searching}
               className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {searching ? (

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, Target, Search, Map, Globe,
   Settings, ChevronLeft, ChevronRight, Menu, X,
-  Bell, User, LogOut, Shield, Zap, Sparkles, Users, Award, Coins,
+  Bell, User, LogOut, Shield, Zap, Sparkles, Award, Coins,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import { usePlan } from '@/lib/hooks/usePlan';

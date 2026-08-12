@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, Target, Search, Map, Globe,
   Settings, Mail, Mic, Shield, Zap, Sparkles, Users, Award,
-  Wrench, FilePen, FileSearch, Linkedin, Clock,
+  Wrench, FilePen, FileSearch,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -12,8 +12,6 @@ export const NAV_ITEMS = [
       { href: '/dashboard/resumes', label: 'My Resumes', icon: FileText, plan: 'free' as const, badge: null },
       { href: '/dashboard/fixer', label: 'Resume Fixer', icon: Wrench, plan: 'free' as const, badge: null },
       { href: '/dashboard/templates', label: 'Cover Letters', icon: FilePen, plan: 'pro' as const, badge: null },
-      { href: '/dashboard/linkedin', label: 'LinkedIn Analyser', icon: Linkedin, plan: 'pro' as const, badge: null },
-      { href: '/dashboard/linkedin/history', label: 'Analysis History', icon: Clock, plan: 'pro' as const, badge: null },
     ],
   },
   {
