@@ -318,9 +318,20 @@ function JobCard({ job }: { job: any }) {
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-2">
-            <Link href={`/dashboard/jobs/${job.id}`} className="text-xl font-semibold text-surface-900 dark:text-white hover:text-indigo-400 transition-colors">
-              {job.title}
-            </Link>
+            {job.applyUrl ? (
+              <a
+                href={job.applyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xl font-semibold text-surface-900 dark:text-white hover:text-indigo-400 transition-colors"
+              >
+                {job.title}
+              </a>
+            ) : (
+              <Link href={`/dashboard/jobs/${job.id}`} className="text-xl font-semibold text-surface-900 dark:text-white hover:text-indigo-400 transition-colors">
+                {job.title}
+              </Link>
+            )}
             <span className={cn('px-2 py-0.5 text-xs font-semibold rounded-full', scoreBg, scoreColor)}>
               {job.matchScore}% Match
             </span>

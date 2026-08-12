@@ -316,9 +316,20 @@ function JobMatchCard({ job, onToggleSave }: { job: any; onToggleSave: (id: stri
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <Link href={`/dashboard/jobs/${job.id}`} className="text-xl font-semibold text-surface-900 dark:text-white hover:text-indigo-400 transition-colors">
-                {job.title}
-              </Link>
+              {job.applyUrl ? (
+                <a
+                  href={job.applyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xl font-semibold text-surface-900 dark:text-white hover:text-indigo-400 transition-colors"
+                >
+                  {job.title}
+                </a>
+              ) : (
+                <Link href={`/dashboard/jobs/${job.id}`} className="text-xl font-semibold text-surface-900 dark:text-white hover:text-indigo-400 transition-colors">
+                  {job.title}
+                </Link>
+              )}
               <span className={cn('px-2.5 py-1 text-xs font-semibold rounded-full border', scoreBg, scoreColor)}>
                 {job.matchScore}% Match
               </span>

@@ -622,8 +622,10 @@ export async function generateCoverLetter(
       tokensUsed,
     };
   } catch (e) {
-    console.error('Failed to parse cover letter. Raw content:\n', content);
-    throw new Error('AI returned invalid data. Please try again.');
+    const message =
+      e instanceof Error ? e.message : 'AI returned invalid data. Please try again or contact support.';
+    console.error('Cover letter generation error:', message);
+    throw new Error(message);
   }
 }
 
