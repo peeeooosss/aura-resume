@@ -152,6 +152,7 @@ export function TemplatesPage() {
   const [newJDUrl, setNewJDUrl] = useState('');
   const [resumeId, setResumeId] = useState('');
   const [resumes, setResumes] = useState<Array<{id: string; title: string}>>([]);
+  const [genError, setGenError] = useState('');
 
   const hasAccess = currentPlan !== 'free' && currentPlan !== 'quick';
 
@@ -186,6 +187,7 @@ export function TemplatesPage() {
       return;
     }
     setLoading(true);
+    setGenError('');
     try {
       const res = await fetch('/api/templates', {
         method: 'POST',
@@ -200,6 +202,7 @@ export function TemplatesPage() {
       useCreditsStore.getState().refresh();
     } catch (e) {
       console.error(e);
+      setGenError(e instanceof Error ? e.message : 'Cover letter generation failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -294,6 +297,12 @@ export function TemplatesPage() {
               ))}
             </select>
           </div>
+          {genError && (
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>{genError}</span>
+            </div>
+          )}
           <button
             onClick={handleGenerate}
             disabled={!newJDText.trim() || loading}
