@@ -19,17 +19,45 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Username must be 3-20 characters, letters, numbers, and underscores only' }, { status: 400 });
     }
 
+    const existingUsername = await prisma.user.findUnique({ where: { username } });
+
     const existingEmail = await prisma.user.findUnique({ where: { email } });
+    const passwordHash = await bcrypt.hash(password, 12);
+
     if (existingEmail) {
-      return NextResponse.json({ error: 'Email already registered' }, { status: 409 });
+      if (existingEmail.passwordHash) {
+        return NextResponse.json({ error: 'Email already registered' }, { status: 409 });
+      }
+
+      if (existingUsername && existingUsername.id !== existingEmail.id) {
+        return NextResponse.json({ error: 'Username already taken' }, { status: 409 });
+      }
+
+      const user = await prisma.user.update({
+        where: { id: existingEmail.id },
+        data: {
+          name: name || existingEmail.name || username,
+          username,
+          passwordHash,
+          onboarded: true,
+        },
+      });
+
+      await prisma.creditBalance.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          balance: getInitialCredits('free'),
+        },
+      });
+
+      return NextResponse.json({ userId: user.id, email: user.email, username: user.username });
     }
 
-    const existingUsername = await prisma.user.findUnique({ where: { username } });
     if (existingUsername) {
       return NextResponse.json({ error: 'Username already taken' }, { status: 409 });
     }
-
-    const passwordHash = await bcrypt.hash(password, 12);
 
     const user = await prisma.user.create({
       data: {

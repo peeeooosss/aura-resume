@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireSessionUserId } from '@/lib/auth/getSessionUser';
+import { getSessionUserId } from '@/lib/auth/getSessionUser';
 import { prisma } from '@/lib/db';
 import Razorpay from 'razorpay';
 import { getPlanBySlug } from '@/lib/constants/plans';
@@ -15,9 +15,11 @@ if (!KEY_ID || !KEY_SECRET) {
 
 const razorpay = new Razorpay({ key_id: KEY_ID, key_secret: KEY_SECRET });
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireSessionUserId();
+    const userId = await getSessionUserId();
     const body = await req.json();
 
     let amount: number;
@@ -27,6 +29,10 @@ export async function POST(req: NextRequest) {
     const type = body.type === 'refill' ? 'refill' : 'plan';
 
     if (type === 'refill') {
+      if (!userId) {
+        return NextResponse.json({ error: 'Please sign in to refill credits' }, { status: 401 });
+      }
+
       const credits = Number(body.credits);
       const user = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } });
       const currentPlan = await resolvePlanValidity(userId, (user?.plan as string) || 'free');
@@ -57,16 +63,50 @@ export async function POST(req: NextRequest) {
       metadata = { type: 'plan', planId: def.id, slug };
     }
 
+    let paymentUserId: string;
+
+    if (userId) {
+      paymentUserId = userId;
+    } else {
+      if (plan !== 'quick') {
+        return NextResponse.json({ error: 'Please sign in to purchase this plan' }, { status: 401 });
+      }
+
+      const guest = (body.guest || {}) as { name?: string; email?: string; phone?: string };
+      const name = (guest.name || '').trim();
+      const email = (guest.email || '').trim().toLowerCase();
+      const phone = (guest.phone || '').trim();
+
+      if (!name || !email || !EMAIL_RE.test(email) || !/^\d{10}$/.test(phone)) {
+        return NextResponse.json(
+          { error: 'Please provide a valid name, email, and 10-digit phone number' },
+          { status: 400 }
+        );
+      }
+
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing) {
+        paymentUserId = existing.id;
+      } else {
+        const created = await prisma.user.create({
+          data: { email, name, plan: 'free', onboarded: false },
+        });
+        paymentUserId = created.id;
+      }
+
+      metadata = { ...metadata, guest: true, guestName: name, guestEmail: email, guestPhone: phone };
+    }
+
     const order = await razorpay.orders.create({
       amount,
       currency: 'INR',
-      receipt: `rcpt_${userId.slice(0, 8)}_${Date.now()}`,
-      notes: { userId, plan, ...metadata },
+      receipt: `rcpt_${paymentUserId.slice(0, 8)}_${Date.now()}`,
+      notes: { userId: paymentUserId, plan, ...metadata },
     });
 
     await prisma.payment.create({
       data: {
-        userId,
+        userId: paymentUserId,
         razorpayId: order.id,
         amount,
         currency: 'INR',

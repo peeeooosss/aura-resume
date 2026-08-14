@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { ArrowLeft, CreditCard, Lock, CheckCircle, Loader2, User } from 'lucide-react';
+import { ArrowLeft, CreditCard, Lock, CheckCircle, Loader2, User, Phone } from 'lucide-react';
 import { usePlan } from '@/lib/hooks/usePlan';
 import { useCreditsStore } from '@/lib/hooks/useCredits';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -25,6 +25,7 @@ export default function PaymentForm() {
   const { user, authenticated, loading: authLoading } = useAuth();
 
   const planDef = getPlanBySlug(rawPlan) || getPlanBySlug('quick-fix')!;
+  const isQuickFix = planDef.id === 'quick';
   const plan = {
     slug: planDef.slug,
     planId: planDef.id,
@@ -38,9 +39,10 @@ export default function PaymentForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resumeId, setResumeId] = useState<string | null>(null);
+  const [guest, setGuest] = useState({ name: '', email: '', phone: '' });
   const startedRef = useRef(false);
 
-  const runCheckout = useCallback(async () => {
+  const runCheckout = useCallback(async (guestData?: { name: string; email: string; phone: string }) => {
     setLoading(true);
     setError('');
 
@@ -55,7 +57,10 @@ export default function PaymentForm() {
       const orderRes = await fetch('/api/payment/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: plan.slug }),
+        body: JSON.stringify({
+          plan: plan.slug,
+          ...(guestData ? { guest: guestData } : {}),
+        }),
       });
 
       const orderData = await readJsonResponse(orderRes);
@@ -94,7 +99,9 @@ export default function PaymentForm() {
         name: 'Aura Resume',
         description: `${plan.name} — ₹${plan.price}`,
         order_id: orderId,
-        prefill: { name: user?.name || '', email: user?.email || '' },
+        prefill: guestData
+          ? { name: guestData.name, email: guestData.email, contact: guestData.phone }
+          : { name: user?.name || '', email: user?.email || '' },
         theme: { color: '#6366f1' },
         handler: async (response: any) => {
           setStep('processing');
@@ -106,6 +113,7 @@ export default function PaymentForm() {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
+                ...(guestData ? { guestEmail: guestData.email } : {}),
                 ...(storedResumeText ? {
                   resumeText: storedResumeText,
                   analysis: storedAnalysis,
@@ -135,8 +143,10 @@ export default function PaymentForm() {
             }
 
             setResumeId(verifyData.resumeId || null);
-            usePlan.getState().setPlan(plan.planId as any);
-            useCreditsStore.getState().refresh();
+            if (!guestData) {
+              usePlan.getState().setPlan(plan.planId as any);
+              useCreditsStore.getState().refresh();
+            }
             setLoading(false);
             setStep('success');
           } catch (err: any) {
@@ -166,16 +176,25 @@ export default function PaymentForm() {
 
   useEffect(() => {
     if (authLoading) return;
+
     if (!authenticated) {
+      if (isQuickFix) return;
       const redirect = `/payment?plan=${plan.slug}${resultId ? `&resultId=${encodeURIComponent(resultId)}` : ''}`;
       router.replace(`/login?redirect=${encodeURIComponent(redirect)}`);
       return;
     }
+
     if (!startedRef.current) {
       startedRef.current = true;
       runCheckout();
     }
-  }, [authLoading, authenticated, plan.slug, resultId, runCheckout, router]);
+  }, [authLoading, authenticated, isQuickFix, plan.slug, resultId, runCheckout, router]);
+
+  const handleGuestSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guest.name.trim() || !guest.email.trim() || guest.phone.length !== 10) return;
+    runCheckout(guest);
+  };
 
   if (authLoading) {
     return (
@@ -199,7 +218,9 @@ export default function PaymentForm() {
             <p className="text-slate-400 mb-6">Your {plan.name} plan is now active.</p>
             <button
               onClick={() => {
-                if (resumeId) {
+                if (!authenticated && resultId) {
+                  router.push(`/report/${resultId}?unlocked=true`);
+                } else if (resumeId) {
                   router.push(`/dashboard/resumes/${resumeId}/report`);
                 } else if (resultId) {
                   router.push(`/report/${resultId}?unlocked=true`);
@@ -239,7 +260,9 @@ export default function PaymentForm() {
               <CreditCard className="w-4 h-4 text-emerald-400" />
               <span className="text-sm text-emerald-300 font-medium">Secure Payment via Razorpay</span>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-3">Complete Your Purchase</h1>
+            <h1 className="text-3xl font-bold text-white mb-3">
+              {!authenticated && isQuickFix ? 'Unlock Your Optimized Resume' : 'Complete Your Purchase'}
+            </h1>
             <p className="text-slate-400">
               {plan.name} — <span className="text-white font-semibold">₹{plan.price}</span> {plan.period}
             </p>
@@ -254,35 +277,105 @@ export default function PaymentForm() {
             ))}
           </div>
 
-          {user && (
-            <div className="flex items-center gap-3 p-4 bg-slate-800/50 rounded-xl border border-slate-700 mb-6">
-              <div className="w-10 h-10 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
-                <User className="w-5 h-5 text-indigo-400" />
+          {!authenticated && isQuickFix ? (
+            <form onSubmit={handleGuestSubmit} className="space-y-4 mb-6">
+              <div>
+                <label htmlFor="guest-name" className="block text-sm font-medium text-slate-300 mb-2">Full Name</label>
+                <input
+                  id="guest-name"
+                  type="text"
+                  value={guest.name}
+                  onChange={(e) => setGuest({ ...guest, name: e.target.value })}
+                  required
+                  disabled={loading}
+                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                  placeholder="John Doe"
+                />
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{user.name || 'Account'}</p>
-                <p className="text-xs text-slate-400 truncate">{user.email}</p>
+              <div>
+                <label htmlFor="guest-email" className="block text-sm font-medium text-slate-300 mb-2">Email Address</label>
+                <input
+                  id="guest-email"
+                  type="email"
+                  value={guest.email}
+                  onChange={(e) => setGuest({ ...guest, email: e.target.value })}
+                  required
+                  disabled={loading}
+                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                  placeholder="john@example.com"
+                />
               </div>
-            </div>
-          )}
+              <div>
+                <label htmlFor="guest-phone" className="block text-sm font-medium text-slate-300 mb-2">Phone Number</label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                  <input
+                    id="guest-phone"
+                    type="tel"
+                    value={guest.phone}
+                    onChange={(e) => setGuest({ ...guest, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                    required
+                    disabled={loading}
+                    className="w-full pl-12 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                    placeholder="9876543210"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                Your details are saved securely. You can preview and download your optimized resume instantly after payment.
+              </p>
 
-          {error && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-sm text-center mb-6">
-              {error}
-            </div>
-          )}
+              {error && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-sm text-center">
+                  {error}
+                </div>
+              )}
 
-          <button
-            onClick={runCheckout}
-            disabled={loading}
-            className="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-emerald-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> Opening Razorpay...</>
-            ) : (
-              `Pay ₹${plan.price} Securely`
-            )}
-          </button>
+              <button
+                type="submit"
+                disabled={loading || !guest.name.trim() || !guest.email.trim() || guest.phone.length !== 10}
+                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-emerald-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <><Loader2 className="w-5 h-5 animate-spin" /> Opening Razorpay...</>
+                ) : (
+                  `Pay ₹${plan.price} Securely`
+                )}
+              </button>
+            </form>
+          ) : (
+            <>
+              {authenticated && (
+                <div className="flex items-center gap-3 p-4 bg-slate-800/50 rounded-xl border border-slate-700 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
+                    <User className="w-5 h-5 text-indigo-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{user?.name || 'Account'}</p>
+                    <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-sm text-center mb-6">
+                  {error}
+                </div>
+              )}
+
+              <button
+                onClick={() => runCheckout()}
+                disabled={loading}
+                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-emerald-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <><Loader2 className="w-5 h-5 animate-spin" /> Opening Razorpay...</>
+                ) : (
+                  `Pay ₹${plan.price} Securely`
+                )}
+              </button>
+            </>
+          )}
 
           <div className="flex items-center justify-center gap-2 text-center mt-6">
             <Lock className="w-4 h-4 text-slate-500" />

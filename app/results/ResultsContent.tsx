@@ -2,10 +2,10 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
 import { Check, Lock, Shield, ArrowLeft, Sparkles, FileText, Linkedin as LinkedinIcon, Link, Star, Zap, Users, ArrowRight, Target, Loader2 } from 'lucide-react';
 import type { DualAnalysisResult, SingleAnalysis } from '@/lib/types';
 import { generateMockAnalysis } from '@/lib/mockData';
+import { PLAN_DEFINITIONS } from '@/lib/constants/plans';
 
 function getScoreColor(score: number): string {
   if (score >= 80) return 'text-emerald-400';
@@ -300,7 +300,6 @@ interface Props {
 
 export default function ResultsContent({ id, testMode }: Props) {
   const router = useRouter();
-  const { status } = useSession();
   const [result, setResult] = useState<DualAnalysisResult | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -349,12 +348,6 @@ export default function ResultsContent({ id, testMode }: Props) {
     if (!result?.resume || !id) return;
 
     const paymentUrl = `/payment?plan=quick-fix&resultId=${encodeURIComponent(id)}`;
-
-    if (status !== 'authenticated') {
-      router.push(`/login?redirect=${encodeURIComponent(paymentUrl)}`);
-      return;
-    }
-
     router.push(paymentUrl);
   };
 
@@ -442,7 +435,7 @@ export default function ResultsContent({ id, testMode }: Props) {
           <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
             <PricingCard
               tier="Quick Fix"
-              price="₹49"
+              price={`₹${PLAN_DEFINITIONS.quick.price}`}
               period="one-time"
               features={[
                 'Full ATS compatibility scan',
@@ -458,7 +451,7 @@ export default function ResultsContent({ id, testMode }: Props) {
             />
             <PricingCard
               tier="Pro Bundle"
-              price="₹499"
+              price={`₹${PLAN_DEFINITIONS.pro.price}`}
               period="/3 months"
               features={[
                 'Everything in Quick Fix',
@@ -476,7 +469,7 @@ export default function ResultsContent({ id, testMode }: Props) {
             />
             <PricingCard
               tier="VIP Mentorship"
-              price="₹1,499"
+              price={`₹${PLAN_DEFINITIONS.vip.price}`}
               period="/3 months"
               features={[
                 'Everything in Pro Bundle',

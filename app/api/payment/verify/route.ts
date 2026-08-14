@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireSessionUserId } from '@/lib/auth/getSessionUser';
+import { getSessionUserId } from '@/lib/auth/getSessionUser';
 import { prisma } from '@/lib/db';
 import { getPlanDefinition } from '@/lib/constants/plans';
 import { generateATSPerfectResume } from '@/lib/ai/openrouter';
@@ -13,7 +13,7 @@ const razorpay = new Razorpay({ key_id: KEY_ID, key_secret: KEY_SECRET });
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireSessionUserId();
+    const userId = await getSessionUserId();
     const body = await req.json();
     const {
       razorpay_payment_id: paymentId,
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
       resumeText,
       analysis,
       fileName,
+      guestEmail,
     } = body;
 
     if (!paymentId || !orderId || !signature) {
@@ -39,8 +40,19 @@ export async function POST(req: NextRequest) {
     }
 
     const payment = await prisma.payment.findUnique({ where: { razorpayId: orderId } });
-    if (!payment || payment.userId !== userId) {
+    if (!payment) {
       return NextResponse.json({ error: 'Payment record not found' }, { status: 400 });
+    }
+
+    if (userId) {
+      if (payment.userId !== userId) {
+        return NextResponse.json({ error: 'Payment record not found' }, { status: 400 });
+      }
+    } else {
+      const meta = (payment.metadata as Record<string, any>) || {};
+      if (!meta.guest || !meta.guestEmail || meta.guestEmail !== (guestEmail || '').trim().toLowerCase()) {
+        return NextResponse.json({ error: 'Payment record not found' }, { status: 400 });
+      }
     }
 
     if (payment.status === 'completed') {
@@ -49,6 +61,8 @@ export async function POST(req: NextRequest) {
     if (payment.status !== 'created') {
       return NextResponse.json({ error: 'Payment record is not in a pending state' }, { status: 400 });
     }
+
+    const payUserId = userId ?? payment.userId;
 
     let order: { status: string; amount: number };
     try {
@@ -68,19 +82,19 @@ export async function POST(req: NextRequest) {
         const credits = Number((payment.metadata as Record<string, any>)?.credits) || 0;
         if (credits <= 0) throw new Error('Invalid refill credits');
         await tx.creditBalance.upsert({
-          where: { userId },
-          create: { userId, balance: credits },
+          where: { userId: payUserId },
+          create: { userId: payUserId, balance: credits },
           update: { balance: { increment: credits } },
         });
       } else {
         const def = getPlanDefinition(payment.plan);
         await tx.user.update({
-          where: { id: userId },
+          where: { id: payUserId },
           data: { plan: payment.plan },
         });
         await tx.creditBalance.upsert({
-          where: { userId },
-          create: { userId, balance: def.credits },
+          where: { userId: payUserId },
+          create: { userId: payUserId, balance: def.credits },
           update: { balance: def.credits },
         });
       }
@@ -112,7 +126,7 @@ export async function POST(req: NextRequest) {
 
         const resume = await prisma.resume.create({
           data: {
-            userId,
+            userId: payUserId,
             title,
             fileUrl: '',
             rawText: resumeText,
@@ -124,7 +138,7 @@ export async function POST(req: NextRequest) {
           await prisma.analysis.create({
             data: {
               resumeId: resume.id,
-              userId,
+              userId: payUserId,
               type: 'resume',
               overallScore: analysis.score || 0,
               strengths: analysis.strengths || [],
