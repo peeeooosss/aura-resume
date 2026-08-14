@@ -2,8 +2,9 @@
 
 import { Fragment, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Sparkles, Shield, Download, Sparkles as SparklesIcon, Users, Star, X, Check, Lock, Zap } from 'lucide-react';
+import { ArrowLeft, Sparkles, Shield, Download, Sparkles as SparklesIcon, Users, Star, X, Check, Lock } from 'lucide-react';
 import { PLAN_DEFINITIONS, type PlanId } from '@/lib/constants/plans';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 function FeatureIcon({ value }: { value: any }) {
   if (value === true) return <Check className="w-5 h-5 text-emerald-400" />;
@@ -19,11 +20,6 @@ const PLAN_DISPLAY = [
     id: 'free' as PlanId,
     icon: Shield,
     badge: null,
-  },
-  {
-    id: 'quick' as PlanId,
-    icon: Zap,
-    badge: { label: 'Instant', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
   },
   {
     id: 'pro' as PlanId,
@@ -89,23 +85,6 @@ function getFeatureValue(planId: string, featureKey: string) {
       prioritySupport: false,
       unlimitedSupport: false,
     },
-    quick: {
-      atsScan: true,
-      redFlags: true,
-      redFlagDetails: true,
-      pdfReport: true,
-      aiRewrite: 1,
-      coverLetter: false,
-      linkedinReview: false,
-      aiInterviewer: false,
-      jobMatch: false,
-      jobRoadmap: false,
-      mentoring: false,
-      salaryNegotiation: false,
-      recruiterOutreach: false,
-      prioritySupport: false,
-      unlimitedSupport: false,
-    },
     pro: {
       atsScan: true,
       redFlags: true,
@@ -147,6 +126,7 @@ function getFeatureValue(planId: string, featureKey: string) {
 export default function PlansContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { authenticated } = useAuth();
   const highlightPlan = searchParams.get('plan') || 'pro';
 
   const handleActivatePlan = (planId: string) => {
@@ -155,6 +135,12 @@ export default function PlansContent() {
 
     if (planId === 'free') {
       router.push('/');
+      return;
+    }
+
+    if (!authenticated) {
+      const redirect = `/plans?plan=${def.id}`;
+      router.push(`/login?redirect=${encodeURIComponent(redirect)}`);
       return;
     }
 
@@ -183,7 +169,7 @@ export default function PlansContent() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 mb-16 max-w-7xl mx-auto">
           {PLAN_DISPLAY.map((plan) => {
             const def = PLAN_DEFINITIONS[plan.id];
             const Icon = plan.icon;
@@ -206,7 +192,7 @@ export default function PlansContent() {
                   </div>
                   <h3 className="text-xl font-bold text-white mb-1">{def.name}</h3>
                   <p className="text-slate-500 text-sm">
-                    {plan.id === 'free' ? 'Free forever' : plan.id === 'quick' ? 'One-time payment' : 'Quarterly subscription'}
+                    {plan.id === 'free' ? 'Free forever' : 'Quarterly subscription'}
                   </p>
                 </div>
 
@@ -241,14 +227,12 @@ export default function PlansContent() {
                   className={`w-full py-3 rounded-xl font-semibold transition-all ${
                     plan.id === 'free'
                       ? 'bg-slate-800 text-white border border-slate-700 hover:bg-slate-700'
-                      : plan.id === 'quick'
-                      ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-lg hover:shadow-emerald-500/30'
                       : plan.id === 'pro'
                       ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg hover:shadow-indigo-500/30'
                       : 'bg-gradient-to-r from-amber-600 to-amber-500 text-white hover:shadow-lg hover:shadow-amber-500/30'
                   }`}
                 >
-                  {plan.id === 'free' ? 'Start Free' : plan.id === 'quick' ? 'Get Quick Fix' : 'Get Started'}
+                  {plan.id === 'free' ? 'Start Free' : 'Upgrade'}
                 </button>
               </div>
             );
@@ -280,7 +264,7 @@ export default function PlansContent() {
                 {features.map((cat) => (
                   <Fragment key={cat.category}>
                     <tr className="border-b border-slate-800/50">
-                      <td className="py-4 px-6 text-sm font-semibold text-slate-400 uppercase tracking-wider bg-slate-900/50" colSpan={5}>{cat.category}</td>
+                      <td className="py-4 px-6 text-sm font-semibold text-slate-400 uppercase tracking-wider bg-slate-900/50" colSpan={4}>{cat.category}</td>
                     </tr>
                     {cat.items.map((item) => (
                       <tr key={item.key} className="border-b border-slate-800/30 hover:bg-slate-900/30">
@@ -314,7 +298,7 @@ export default function PlansContent() {
               className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
             >
               <Download className="w-5 h-5" />
-              Get Started with Pro
+              Upgrade to Pro
             </button>
             <button
               onClick={() => handleActivatePlan('vip')}

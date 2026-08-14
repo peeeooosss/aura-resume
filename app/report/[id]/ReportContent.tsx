@@ -7,6 +7,7 @@ import { ArrowLeft, Check, Shield, FileText, Download, Sparkles, Zap, Users, Arr
 import { generateAnalysisPDF, generateOptimizedResumePDF, getPDFBlobURL, type AnalysisReportData } from '@/lib/pdf/generateReport';
 import type { DualAnalysisResult, SingleAnalysis, JobRolePotential } from '@/lib/types';
 import { useCreditsStore } from '@/lib/hooks/useCredits';
+import { PLAN_DEFINITIONS } from '@/lib/constants/plans';
 
 function getScoreColor(score: number): string {
   if (score >= 80) return 'text-emerald-400';
@@ -580,7 +581,7 @@ export default function ReportContent({ id }: { id: string }) {
                 <p className="text-slate-500 text-sm">Complete optimization for 3 months</p>
               </div>
               <div className="mb-6">
-                <span className="text-4xl font-bold text-white">₹499</span>
+                <span className="text-4xl font-bold text-white">₹{PLAN_DEFINITIONS.pro.price}</span>
                 <span className="text-slate-500 text-sm"> /3 months</span>
               </div>
               <ul className="space-y-3 mb-8">
@@ -609,7 +610,7 @@ export default function ReportContent({ id }: { id: string }) {
                 <p className="text-slate-500 text-sm">1-on-1 career coaching</p>
               </div>
               <div className="mb-6">
-                <span className="text-4xl font-bold text-white">₹1,499</span>
+                <span className="text-4xl font-bold text-white">₹{PLAN_DEFINITIONS.vip.price}</span>
                 <span className="text-slate-500 text-sm"> /3 months</span>
               </div>
               <ul className="space-y-3 mb-8">

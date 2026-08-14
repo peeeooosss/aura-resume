@@ -1,10 +1,11 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useCallback } from 'react';
-import { ArrowLeft, CreditCard, Lock, CheckCircle, Loader2, Phone } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { ArrowLeft, CreditCard, Lock, CheckCircle, Loader2, User } from 'lucide-react';
 import { usePlan } from '@/lib/hooks/usePlan';
 import { useCreditsStore } from '@/lib/hooks/useCredits';
+import { useAuth } from '@/lib/hooks/useAuth';
 import { loadRazorpayScript } from '@/lib/payment/checkout';
 import { readJsonResponse } from '@/lib/utils/helpers';
 import { getPlanBySlug } from '@/lib/constants/plans';
@@ -21,6 +22,8 @@ export default function PaymentForm() {
   const rawPlan = searchParams.get('plan') || 'quick-fix';
   const resultId = searchParams.get('resultId');
 
+  const { user, authenticated, loading: authLoading } = useAuth();
+
   const planDef = getPlanBySlug(rawPlan) || getPlanBySlug('quick-fix')!;
   const plan = {
     slug: planDef.slug,
@@ -32,16 +35,12 @@ export default function PaymentForm() {
   };
 
   const [step, setStep] = useState<'details' | 'processing' | 'success'>('details');
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resumeId, setResumeId] = useState<string | null>(null);
+  const startedRef = useRef(false);
 
-  const handleRazorpayCheckout = useCallback(async () => {
-    if (!email || !name || !phone) return;
-
+  const runCheckout = useCallback(async () => {
     setLoading(true);
     setError('');
 
@@ -95,7 +94,7 @@ export default function PaymentForm() {
         name: 'Aura Resume',
         description: `${plan.name} — ₹${plan.price}`,
         order_id: orderId,
-        prefill: { name, email, contact: phone },
+        prefill: { name: user?.name || '', email: user?.email || '' },
         theme: { color: '#6366f1' },
         handler: async (response: any) => {
           setStep('processing');
@@ -163,13 +162,28 @@ export default function PaymentForm() {
       setError(err.message || 'Something went wrong');
       setLoading(false);
     }
-  }, [email, name, phone, plan, resultId]);
+  }, [plan, resultId, user?.name, user?.email]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !name || !phone) return;
-    handleRazorpayCheckout();
-  };
+  useEffect(() => {
+    if (authLoading) return;
+    if (!authenticated) {
+      const redirect = `/payment?plan=${plan.slug}${resultId ? `&resultId=${encodeURIComponent(resultId)}` : ''}`;
+      router.replace(`/login?redirect=${encodeURIComponent(redirect)}`);
+      return;
+    }
+    if (!startedRef.current) {
+      startedRef.current = true;
+      runCheckout();
+    }
+  }, [authLoading, authenticated, plan.slug, resultId, runCheckout, router]);
+
+  if (authLoading) {
+    return (
+      <main className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <p className="text-slate-400 animate-pulse">Checking your account...</p>
+      </main>
+    );
+  }
 
   if (step === 'success') {
     return (
@@ -240,75 +254,35 @@ export default function PaymentForm() {
             ))}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-2">Full Name</label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
-                placeholder="John Doe"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">Email Address</label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
-                placeholder="john@example.com"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-slate-300 mb-2">Phone Number</label>
-              <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                <input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  required
-                  className="w-full pl-12 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
-                  placeholder="9876543210"
-                  disabled={loading}
-                />
+          {user && (
+            <div className="flex items-center gap-3 p-4 bg-slate-800/50 rounded-xl border border-slate-700 mb-6">
+              <div className="w-10 h-10 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
+                <User className="w-5 h-5 text-indigo-400" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{user.name || 'Account'}</p>
+                <p className="text-xs text-slate-400 truncate">{user.email}</p>
               </div>
             </div>
+          )}
 
-            <div className="flex items-center gap-3 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
-              <CreditCard className="w-6 h-6 text-slate-400" />
-              <span className="text-sm text-slate-300">Card / UPI / Net Banking via Razorpay</span>
+          {error && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-sm text-center mb-6">
+              {error}
             </div>
+          )}
 
-            {error && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-sm text-center">
-                {error}
-              </div>
+          <button
+            onClick={runCheckout}
+            disabled={loading}
+            className="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-emerald-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <><Loader2 className="w-5 h-5 animate-spin" /> Opening Razorpay...</>
+            ) : (
+              `Pay ₹${plan.price} Securely`
             )}
-
-            <button
-              type="submit"
-              disabled={loading || !email || !name || phone.length < 10}
-              className="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-emerald-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <><Loader2 className="w-5 h-5 animate-spin" /> Opening Razorpay...</>
-              ) : (
-                `Pay ₹${plan.price} Securely`
-              )}
-            </button>
-          </form>
+          </button>
 
           <div className="flex items-center justify-center gap-2 text-center mt-6">
             <Lock className="w-4 h-4 text-slate-500" />
