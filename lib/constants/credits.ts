@@ -15,10 +15,10 @@ export const CREDIT_COSTS = {
 export type CreditAction = keyof typeof CREDIT_COSTS;
 
 export const REFILL_OPTIONS = [
-  { amount: 50, proPrice: 49, vipPrice: 79 },
-  { amount: 100, proPrice: 99, vipPrice: 149 },
-  { amount: 200, proPrice: 189, vipPrice: 289 },
-  { amount: 500, proPrice: 449, vipPrice: 699 },
+  { amount: 50, proPrice: 1, vipPrice: 1 },
+  { amount: 100, proPrice: 1, vipPrice: 1 },
+  { amount: 200, proPrice: 1, vipPrice: 1 },
+  { amount: 500, proPrice: 1, vipPrice: 1 },
 ] as const;
 
 export const REFILL_THRESHOLD = 50;
