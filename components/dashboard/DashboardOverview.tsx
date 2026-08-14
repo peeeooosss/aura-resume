@@ -4,12 +4,11 @@ import { usePlan } from '@/lib/hooks/usePlan';
 import { useResumes } from '@/lib/hooks/useResumes';
 import { useJobMatches } from '@/lib/hooks/useJobMatches';
 import { useRoadmap } from '@/lib/hooks/useRoadmap';
-import { usePortfolio } from '@/lib/hooks/usePortfolio';
 import { PlanGate } from '@/components/dashboard/PlanGate';
 import { PlanBadge } from '@/components/dashboard/PlanBadge';
 import { cn } from '@/lib/utils/helpers';
 import {
-  FileText, Target, Map, Globe, TrendingUp, CheckCircle,
+  FileText, Target, Map, TrendingUp, CheckCircle,
   Clock, Award, Zap, Sparkles, Users, ArrowRight, Plus,
   ExternalLink, Settings, LayoutDashboard, Scan, Wrench, Upload,
 } from 'lucide-react';
@@ -26,7 +25,6 @@ export function DashboardOverview() {
   const getUsagePercent = usePlan(s => s.getUsagePercent);
   const { resumes, getPrimary, hasAnalyzedResume, latestAnalysis } = useResumes();
   const { currentRoadmap } = useRoadmap();
-  const { currentPortfolio } = usePortfolio();
 
   const userName = (session?.user as any)?.name || (session?.user as any)?.email?.split('@')[0] || 'User';
 
@@ -201,19 +199,6 @@ export function DashboardOverview() {
             href="/dashboard/roadmap/generate"
           />
         </PlanGate>
-        <PlanGate
-          requiredPlan="vip"
-          featureName="Portfolio Builder"
-          showUpgrade={false}
-          fallback={<LockedQuickAction icon={Globe} title="Build Portfolio" description="VIP plan required" requiredPlan="vip" />}
-        >
-          <QuickActionCard
-            icon={Globe}
-            title="Build Portfolio"
-            description="Auto-generate from your resume"
-            href="/dashboard/portfolio"
-          />
-        </PlanGate>
       </div>
 
       {/* Main Content Grid */}
@@ -383,34 +368,6 @@ export function DashboardOverview() {
                   </Link>
                 )}
               </div>
-            </section>
-          )}
-
-          {/* Portfolio Status */}
-          {currentPortfolio && (
-            <section className="bg-white border border-surface-200 shadow-sm dark:bg-slate-900/80 dark:border-surface-200 dark:border-slate-800 rounded-3xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-surface-900 dark:text-white">Your Portfolio</h2>
-                <span className="px-2 py-1 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded-full">Published</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="bg-surface-100 dark:bg-slate-800/50 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-surface-900 dark:text-white">{currentPortfolio.views}</p>
-                  <p className="text-surface-400 dark:text-slate-500 text-xs">Total Views</p>
-                </div>
-                <div className="bg-surface-100 dark:bg-slate-800/50 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-surface-900 dark:text-white">{currentPortfolio.uniqueVisitors}</p>
-                  <p className="text-surface-400 dark:text-slate-500 text-xs">Unique Visitors</p>
-                </div>
-              </div>
-              <Link
-                href={`/portfolio/${currentPortfolio.slug}`}
-                target="_blank"
-                className="block w-full px-4 py-2 bg-surface-100 hover:bg-surface-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-surface-900 dark:text-surface-900 dark:text-white text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
-              >
-                <ExternalLink className="w-4 h-4" />
-                View Live Portfolio
-              </Link>
             </section>
           )}
         </div>

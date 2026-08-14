@@ -12,7 +12,7 @@ import { getPlanBySlug } from '@/lib/constants/plans';
 
 const PLAN_FEATURES: Record<string, string[]> = {
   'quick-fix': ['Full ATS scan', 'Red flag details & fixes', 'ATS-optimized resume download', 'PDF report'],
-  'pro-bundle': ['AI resume rewrite', 'Cover letters', 'LinkedIn review', 'Portfolio builder'],
+  'pro-bundle': ['AI resume rewrite', 'Cover letters', 'LinkedIn review', 'Priority support'],
   'vip-mentorship': ['Everything in Pro', '1-on-1 mentoring', 'Salary coaching', 'Unlimited support'],
 };
 
@@ -218,12 +218,10 @@ export default function PaymentForm() {
             <p className="text-slate-400 mb-6">Your {plan.name} plan is now active.</p>
             <button
               onClick={() => {
-                if (!authenticated && resultId) {
-                  router.push(`/report/${resultId}?unlocked=true`);
+                if (resultId) {
+                  router.push(`/results?id=${encodeURIComponent(resultId)}`);
                 } else if (resumeId) {
                   router.push(`/dashboard/resumes/${resumeId}/report`);
-                } else if (resultId) {
-                  router.push(`/report/${resultId}?unlocked=true`);
                 } else {
                   router.push('/dashboard');
                 }

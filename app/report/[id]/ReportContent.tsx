@@ -585,7 +585,7 @@ export default function ReportContent({ id }: { id: string }) {
                 <span className="text-slate-500 text-sm"> /3 months</span>
               </div>
               <ul className="space-y-3 mb-8">
-                {['AI resume rewrite (5/month)', 'Cover letter generator', 'LinkedIn profile review', '5 tailored resumes', 'Portfolio builder', 'Priority email support'].map((f, i) => (
+                {['AI resume rewrite (5/month)', 'Cover letter generator', 'LinkedIn profile review', '5 tailored resumes', 'Priority email support'].map((f, i) => (
                   <li key={i} className="flex items-center gap-3 text-slate-300 text-sm">
                     <Check className="w-4 h-4 text-indigo-400 flex-shrink-0" />
                     <span>{f}</span>

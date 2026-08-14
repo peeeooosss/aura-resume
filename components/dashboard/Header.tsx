@@ -182,7 +182,6 @@ export function Header() {
                 { label: 'Job Matches', href: '/dashboard/jobs/matches', icon: '🎯' },
                 { label: 'Job Search', href: '/dashboard/jobs', icon: '🔍' },
                 { label: '90-Day Roadmap', href: '/dashboard/roadmap', icon: '🗺️' },
-                { label: 'Portfolio', href: '/dashboard/portfolio', icon: '🌐' },
                 { label: 'Settings', href: '/dashboard/settings', icon: '⚙️' },
               ].map((item) => (
                 <Link

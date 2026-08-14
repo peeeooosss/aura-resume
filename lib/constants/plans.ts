@@ -127,7 +127,6 @@ export const PLAN_DEFINITIONS = {
       'Everything in Pro',
       'Unlimited AI mock interviews',
       'Cold email engine',
-      'Portfolio builder',
       '3× 1-on-1 mentoring sessions',
       '24/7 AI mentor chat',
       'Salary negotiation coaching',

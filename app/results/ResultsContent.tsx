@@ -1,10 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { Check, Lock, Shield, ArrowLeft, Sparkles, FileText, Linkedin as LinkedinIcon, Link, Star, Zap, Users, ArrowRight, Target, Loader2 } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useSession } from 'next-auth/react';
+import { Check, Lock, Shield, ArrowLeft, Sparkles, FileText, Linkedin as LinkedinIcon, Link, Star, Zap, Users, ArrowRight, Target, Loader2, Download, Eye, CheckCircle } from 'lucide-react';
 import type { DualAnalysisResult, SingleAnalysis } from '@/lib/types';
 import { generateMockAnalysis } from '@/lib/mockData';
+import { generateAnalysisPDF, generateOptimizedResumePDF, getPDFBlobURL, type AnalysisReportData } from '@/lib/pdf/generateReport';
+import { useCreditsStore } from '@/lib/hooks/useCredits';
 import { PLAN_DEFINITIONS } from '@/lib/constants/plans';
 
 function getScoreColor(score: number): string {
@@ -43,7 +46,7 @@ function ScoreCircle({ score }: { score: number }) {
   );
 }
 
-function AnalysisColumn({ analysis, isResume }: { analysis: SingleAnalysis; isResume: boolean }) {
+function AnalysisColumn({ analysis, isResume, isUnlocked }: { analysis: SingleAnalysis; isResume: boolean; isUnlocked: boolean }) {
   const sourceConfig = isResume
     ? {
         icon: FileText,
@@ -69,6 +72,7 @@ function AnalysisColumn({ analysis, isResume }: { analysis: SingleAnalysis; isRe
       };
 
   const Icon = sourceConfig.icon;
+  const blurClass = isUnlocked ? '' : 'select-none pointer-events-none blur-[3px] opacity-50';
 
   return (
     <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 md:p-8">
@@ -78,7 +82,7 @@ function AnalysisColumn({ analysis, isResume }: { analysis: SingleAnalysis; isRe
         </div>
         <div>
           <h2 className={`text-lg font-bold ${sourceConfig.textClass}`}>{sourceConfig.label}</h2>
-          <p className="text-slate-500 text-xs">Score breakdown</p>
+          <p className="text-slate-500 text-xs">{isUnlocked ? 'Full unlocked report' : 'Score breakdown'}</p>
         </div>
       </div>
 
@@ -103,15 +107,21 @@ function AnalysisColumn({ analysis, isResume }: { analysis: SingleAnalysis; isRe
         </div>
       </div>
 
-      <div className="relative">
+      <div>
         <h3 className="flex items-center gap-2 text-sm font-bold text-rose-500 mb-4">
           <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center">
             <Lock className="w-4 h-4 text-rose-500" />
           </div>
           Critical Red Flags
+          {isUnlocked && (
+            <span className="inline-flex items-center gap-1 ml-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-semibold">
+              <Shield className="w-2.5 h-2.5" />
+              Unlocked
+            </span>
+          )}
         </h3>
         <div className="relative">
-          <div className="space-y-2 select-none pointer-events-none blur-[3px] opacity-50">
+          <div className={`space-y-2 ${blurClass}`}>
             {analysis.redFlags.map((flag, i) => (
               <div key={i} className={`flex items-start gap-3 p-3 ${sourceConfig.flagBg} rounded-xl border ${sourceConfig.flagBorder}`}>
                 <div className="w-1.5 h-1.5 rounded-full bg-rose-500 flex-shrink-0 mt-2" />
@@ -134,6 +144,43 @@ function AnalysisColumn({ analysis, isResume }: { analysis: SingleAnalysis; isRe
         </div>
       </div>
 
+      {isUnlocked && analysis.suggestions && analysis.suggestions.length > 0 && (
+        <div className="mt-8">
+          <h3 className="flex items-center gap-2 text-sm font-bold text-amber-500 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+            </div>
+            Improvement Suggestions
+          </h3>
+          <div className="space-y-2">
+            {analysis.suggestions.map((s, i) => (
+              <div key={i} className="flex items-start gap-3 p-3 bg-amber-500/5 rounded-xl border border-amber-500/20">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0 mt-2" />
+                <p className="text-amber-50 font-medium text-sm leading-snug">{s}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {isUnlocked && analysis.keywordGaps && analysis.keywordGaps.length > 0 && (
+        <div className="mt-8">
+          <h3 className="flex items-center gap-2 text-sm font-bold text-blue-500 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <Target className="w-4 h-4 text-blue-500" />
+            </div>
+            Keyword Gaps
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {analysis.keywordGaps.map((gap, i) => (
+              <span key={i} className="px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm">
+                {gap}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {analysis.jobRolePotential && (
         <div className="relative mt-8">
           <h3 className="flex items-center gap-2 text-sm font-bold text-blue-500 mb-4">
@@ -142,7 +189,7 @@ function AnalysisColumn({ analysis, isResume }: { analysis: SingleAnalysis; isRe
             </div>
             Job Role Potential
           </h3>
-          <div className="space-y-4 select-none pointer-events-none blur-[3px] opacity-50">
+          <div className={`space-y-4 ${blurClass}`}>
             <div className={`p-4 rounded-xl border ${sourceConfig.flagBorder} ${sourceConfig.flagBg}`}>
               <h4 className="text-blue-400 font-semibold text-sm mb-3">Top Matching Roles</h4>
               <div className="space-y-2">
@@ -199,100 +246,6 @@ function AnalysisColumn({ analysis, isResume }: { analysis: SingleAnalysis; isRe
   );
 }
 
-function PricingCard({
-  tier,
-  price,
-  period,
-  features,
-  cta,
-  highlighted = false,
-  badge,
-  onClick,
-  disabled = false,
-}: {
-  tier: string;
-  price: string;
-  period: string;
-  features: string[];
-  cta: string;
-  highlighted?: boolean;
-  badge?: { label: string; icon: React.ReactNode };
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div
-      onClick={disabled ? undefined : onClick}
-      className={`relative group transition-all duration-300 ${
-        disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
-      } ${
-        highlighted
-          ? 'bg-slate-900/90 border-2 border-indigo-500/50 rounded-3xl p-6 md:p-8 shadow-2xl shadow-indigo-500/20'
-          : 'bg-slate-900/80 border border-slate-800 rounded-3xl p-6 md:p-8 hover:border-slate-700 hover:shadow-xl hover:shadow-slate-900/50'
-      }`}
-    >
-      {badge && (
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-5 py-1.5 rounded-full text-sm font-bold shadow-lg flex items-center gap-1.5">
-            {badge.icon}
-            {badge.label}
-          </div>
-        </div>
-      )}
-
-      <div className="text-center mb-6">
-        <div className={`w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center ${
-          highlighted ? 'bg-indigo-600/20' : 'bg-slate-800'
-        }`}>
-          {tier === 'Quick Fix' && <Zap className="w-6 h-6 text-emerald-400" />}
-          {tier === 'Pro Bundle' && <Sparkles className="w-6 h-6 text-indigo-400" />}
-          {tier === 'VIP Mentorship' && <Users className="w-6 h-6 text-amber-400" />}
-        </div>
-        <h3 className="text-xl font-bold text-white mb-1">{tier}</h3>
-        <p className="text-slate-500 text-sm">{cta}</p>
-      </div>
-
-      <div className="mb-6">
-        <span className="text-4xl font-bold text-white">{price}</span>
-        <span className="text-slate-500 text-sm"> {period}</span>
-      </div>
-
-      <ul className="space-y-3 mb-8">
-        {features.map((feature, i) => (
-          <li key={i} className="flex items-center gap-3 text-slate-300 text-sm">
-            <Check className={`w-4 h-4 flex-shrink-0 ${highlighted ? 'text-indigo-400' : 'text-emerald-500'}`} />
-            <span>{feature}</span>
-          </li>
-        ))}
-      </ul>
-
-      <button
-        onClick={disabled ? undefined : onClick}
-        disabled={disabled}
-        className={`w-full py-3 rounded-xl font-semibold transition-all ${
-          highlighted
-            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg hover:shadow-indigo-500/30'
-            : 'bg-slate-800 text-white border border-slate-700 hover:bg-slate-700'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-      >
-        {disabled ? (
-          <span className="flex items-center justify-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Generating...
-          </span>
-        ) : highlighted ? (
-          <span className="flex items-center justify-center gap-2">
-            Get Started
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </span>
-        ) : (
-          'Get Started'
-        )}
-      </button>
-    </div>
-  );
-}
-
 interface Props {
   id?: string;
   testMode?: boolean;
@@ -300,9 +253,17 @@ interface Props {
 
 export default function ResultsContent({ id, testMode }: Props) {
   const router = useRouter();
+  const { status } = useSession();
   const [result, setResult] = useState<DualAnalysisResult | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [generatingResume, setGeneratingResume] = useState(false);
+  const [resumePdfUrl, setResumePdfUrl] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
+  const [downloadingReport, setDownloadingReport] = useState(false);
+  const [downloadingResume, setDownloadingResume] = useState(false);
+  const resumeGeneratedRef = useRef(false);
 
   useEffect(() => {
     if (testMode) {
@@ -322,7 +283,6 @@ export default function ResultsContent({ id, testMode }: Props) {
       try {
         const data = JSON.parse(stored);
         setResult(data);
-        // Also backup to localStorage so reloads still work
         const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
         analyses[id] = data;
         localStorage.setItem('aura-analyses', JSON.stringify(analyses));
@@ -343,6 +303,128 @@ export default function ResultsContent({ id, testMode }: Props) {
     setError(true);
     setLoading(false);
   }, [id, testMode]);
+
+  useEffect(() => {
+    if (!id || loading) return;
+    const unlocked = localStorage.getItem(`aura-unlocked-${id}`);
+    setIsUnlocked(!!unlocked);
+  }, [id, loading]);
+
+  const generateResumePDF = useCallback(async () => {
+    if (!result || resumeGeneratedRef.current) return;
+    resumeGeneratedRef.current = true;
+    setGeneratingResume(true);
+
+    try {
+      const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
+      let optimizedText = id ? analyses[id]?.optimizedResumeText : undefined;
+
+      if (!optimizedText && result.resume?.originalText) {
+        if (status !== 'authenticated') {
+          setGeneratingResume(false);
+          return;
+        }
+        const response = await fetch('/api/generate-resume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            resumeText: result.resume.originalText,
+            analysis: result.resume,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Generation failed');
+        optimizedText = data.optimizedResume;
+        if (id) {
+          analyses[id].optimizedResumeText = optimizedText;
+          localStorage.setItem('aura-analyses', JSON.stringify(analyses));
+        }
+        useCreditsStore.getState().refresh();
+      }
+
+      if (!optimizedText) {
+        setGeneratingResume(false);
+        return;
+      }
+
+      const doc = generateOptimizedResumePDF(optimizedText, {
+        generatedAt: new Date().toLocaleString(),
+      });
+
+      setResumePdfUrl(getPDFBlobURL(doc));
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+    } finally {
+      setGeneratingResume(false);
+    }
+  }, [result, id, status]);
+
+  useEffect(() => {
+    if (result && isUnlocked) {
+      generateResumePDF();
+    }
+  }, [result, isUnlocked, generateResumePDF]);
+
+  const handleDownloadReport = () => {
+    if (!result) return;
+    setDownloadingReport(true);
+
+    try {
+      const analyzedAt = new Date(result.createdAt || result.purchasedAt || Date.now()).toLocaleString();
+
+      const reportData: AnalysisReportData = {
+        resume: result.resume ? {
+          score: result.resume.score,
+          strengths: result.resume.strengths,
+          redFlags: result.resume.redFlags,
+          suggestions: result.resume.suggestions,
+          keywordGaps: result.resume.keywordGaps,
+          jobRolePotential: result.resume.jobRolePotential,
+        } : undefined,
+        linkedin: result.linkedin ? {
+          score: result.linkedin.score,
+          strengths: result.linkedin.strengths,
+          redFlags: result.linkedin.redFlags,
+          suggestions: result.linkedin.suggestions,
+        } : undefined,
+        coverLetter: result.coverLetter,
+        creditsUsed: result.creditsUsed,
+        creditsRemaining: result.creditsRemaining,
+        fileName: 'resume.pdf',
+        analyzedAt,
+      };
+
+      const doc = generateAnalysisPDF(reportData);
+      doc.save(`aura-detailed-report-${Date.now()}.pdf`);
+    } catch (error) {
+      console.error('Report PDF generation failed:', error);
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
+
+  const handleDownloadResume = () => {
+    if (!result || !id) return;
+    setDownloadingResume(true);
+
+    try {
+      const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
+      const optimizedText = analyses[id]?.optimizedResumeText;
+      if (!optimizedText) {
+        setDownloadingResume(false);
+        return;
+      }
+
+      const doc = generateOptimizedResumePDF(optimizedText, {
+        generatedAt: new Date().toLocaleString(),
+      });
+      doc.save(`ATS-Optimized-Resume-${Date.now()}.pdf`);
+    } catch (error) {
+      console.error('Resume PDF download failed:', error);
+    } finally {
+      setDownloadingResume(false);
+    }
+  };
 
   const handleQuickFixPurchase = () => {
     if (!result?.resume || !id) return;
@@ -386,9 +468,9 @@ export default function ResultsContent({ id, testMode }: Props) {
   }
 
   const hasBoth = result.resume && result.linkedin;
-  const analyses: SingleAnalysis[] = [];
-  if (result.resume) analyses.push(result.resume);
-  if (result.linkedin) analyses.push(result.linkedin);
+  const analyses: { analysis: SingleAnalysis; isResume: boolean }[] = [];
+  if (result.resume) analyses.push({ analysis: result.resume, isResume: true });
+  if (result.linkedin) analyses.push({ analysis: result.linkedin, isResume: false });
 
   return (
     <main className="min-h-screen bg-slate-950 py-16 px-4">
@@ -402,97 +484,259 @@ export default function ResultsContent({ id, testMode }: Props) {
         </button>
 
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-600/10 border border-indigo-500/20 mb-6">
-            <Sparkles className="w-4 h-4 text-indigo-400" />
-            <span className="text-sm text-indigo-300 font-medium">Analysis Complete</span>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${isUnlocked ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-indigo-600/10 border border-indigo-500/20'} mb-6`}>
+            {isUnlocked ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Sparkles className="w-4 h-4 text-indigo-400" />}
+            <span className={`text-sm font-medium ${isUnlocked ? 'text-emerald-300' : 'text-indigo-300'}`}>
+              {isUnlocked ? 'Detailed Report – Unlocked' : 'Analysis Complete'}
+            </span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">Your ATS Scorecard</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
+            {isUnlocked ? 'Your Complete ATS Scorecard' : 'Your ATS Scorecard'}
+          </h1>
           <p className="text-slate-400 max-w-xl mx-auto">
-            {hasBoth
+            {isUnlocked
+              ? 'Full analysis with all red flags, job role potential, skills gap analysis, and AI-optimized resume.'
+              : hasBoth
               ? 'Here\'s how your resume and LinkedIn profile compare against ATS filters'
               : 'Here\'s what\'s holding your profile back from landing interviews'}
           </p>
         </div>
 
         <div className={`grid gap-6 mb-12 ${hasBoth ? 'lg:grid-cols-2' : 'max-w-xl mx-auto'}`}>
-          {analyses.map((a) => (
-            <AnalysisColumn key={a.source} analysis={a} isResume={a.source === 'resume'} />
+          {analyses.map(({ analysis, isResume }) => (
+            <AnalysisColumn key={analysis.source} analysis={analysis} isResume={isResume} isUnlocked={isUnlocked} />
           ))}
         </div>
 
-        <div className="mb-12">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rose-500/10 border border-rose-500/20 mb-4">
-              <Lock className="w-4 h-4 text-rose-400" />
-              <span className="text-sm text-rose-300 font-medium">Critical Red Flags Locked</span>
+        {!isUnlocked ? (
+          <div className="max-w-3xl mx-auto mb-12">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rose-500/10 border border-rose-500/20 mb-4">
+                <Lock className="w-4 h-4 text-rose-400" />
+                <span className="text-sm text-rose-300 font-medium">Red Flags Locked</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Get Your Full Report & Optimized Resume</h2>
+              <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+                Unlock every red flag with fixes, your ATS-perfect resume, and a detailed PDF report.
+              </p>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Unlock Exact Errors & Fixes</h2>
-            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-              See every red flag with step-by-step instructions to fix them. Download your personalized PDF report.
-            </p>
-          </div>
 
-          <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            <PricingCard
-              tier="Quick Fix"
-              price={`₹${PLAN_DEFINITIONS.quick.price}`}
-              period="one-time"
-              features={[
-                'Full ATS compatibility scan',
-                'Basic keyword analysis',
-                '1-click LinkedIn import',
-                'PDF report download',
-                'All red flag details & fixes',
-                'Generate perfect ATS resume',
-              ]}
-              cta="Perfect for a quick resume check before applying"
-              highlighted={false}
-              onClick={handleQuickFixPurchase}
-            />
-            <PricingCard
-              tier="Pro Bundle"
-              price={`₹${PLAN_DEFINITIONS.pro.price}`}
-              period="/3 months"
-              features={[
-                'Everything in Quick Fix',
-                'AI-powered resume rewrite (5/month)',
-                '5 job-specific optimizations',
-                'Cover letter generator',
-                'LinkedIn profile review',
-                'Portfolio builder',
-                'Priority email support',
-              ]}
-              cta="Complete job search optimization for 3 months"
-              highlighted={true}
-              badge={{ label: 'Most Popular', icon: <Star className="w-4 h-4 fill-current" /> }}
-              onClick={() => handlePlanPurchase('pro-bundle')}
-            />
-            <PricingCard
-              tier="VIP Mentorship"
-              price={`₹${PLAN_DEFINITIONS.vip.price}`}
-              period="/3 months"
-              features={[
-                'Everything in Pro Bundle',
-                '3 one-on-one mentoring sessions',
-                'Personal career roadmap',
-                'Salary negotiation coaching',
-                'Interview preparation',
-                'Recruiter outreach strategy',
-                'Unlimited email support',
-              ]}
-              cta="Personal 1-on-1 career coaching & strategy"
-              highlighted={false}
-              onClick={() => handlePlanPurchase('vip-mentorship')}
-            />
-          </div>
-        </div>
+            <div className="bg-slate-900/80 backdrop-blur-xl border-2 border-emerald-500/40 rounded-3xl p-8 md:p-10 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto mb-5">
+                <Zap className="w-7 h-7 text-emerald-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-1">Full Report & Optimized Resume</h3>
+              <p className="text-slate-400 mb-6">One-time unlock · instant access after payment</p>
 
-        <div className="text-center mt-10">
-          <p className="text-slate-500 text-sm flex items-center justify-center gap-2">
-            <Shield className="w-4 h-4" />
-            30-day money-back guarantee on all plans
-          </p>
-        </div>
+              <div className="mb-8">
+                <span className="text-5xl font-bold text-white">₹{PLAN_DEFINITIONS.quick.price}</span>
+                <span className="text-slate-500 text-sm"> one-time</span>
+              </div>
+
+              <ul className="space-y-3 mb-8 max-w-sm mx-auto text-left">
+                {[
+                  'All red flag details & step-by-step fixes',
+                  'ATS-perfect optimized resume (downloadable PDF)',
+                  'Full detailed report (PDF download)',
+                  'Job role potential & salary insights',
+                  'Skills gap & keyword analysis',
+                ].map((feature, i) => (
+                  <li key={i} className="flex items-center gap-3 text-slate-300 text-sm">
+                    <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <button
+                onClick={handleQuickFixPurchase}
+                className="w-full py-5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-lg rounded-2xl hover:shadow-xl hover:shadow-emerald-500/30 transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+              >
+                <Zap className="w-5 h-5" />
+                GET FULL REPORT AND OPTIMIZED RESUME
+              </button>
+              <p className="text-slate-500 text-xs mt-4 flex items-center justify-center gap-2">
+                <Shield className="w-4 h-4" />
+                Secure Razorpay payment · 30-day money-back guarantee
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="mb-12 max-w-4xl mx-auto">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-4">
+                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                  <span className="text-sm text-emerald-300 font-medium">Your ATS-Perfect Resume</span>
+                </div>
+                <h2 className="text-3xl font-bold text-white mb-2">AI-Optimized Resume</h2>
+                <p className="text-slate-400">AI-rewritten to pass ATS filters. Preview and download.</p>
+              </div>
+
+              <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 md:p-8">
+                {generatingResume && !resumePdfUrl && (
+                  <div className="flex items-center justify-center py-16">
+                    <div className="text-center">
+                      <Loader2 className="w-8 h-8 text-indigo-400 animate-spin mx-auto mb-4" />
+                      <p className="text-white font-medium">Generating optimized resume PDF...</p>
+                      <p className="text-slate-500 text-sm mt-1">This may take a moment</p>
+                    </div>
+                  </div>
+                )}
+
+                {resumePdfUrl && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-white font-semibold text-lg">Resume Preview</h3>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setPreviewMode(!previewMode)}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-sm hover:bg-slate-700 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                          {previewMode ? 'Hide Preview' : 'Show Preview'}
+                        </button>
+                        <button
+                          onClick={handleDownloadResume}
+                          disabled={downloadingResume}
+                          className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-medium text-sm hover:shadow-lg hover:shadow-emerald-500/30 transition-all disabled:opacity-50"
+                        >
+                          {downloadingResume ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Download className="w-4 h-4" />
+                          )}
+                          Download Optimized Resume
+                        </button>
+                      </div>
+                    </div>
+
+                    {previewMode && (
+                      <div className="rounded-xl overflow-hidden border border-slate-700 bg-white">
+                        <iframe
+                          src={resumePdfUrl}
+                          className="w-full h-[700px]"
+                          title="ATS-Perfect Resume Preview"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!generatingResume && !resumePdfUrl && (
+                  <div className="text-center py-8">
+                    <p className="text-slate-400 text-sm">
+                      Your optimized resume PDF wasn't generated. Please refresh the page.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-center mb-12">
+              <button
+                onClick={handleDownloadReport}
+                disabled={downloadingReport}
+                className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl text-white font-semibold text-lg hover:shadow-2xl hover:shadow-indigo-500/30 transition-all disabled:opacity-50"
+              >
+                {downloadingReport ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Download className="w-5 h-5" />
+                )}
+                Download Full Detailed Report PDF
+              </button>
+            </div>
+
+            {status === 'authenticated' && (
+              <div className="border-t border-slate-800 pt-12">
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 mb-4">
+                    <Target className="w-4 h-4 text-amber-400" />
+                    <span className="text-sm text-amber-300 font-medium">Want even more?</span>
+                  </div>
+                  <h2 className="text-3xl font-bold text-white mb-2">Upgrade for Pro Features</h2>
+                  <p className="text-slate-400 max-w-xl mx-auto">
+                    Cover letters, job-specific optimizations, LinkedIn review, career roadmap, and more.
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+                  <div className="bg-slate-900/80 backdrop-blur-xl border-2 border-indigo-500/50 rounded-3xl p-8 relative">
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
+                      <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-5 py-1.5 rounded-full text-sm font-bold shadow-lg flex items-center gap-1.5">
+                        <Star className="w-4 h-4 fill-current" />
+                        Most Popular
+                      </div>
+                    </div>
+                    <div className="text-center mb-6 mt-2">
+                      <div className="w-12 h-12 rounded-xl bg-indigo-600/20 flex items-center justify-center mx-auto mb-4">
+                        <Sparkles className="w-6 h-6 text-indigo-400" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-1">Pro Bundle</h3>
+                      <p className="text-slate-500 text-sm">Complete optimization for 3 months</p>
+                    </div>
+                    <div className="mb-6">
+                      <span className="text-4xl font-bold text-white">₹{PLAN_DEFINITIONS.pro.price}</span>
+                      <span className="text-slate-500 text-sm"> /3 months</span>
+                    </div>
+                    <ul className="space-y-3 mb-8">
+                      {['AI resume rewrite (5/month)', 'Cover letter generator', 'LinkedIn profile review', '5 tailored resumes', 'Priority email support'].map((f, i) => (
+                        <li key={i} className="flex items-center gap-3 text-slate-300 text-sm">
+                          <Check className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      onClick={() => handlePlanPurchase('pro-bundle')}
+                      className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold hover:shadow-lg hover:shadow-indigo-500/30 transition-all flex items-center justify-center gap-2"
+                    >
+                      Get Pro Bundle
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-8">
+                    <div className="text-center mb-6">
+                      <div className="w-12 h-12 rounded-xl bg-amber-600/20 flex items-center justify-center mx-auto mb-4">
+                        <Users className="w-6 h-6 text-amber-400" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-1">VIP Mentorship</h3>
+                      <p className="text-slate-500 text-sm">1-on-1 career coaching</p>
+                    </div>
+                    <div className="mb-6">
+                      <span className="text-4xl font-bold text-white">₹{PLAN_DEFINITIONS.vip.price}</span>
+                      <span className="text-slate-500 text-sm"> /3 months</span>
+                    </div>
+                    <ul className="space-y-3 mb-8">
+                      {['Everything in Pro', '3 mentoring sessions', 'Career roadmap', 'Interview prep', 'Salary negotiation', 'Unlimited support'].map((f, i) => (
+                        <li key={i} className="flex items-center gap-3 text-slate-300 text-sm">
+                          <Check className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      onClick={() => handlePlanPurchase('vip-mentorship')}
+                      className="w-full py-3 rounded-xl bg-slate-800 text-white border border-slate-700 font-semibold hover:bg-slate-700 transition-all flex items-center justify-center gap-2"
+                    >
+                      Upgrade to VIP
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="text-center mt-10">
+              <p className="text-slate-500 text-sm flex items-center justify-center gap-2">
+                <Shield className="w-4 h-4" />
+                30-day money-back guarantee on all plans
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </main>
   );
