@@ -44,15 +44,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment record not found' }, { status: 400 });
     }
 
-    if (userId) {
-      if (payment.userId !== userId) {
+    const meta = (payment.metadata as Record<string, any>) || {};
+    let payUserId: string;
+
+    if (guestEmail) {
+      const normalizedGuestEmail = (guestEmail || '').trim().toLowerCase();
+      if (!meta.guest || !meta.guestEmail || meta.guestEmail !== normalizedGuestEmail) {
         return NextResponse.json({ error: 'Payment record not found' }, { status: 400 });
       }
+      payUserId = payment.userId;
     } else {
-      const meta = (payment.metadata as Record<string, any>) || {};
-      if (!meta.guest || !meta.guestEmail || meta.guestEmail !== (guestEmail || '').trim().toLowerCase()) {
+      if (!userId || payment.userId !== userId) {
         return NextResponse.json({ error: 'Payment record not found' }, { status: 400 });
       }
+      payUserId = userId;
     }
 
     if (payment.status === 'completed') {
@@ -61,8 +66,6 @@ export async function POST(req: NextRequest) {
     if (payment.status !== 'created') {
       return NextResponse.json({ error: 'Payment record is not in a pending state' }, { status: 400 });
     }
-
-    const payUserId = userId ?? payment.userId;
 
     let order: { status: string; amount: number };
     try {

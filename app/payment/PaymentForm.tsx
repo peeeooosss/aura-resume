@@ -143,7 +143,7 @@ export default function PaymentForm() {
             }
 
             setResumeId(verifyData.resumeId || null);
-            if (!guestData) {
+            if (authenticated) {
               usePlan.getState().setPlan(plan.planId as any);
               useCreditsStore.getState().refresh();
             }
@@ -176,9 +176,9 @@ export default function PaymentForm() {
 
   useEffect(() => {
     if (authLoading) return;
+    if (isQuickFix) return;
 
     if (!authenticated) {
-      if (isQuickFix) return;
       const redirect = `/payment?plan=${plan.slug}${resultId ? `&resultId=${encodeURIComponent(resultId)}` : ''}`;
       router.replace(`/login?redirect=${encodeURIComponent(redirect)}`);
       return;
@@ -259,7 +259,7 @@ export default function PaymentForm() {
               <span className="text-sm text-emerald-300 font-medium">Secure Payment via Razorpay</span>
             </div>
             <h1 className="text-3xl font-bold text-white mb-3">
-              {!authenticated && isQuickFix ? 'Unlock Your Optimized Resume' : 'Complete Your Purchase'}
+              {isQuickFix ? 'Unlock Your Optimized Resume' : 'Complete Your Purchase'}
             </h1>
             <p className="text-slate-400">
               {plan.name} — <span className="text-white font-semibold">₹{plan.price}</span> {plan.period}
@@ -275,7 +275,7 @@ export default function PaymentForm() {
             ))}
           </div>
 
-          {!authenticated && isQuickFix ? (
+          {isQuickFix ? (
             <form onSubmit={handleGuestSubmit} className="space-y-4 mb-6">
               <div>
                 <label htmlFor="guest-name" className="block text-sm font-medium text-slate-300 mb-2">Full Name</label>

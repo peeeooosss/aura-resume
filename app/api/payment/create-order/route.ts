@@ -65,13 +65,7 @@ export async function POST(req: NextRequest) {
 
     let paymentUserId: string;
 
-    if (userId) {
-      paymentUserId = userId;
-    } else {
-      if (plan !== 'quick') {
-        return NextResponse.json({ error: 'Please sign in to purchase this plan' }, { status: 401 });
-      }
-
+    if (plan === 'quick') {
       const guest = (body.guest || {}) as { name?: string; email?: string; phone?: string };
       const name = (guest.name || '').trim();
       const email = (guest.email || '').trim().toLowerCase();
@@ -95,6 +89,10 @@ export async function POST(req: NextRequest) {
       }
 
       metadata = { ...metadata, guest: true, guestName: name, guestEmail: email, guestPhone: phone };
+    } else if (userId) {
+      paymentUserId = userId;
+    } else {
+      return NextResponse.json({ error: 'Please sign in to purchase this plan' }, { status: 401 });
     }
 
     const order = await razorpay.orders.create({
