@@ -435,7 +435,11 @@ export default function ResultsContent({ id, testMode }: Props) {
 
   const handlePlanPurchase = (planSlug: string) => {
     const paymentUrl = `/payment?plan=${planSlug}${id ? `&resultId=${encodeURIComponent(id)}` : ''}`;
-    router.push(paymentUrl);
+    if (status === 'authenticated') {
+      router.push(paymentUrl);
+    } else {
+      router.push(`/login?redirect=${encodeURIComponent(paymentUrl)}`);
+    }
   };
 
   if (loading) {
@@ -648,86 +652,89 @@ export default function ResultsContent({ id, testMode }: Props) {
               </button>
             </div>
 
-            {status === 'authenticated' && (
-              <div className="border-t border-slate-800 pt-12">
-                <div className="text-center mb-8">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 mb-4">
-                    <Target className="w-4 h-4 text-amber-400" />
-                    <span className="text-sm text-amber-300 font-medium">Want even more?</span>
-                  </div>
-                  <h2 className="text-3xl font-bold text-white mb-2">Upgrade for Pro Features</h2>
-                  <p className="text-slate-400 max-w-xl mx-auto">
-                    Cover letters, job-specific optimizations, LinkedIn review, career roadmap, and more.
+            <div className="border-t border-slate-800 pt-12">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 mb-4">
+                  <Target className="w-4 h-4 text-amber-400" />
+                  <span className="text-sm text-amber-300 font-medium">Want even more?</span>
+                </div>
+                <h2 className="text-3xl font-bold text-white mb-2">Upgrade for Pro Features</h2>
+                <p className="text-slate-400 max-w-xl mx-auto">
+                  Cover letters, job-specific optimizations, LinkedIn review, career roadmap, and more.
+                </p>
+                {status !== 'authenticated' && (
+                  <p className="text-xs text-slate-400 mt-2">
+                    Sign up (or sign in) and your Pro plan checkout will open automatically.
                   </p>
+                )}
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+                <div className="bg-slate-900/80 backdrop-blur-xl border-2 border-indigo-500/50 rounded-3xl p-8 relative">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
+                    <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-5 py-1.5 rounded-full text-sm font-bold shadow-lg flex items-center gap-1.5">
+                      <Star className="w-4 h-4 fill-current" />
+                      Most Popular
+                    </div>
+                  </div>
+                  <div className="text-center mb-6 mt-2">
+                    <div className="w-12 h-12 rounded-xl bg-indigo-600/20 flex items-center justify-center mx-auto mb-4">
+                      <Sparkles className="w-6 h-6 text-indigo-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-1">Pro Bundle</h3>
+                    <p className="text-slate-500 text-sm">Complete optimization for 3 months</p>
+                  </div>
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold text-white">{PLAN_DEFINITIONS.pro.price}</span>
+                    <span className="text-slate-500 text-sm">{' /3 months'}</span>
+                  </div>
+                  <ul className="space-y-3 mb-8">
+                    {['AI resume rewrite (5/month)', 'Cover letter generator', 'LinkedIn profile review', '5 tailored resumes', 'Priority email support'].map((f, i) => (
+                      <li key={i} className="flex items-center gap-3 text-slate-300 text-sm">
+                        <Check className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => handlePlanPurchase('pro-bundle')}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold hover:shadow-lg hover:shadow-indigo-500/30 transition-all flex items-center justify-center gap-2"
+                  >
+                    Get Pro Bundle
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                  <div className="bg-slate-900/80 backdrop-blur-xl border-2 border-indigo-500/50 rounded-3xl p-8 relative">
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
-                      <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-5 py-1.5 rounded-full text-sm font-bold shadow-lg flex items-center gap-1.5">
-                        <Star className="w-4 h-4 fill-current" />
-                        Most Popular
-                      </div>
+                <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-8">
+                  <div className="text-center mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-amber-600/20 flex items-center justify-center mx-auto mb-4">
+                      <Users className="w-6 h-6 text-amber-400" />
                     </div>
-                    <div className="text-center mb-6 mt-2">
-                      <div className="w-12 h-12 rounded-xl bg-indigo-600/20 flex items-center justify-center mx-auto mb-4">
-                        <Sparkles className="w-6 h-6 text-indigo-400" />
-                      </div>
-                      <h3 className="text-xl font-bold text-white mb-1">Pro Bundle</h3>
-                      <p className="text-slate-500 text-sm">Complete optimization for 3 months</p>
-                    </div>
-                    <div className="mb-6">
-                      <span className="text-4xl font-bold text-white">₹{PLAN_DEFINITIONS.pro.price}</span>
-                      <span className="text-slate-500 text-sm"> /3 months</span>
-                    </div>
-                    <ul className="space-y-3 mb-8">
-                      {['AI resume rewrite (5/month)', 'Cover letter generator', 'LinkedIn profile review', '5 tailored resumes', 'Priority email support'].map((f, i) => (
-                        <li key={i} className="flex items-center gap-3 text-slate-300 text-sm">
-                          <Check className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                          <span>{f}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <button
-                      onClick={() => handlePlanPurchase('pro-bundle')}
-                      className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold hover:shadow-lg hover:shadow-indigo-500/30 transition-all flex items-center justify-center gap-2"
-                    >
-                      Get Pro Bundle
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
+                    <h3 className="text-xl font-bold text-white mb-1">VIP Mentorship</h3>
+                    <p className="text-slate-500 text-sm">1-on-1 career coaching</p>
                   </div>
-
-                  <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-8">
-                    <div className="text-center mb-6">
-                      <div className="w-12 h-12 rounded-xl bg-amber-600/20 flex items-center justify-center mx-auto mb-4">
-                        <Users className="w-6 h-6 text-amber-400" />
-                      </div>
-                      <h3 className="text-xl font-bold text-white mb-1">VIP Mentorship</h3>
-                      <p className="text-slate-500 text-sm">1-on-1 career coaching</p>
-                    </div>
-                    <div className="mb-6">
-                      <span className="text-4xl font-bold text-white">₹{PLAN_DEFINITIONS.vip.price}</span>
-                      <span className="text-slate-500 text-sm"> /3 months</span>
-                    </div>
-                    <ul className="space-y-3 mb-8">
-                      {['Everything in Pro', '3 mentoring sessions', 'Career roadmap', 'Interview prep', 'Salary negotiation', 'Unlimited support'].map((f, i) => (
-                        <li key={i} className="flex items-center gap-3 text-slate-300 text-sm">
-                          <Check className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                          <span>{f}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <button
-                      onClick={() => handlePlanPurchase('vip-mentorship')}
-                      className="w-full py-3 rounded-xl bg-slate-800 text-white border border-slate-700 font-semibold hover:bg-slate-700 transition-all flex items-center justify-center gap-2"
-                    >
-                      Upgrade to VIP
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold text-white">{PLAN_DEFINITIONS.vip.price}</span>
+                    <span className="text-slate-500 text-sm">{' /3 months'}</span>
                   </div>
+                  <ul className="space-y-3 mb-8">
+                    {['Everything in Pro', '3 mentoring sessions', 'Career roadmap', 'Interview prep', 'Salary negotiation', 'Unlimited support'].map((f, i) => (
+                      <li key={i} className="flex items-center gap-3 text-slate-300 text-sm">
+                        <Check className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => handlePlanPurchase('vip-mentorship')}
+                    className="w-full py-3 rounded-xl bg-slate-800 text-white border border-slate-700 font-semibold hover:bg-slate-700 transition-all flex items-center justify-center gap-2"
+                  >
+                    Upgrade to VIP
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
 
             <div className="text-center mt-10">
               <p className="text-slate-500 text-sm flex items-center justify-center gap-2">
