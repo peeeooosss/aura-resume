@@ -211,7 +211,7 @@ export function RoadmapGenerate() {
 
         <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
           <p className="text-indigo-400 text-sm">
-            <strong>120 credits</strong> will be used for roadmap generation.
+            <strong>30 credits</strong> will be used for roadmap generation.
             AI will analyze your resume, recommend the best career role, and create a personalized 90-day plan.
           </p>
         </div>

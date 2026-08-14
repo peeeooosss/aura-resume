@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Coins, X, Check, Loader2, Lock, Zap } from 'lucide-react';
 import { getRefillOptions, REFILL_THRESHOLD } from '@/lib/constants/credits';
 import { useCredits } from '@/lib/hooks/useCredits';
+import { loadRazorpayScript } from '@/lib/payment/checkout';
+import { readJsonResponse } from '@/lib/utils/helpers';
 
 interface CreditRefillModalProps {
   open: boolean;
@@ -29,22 +31,60 @@ export function CreditRefillModal({ open, onClose, plan }: CreditRefillModalProp
     setSuccess(null);
 
     try {
-      const res = await fetch('/api/credits/refill', {
+      const orderRes = await fetch('/api/payment/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({ type: 'refill', credits: amount }),
       });
-      const data = await res.json();
+      const orderData = await readJsonResponse(orderRes);
+      const { orderId, amount: orderAmount, currency, keyId } = orderData;
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Refill failed');
-      }
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) throw new Error('Failed to load payment gateway. Please refresh and try again.');
 
-      await refresh();
-      setSuccess(`+${data.creditsAdded} credits added! New balance: ${data.balance}`);
+      const options = {
+        key: keyId,
+        amount: orderAmount,
+        currency,
+        name: 'Aura Resume',
+        description: `Credit refill — ${amount} credits`,
+        order_id: orderId,
+        theme: { color: '#f59e0b' },
+        handler: async (response: any) => {
+          try {
+            const verifyRes = await fetch('/api/payment/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+            await readJsonResponse(verifyRes);
+            await refresh();
+            setSuccess(`+${amount} credits added!`);
+          } catch (err: any) {
+            setError(err.message || 'Payment verification failed');
+          } finally {
+            setLoading(null);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setLoading(null);
+          },
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', (resp: any) => {
+        setError(resp.error?.description || 'Payment failed. Please try again.');
+        setLoading(null);
+      });
+      rzp.open();
     } catch (err: any) {
       setError(err.message || 'Refill failed');
-    } finally {
       setLoading(null);
     }
   }

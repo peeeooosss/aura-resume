@@ -1,10 +1,24 @@
+export interface PlanLimits {
+  resumes: number;
+  scansPerMonth: number;
+  jobMatches: number;
+  tailoredResumes: number;
+  roadmaps: number;
+  portfolio: boolean;
+  aiInterviews: number;
+  coldEmails: number;
+}
+
 export const PLAN_DEFINITIONS = {
   free: {
     id: 'free',
+    slug: 'free',
     name: 'Free',
     price: 0,
     period: '/month',
     monthlyEquiv: '₹0/month',
+    duration: 'monthly' as const,
+    expiresInDays: null,
     color: 'text-slate-400',
     bgColor: 'bg-slate-500/10',
     borderColor: 'border-slate-500/20',
@@ -23,10 +37,13 @@ export const PLAN_DEFINITIONS = {
   },
   quick: {
     id: 'quick',
+    slug: 'quick-fix',
     name: 'Quick Fix',
     price: 49,
     period: 'one-time',
     monthlyEquiv: '₹49 one-time',
+    duration: 'one-time' as const,
+    expiresInDays: null,
     color: 'text-emerald-400',
     bgColor: 'bg-emerald-500/10',
     borderColor: 'border-emerald-500/20',
@@ -50,10 +67,13 @@ export const PLAN_DEFINITIONS = {
   },
   pro: {
     id: 'pro',
+    slug: 'pro-bundle',
     name: 'Pro Bundle',
     price: 499,
     period: '/3 months',
     monthlyEquiv: '~₹166/month',
+    duration: 'quarterly' as const,
+    expiresInDays: 90,
     color: 'text-indigo-400',
     bgColor: 'bg-indigo-500/10',
     borderColor: 'border-indigo-500/20',
@@ -81,10 +101,13 @@ export const PLAN_DEFINITIONS = {
   },
   vip: {
     id: 'vip',
+    slug: 'vip-mentorship',
     name: 'VIP Mentorship',
     price: 1499,
     period: '/3 months',
     monthlyEquiv: '~₹499/month',
+    duration: 'quarterly' as const,
+    expiresInDays: 90,
     color: 'text-amber-400',
     bgColor: 'bg-amber-500/10',
     borderColor: 'border-amber-500/20',
@@ -114,20 +137,39 @@ export const PLAN_DEFINITIONS = {
 } as const;
 
 export type PlanId = keyof typeof PLAN_DEFINITIONS;
-export type PlanDefinition = typeof PLAN_DEFINITIONS[PlanId];
+export type PlanDefinition = (typeof PLAN_DEFINITIONS)[PlanId];
 
-export function getPlanDefinition(planId: PlanId): PlanDefinition {
-  return PLAN_DEFINITIONS[planId] || PLAN_DEFINITIONS.free;
+export function getPlanDefinition(planId: string): PlanDefinition {
+  return PLAN_DEFINITIONS[planId as PlanId] || PLAN_DEFINITIONS.free;
+}
+
+export function getPlanBySlug(slug: string): PlanDefinition | null {
+  const entry = (Object.values(PLAN_DEFINITIONS) as PlanDefinition[]).find((p) => p.slug === slug);
+  return entry || null;
+}
+
+export function getPlanPricePaise(planId: string): number {
+  return getPlanDefinition(planId).price * 100;
+}
+
+export function getPlanExpiry(planId: string, from: Date = new Date()): Date | null {
+  const days = getPlanDefinition(planId).expiresInDays;
+  if (days === null) return null;
+  const expires = new Date(from);
+  expires.setDate(expires.getDate() + days);
+  return expires;
 }
 
 export function canAccessFeature(
-  userPlan: PlanId,
-  requiredPlan: PlanId
+  userPlan: string,
+  requiredPlan: string
 ): boolean {
-  const planOrder: PlanId[] = ['free', 'quick', 'pro', 'vip'];
+  const planOrder: string[] = ['free', 'quick', 'pro', 'vip'];
   return planOrder.indexOf(userPlan) >= planOrder.indexOf(requiredPlan);
 }
 
-export function getPlanLimit(userPlan: PlanId, limitKey: keyof PlanDefinition['limits']) {
-  return PLAN_DEFINITIONS[userPlan]?.limits[limitKey] ?? 0;
+export function getPlanLimit(userPlan: string, limitKey: keyof PlanDefinition['limits']) {
+  return PLAN_DEFINITIONS[userPlan as PlanId]?.limits[limitKey] ?? 0;
 }
+
+export const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };

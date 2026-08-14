@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSessionUserId } from '@/lib/auth/getSessionUser';
+import { prisma } from '@/lib/db';
 import Razorpay from 'razorpay';
+import { getPlanBySlug } from '@/lib/constants/plans';
+import { getRefillPrice } from '@/lib/constants/credits';
+import { resolvePlanValidity } from '@/lib/billing';
 
 const KEY_ID = process.env.RAZORPAY_KEY_ID || '';
 const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '';
@@ -11,36 +15,65 @@ if (!KEY_ID || !KEY_SECRET) {
 
 const razorpay = new Razorpay({ key_id: KEY_ID, key_secret: KEY_SECRET });
 
-const PLAN_PRICES: Record<string, { amount: number; label: string }> = {
-  quick: { amount: 4900, label: 'Quick Fix' },
-  pro: { amount: 49900, label: 'Pro Bundle' },
-  vip: { amount: 149900, label: 'VIP Mentorship' },
-};
-
 export async function POST(req: NextRequest) {
   try {
     const userId = await requireSessionUserId();
     const body = await req.json();
-    const plan = (body.plan as string) || 'quick';
-    const customAmount = body.amount ? Number(body.amount) : undefined;
 
-    const planConfig = PLAN_PRICES[plan];
-    if (!planConfig && !customAmount) {
-      return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    let amount: number;
+    let plan: string;
+    let metadata: Record<string, unknown>;
+
+    const type = body.type === 'refill' ? 'refill' : 'plan';
+
+    if (type === 'refill') {
+      const credits = Number(body.credits);
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } });
+      const currentPlan = await resolvePlanValidity(userId, (user?.plan as string) || 'free');
+
+      if (currentPlan === 'free') {
+        return NextResponse.json({ error: 'Credit refills require a paid plan' }, { status: 403 });
+      }
+
+      const price = getRefillPrice(currentPlan, credits);
+
+      if (!credits || credits <= 0 || !price) {
+        return NextResponse.json({ error: 'Invalid refill amount' }, { status: 400 });
+      }
+
+      amount = price * 100;
+      plan = 'credit_refill';
+      metadata = { type: 'refill', credits };
+    } else {
+      const slug = (body.plan as string) || 'quick-fix';
+      const def = getPlanBySlug(slug);
+
+      if (!def || def.price <= 0) {
+        return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+      }
+
+      amount = def.price * 100;
+      plan = def.id;
+      metadata = { type: 'plan', planId: def.id, slug };
     }
-
-    const amount = customAmount || planConfig.amount;
-    const notes = {
-      userId,
-      plan,
-      label: planConfig?.label || plan,
-    };
 
     const order = await razorpay.orders.create({
       amount,
       currency: 'INR',
       receipt: `rcpt_${userId.slice(0, 8)}_${Date.now()}`,
-      notes,
+      notes: { userId, plan, ...metadata },
+    });
+
+    await prisma.payment.create({
+      data: {
+        userId,
+        razorpayId: order.id,
+        amount,
+        currency: 'INR',
+        plan,
+        status: 'created',
+        metadata: { ...metadata, orderId: order.id },
+      },
     });
 
     return NextResponse.json({

@@ -1,54 +1,18 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { ArrowLeft, CreditCard, Lock, CheckCircle, Loader2, Phone } from 'lucide-react';
 import { usePlan } from '@/lib/hooks/usePlan';
 import { useCreditsStore } from '@/lib/hooks/useCredits';
-import type { PlanId } from '@/lib/constants/plans';
+import { loadRazorpayScript } from '@/lib/payment/checkout';
+import { readJsonResponse } from '@/lib/utils/helpers';
+import { getPlanBySlug } from '@/lib/constants/plans';
 
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
-
-function loadRazorpayScript(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (window.Razorpay) {
-      resolve(true);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
-
-const PLANS: Record<string, { name: string; price: number; planId: string; period: string; features: string[] }> = {
-  'quick-fix': {
-    name: 'Quick Fix',
-    price: 49,
-    planId: 'quick',
-    period: 'one-time',
-    features: ['Full ATS scan', 'Red flag details & fixes', 'ATS-optimized resume download', 'PDF report'],
-  },
-  'pro-bundle': {
-    name: 'Pro Bundle',
-    price: 499,
-    planId: 'pro',
-    period: '/3 months',
-    features: ['AI resume rewrite', 'Cover letters', 'LinkedIn review', 'Portfolio builder'],
-  },
-  'vip-mentorship': {
-    name: 'VIP Mentorship',
-    price: 1499,
-    planId: 'vip',
-    period: '/3 months',
-    features: ['Everything in Pro', '1-on-1 mentoring', 'Salary coaching', 'Unlimited support'],
-  },
+const PLAN_FEATURES: Record<string, string[]> = {
+  'quick-fix': ['Full ATS scan', 'Red flag details & fixes', 'ATS-optimized resume download', 'PDF report'],
+  'pro-bundle': ['AI resume rewrite', 'Cover letters', 'LinkedIn review', 'Portfolio builder'],
+  'vip-mentorship': ['Everything in Pro', '1-on-1 mentoring', 'Salary coaching', 'Unlimited support'],
 };
 
 export default function PaymentForm() {
@@ -57,7 +21,15 @@ export default function PaymentForm() {
   const rawPlan = searchParams.get('plan') || 'quick-fix';
   const resultId = searchParams.get('resultId');
 
-  const plan = PLANS[rawPlan] || PLANS['quick-fix'];
+  const planDef = getPlanBySlug(rawPlan) || getPlanBySlug('quick-fix')!;
+  const plan = {
+    slug: planDef.slug,
+    planId: planDef.id,
+    name: planDef.name,
+    price: planDef.price,
+    period: planDef.period,
+    features: PLAN_FEATURES[planDef.slug] || [],
+  };
 
   const [step, setStep] = useState<'details' | 'processing' | 'success'>('details');
   const [email, setEmail] = useState('');
@@ -84,15 +56,11 @@ export default function PaymentForm() {
       const orderRes = await fetch('/api/payment/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: plan.planId }),
+        body: JSON.stringify({ plan: plan.slug }),
       });
 
-      if (!orderRes.ok) {
-        const err = await orderRes.json();
-        throw new Error(err.error || 'Failed to create order');
-      }
-
-      const { orderId, amount, currency, keyId } = await orderRes.json();
+      const orderData = await readJsonResponse(orderRes);
+      const { orderId, amount, currency, keyId } = orderData;
 
       let storedResumeText = '';
       let storedAnalysis: any = null;
@@ -139,7 +107,6 @@ export default function PaymentForm() {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
-                plan: plan.planId,
                 ...(storedResumeText ? {
                   resumeText: storedResumeText,
                   analysis: storedAnalysis,
@@ -148,30 +115,28 @@ export default function PaymentForm() {
               }),
             });
 
-            const verifyData = await verifyRes.json();
-
-            if (!verifyRes.ok) {
-              throw new Error(verifyData.error || 'Payment verification failed');
-            }
+            const verifyData = await readJsonResponse(verifyRes);
 
             if (storedResumeText && resultId) {
-              const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
-              if (analyses[resultId]) {
-                analyses[resultId].unlockedTier = plan.planId;
-                analyses[resultId].purchasedAt = new Date().toISOString();
-                if (verifyData.optimizedResume) {
-                  analyses[resultId].optimizedResumeText = verifyData.optimizedResume;
+              try {
+                const analyses = JSON.parse(localStorage.getItem('aura-analyses') || '{}');
+                if (analyses[resultId]) {
+                  analyses[resultId].unlockedTier = plan.planId;
+                  analyses[resultId].purchasedAt = new Date().toISOString();
+                  if (verifyData.optimizedResume) {
+                    analyses[resultId].optimizedResumeText = verifyData.optimizedResume;
+                  }
+                  localStorage.setItem('aura-analyses', JSON.stringify(analyses));
                 }
-                localStorage.setItem('aura-analyses', JSON.stringify(analyses));
-              }
-              localStorage.setItem(`aura-unlocked-${resultId}`, JSON.stringify({
-                tier: plan.planId,
-                at: Date.now(),
-              }));
+                localStorage.setItem(`aura-unlocked-${resultId}`, JSON.stringify({
+                  tier: plan.planId,
+                  at: Date.now(),
+                }));
+              } catch {}
             }
 
-            setResumeId(verifyData.resumeId);
-            usePlan.getState().setPlan(plan.planId as PlanId);
+            setResumeId(verifyData.resumeId || null);
+            usePlan.getState().setPlan(plan.planId as any);
             useCreditsStore.getState().refresh();
             setLoading(false);
             setStep('success');
@@ -198,7 +163,7 @@ export default function PaymentForm() {
       setError(err.message || 'Something went wrong');
       setLoading(false);
     }
-  }, [email, name, phone, plan, resultId, router]);
+  }, [email, name, phone, plan, resultId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

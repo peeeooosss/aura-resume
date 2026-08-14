@@ -63,3 +63,23 @@ export function getInitials(name: string): string {
 export function generateId(prefix = 'id'): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
+
+export async function readJsonResponse<T = any>(res: Response): Promise<T> {
+  const text = await res.text();
+  let data: any = null;
+  if (text.trim()) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = null;
+    }
+  }
+
+  if (!res.ok) {
+    throw new Error((data && data.error) || `Request failed (${res.status})`);
+  }
+  if (data === null) {
+    throw new Error('Empty response from server. Please try again.');
+  }
+  return data as T;
+}

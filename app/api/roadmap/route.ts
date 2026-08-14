@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateRoadmapFromResume } from '@/lib/ai/openrouter';
 import { CREDIT_COSTS } from '@/lib/constants/credits';
+import { PLAN_TIER } from '@/lib/constants/plans';
 import { requireSessionUserId } from '@/lib/auth/getSessionUser';
-
-const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };
+import { resolvePlanValidity } from '@/lib/billing';
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } });
-    const userPlan = (user?.plan as string) || 'free';
+    const storedPlan = (user?.plan as string) || 'free';
+    const userPlan = await resolvePlanValidity(userId, storedPlan);
     if ((PLAN_TIER[userPlan] ?? 0) < (PLAN_TIER['pro'] ?? 0)) {
       return NextResponse.json({ error: 'Roadmap requires Pro or VIP plan', upgradeRequired: true }, { status: 403 });
     }

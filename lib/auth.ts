@@ -5,6 +5,7 @@ import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { getInitialCredits } from "./constants/credits";
+import { resolvePlanValidity } from "./billing";
 
 export const authOptions = {
   adapter: PrismaAdapter(prisma),
@@ -88,7 +89,7 @@ export const authOptions = {
         });
         token.username = dbUser?.username ?? null;
         token.onboarded = dbUser?.onboarded ?? false;
-        token.plan = (dbUser?.plan as string) || "free";
+        token.plan = await resolvePlanValidity(token.id, (dbUser?.plan as string) || "free");
       }
       return token;
     },

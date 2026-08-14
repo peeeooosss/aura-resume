@@ -2,9 +2,8 @@
 
 import { Fragment, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Sparkles, Shield, Download, Sparkles as SparklesIcon, Users, Award, Star, X, Check, Lock, CreditCard, Mail, Linkedin, Briefcase, Mic, Target, Brain, GraduationCap, Handshake, ArrowRight, Loader2 } from 'lucide-react';
-import { usePlan } from '@/lib/hooks/usePlan';
-import { useCreditsStore } from '@/lib/hooks/useCredits';
+import { ArrowLeft, Sparkles, Shield, Download, Sparkles as SparklesIcon, Users, Star, X, Check, Lock, Zap } from 'lucide-react';
+import { PLAN_DEFINITIONS, type PlanId } from '@/lib/constants/plans';
 
 function FeatureIcon({ value }: { value: any }) {
   if (value === true) return <Check className="w-5 h-5 text-emerald-400" />;
@@ -15,43 +14,26 @@ function FeatureIcon({ value }: { value: any }) {
   return <X className="w-5 h-5 text-slate-600" />;
 }
 
-const plans = [
+const PLAN_DISPLAY = [
   {
-    id: 'free',
-    name: 'Free',
-    price: 0,
-    period: '/month',
-    bgColor: 'bg-slate-900/50',
-    borderColor: 'border-slate-800',
-    color: 'text-slate-400',
+    id: 'free' as PlanId,
     icon: Shield,
     badge: null,
-    monthlyEquiv: null,
   },
-
   {
-    id: 'pro',
-    name: 'Pro Bundle',
-    price: 499,
-    period: '/3 months',
-    bgColor: 'bg-indigo-500/10',
-    borderColor: 'border-indigo-500/30',
-    color: 'text-indigo-400',
+    id: 'quick' as PlanId,
+    icon: Zap,
+    badge: { label: 'Instant', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+  },
+  {
+    id: 'pro' as PlanId,
     icon: SparklesIcon,
     badge: { label: 'Most Popular', color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' },
-    monthlyEquiv: '~₹166/month',
   },
   {
-    id: 'vip',
-    name: 'VIP Mentorship',
-    price: 1499,
-    period: '/3 months',
-    bgColor: 'bg-amber-500/10',
-    borderColor: 'border-amber-500/30',
-    color: 'text-amber-400',
+    id: 'vip' as PlanId,
     icon: Users,
     badge: { label: 'Premium', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
-    monthlyEquiv: '~₹499/month',
   },
 ];
 
@@ -107,7 +89,23 @@ function getFeatureValue(planId: string, featureKey: string) {
       prioritySupport: false,
       unlimitedSupport: false,
     },
-
+    quick: {
+      atsScan: true,
+      redFlags: true,
+      redFlagDetails: true,
+      pdfReport: true,
+      aiRewrite: 1,
+      coverLetter: false,
+      linkedinReview: false,
+      aiInterviewer: false,
+      jobMatch: false,
+      jobRoadmap: false,
+      mentoring: false,
+      salaryNegotiation: false,
+      recruiterOutreach: false,
+      prioritySupport: false,
+      unlimitedSupport: false,
+    },
     pro: {
       atsScan: true,
       redFlags: true,
@@ -116,7 +114,7 @@ function getFeatureValue(planId: string, featureKey: string) {
       aiRewrite: 5,
       coverLetter: true,
       linkedinReview: true,
-      aiInterviewer: 3,
+      aiInterviewer: false,
       jobMatch: true,
       jobRoadmap: 'Basic',
       mentoring: false,
@@ -150,37 +148,17 @@ export default function PlansContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const highlightPlan = searchParams.get('plan') || 'pro';
-  const setPlan = usePlan(s => s.setPlan);
-  const [activating, setActivating] = useState<string | null>(null);
 
-  const handleActivatePlan = async (planId: string) => {
+  const handleActivatePlan = (planId: string) => {
+    const def = PLAN_DEFINITIONS[planId as PlanId];
+    if (!def) return;
+
     if (planId === 'free') {
       router.push('/');
       return;
     }
 
-    setActivating(planId);
-    try {
-      const res = await fetch('/api/plan/activate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planId }),
-      });
-
-      if (res.ok) {
-        setPlan(planId as any);
-        useCreditsStore.getState().refresh();
-        router.push('/dashboard');
-      } else if (res.status === 401) {
-        router.push(`/login?redirect=/plans&plan=${planId}`);
-      } else {
-        console.error('Plan activation failed');
-      }
-    } catch {
-      router.push(`/login?redirect=/plans&plan=${planId}`);
-    } finally {
-      setActivating(null);
-    }
+    router.push(`/payment?plan=${def.slug}`);
   };
 
   return (
@@ -201,79 +179,80 @@ export default function PlansContent() {
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Subscription Plans</h1>
           <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-            Subscriptions billed quarterly. Cancel anytime.
+            Billed securely via Razorpay. Cancel anytime.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-16 max-w-7xl mx-auto">
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className={`relative group transition-all duration-300 ${plan.id === highlightPlan ? 'ring-2 ring-indigo-500/50 scale-[1.02] z-10' : ''} ${plan.bgColor} border ${plan.borderColor} rounded-3xl p-6 md:p-8 flex flex-col`}
-            >
-              {plan.badge && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <span className={`px-4 py-1.5 rounded-full text-sm font-bold ${plan.badge.color}`}>
-                    {plan.badge.label}
-                  </span>
-                </div>
-              )}
-
-              <div className="text-center mb-6">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 ${plan.bgColor} border ${plan.borderColor}`}>
-                  <plan.icon className={`w-7 h-7 ${plan.color}`} />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
-                <p className="text-slate-500 text-sm">{plan.id === 'free' ? 'Free forever' : plan.id === 'quick' ? 'One-time payment' : 'Quarterly subscription'}</p>
-              </div>
-
-              <div className="text-center mb-6">
-                <span className="text-5xl font-bold text-white">₹{plan.price}</span>
-                <span className="text-slate-500 text-sm ml-2">{plan.period}</span>
-                {plan.monthlyEquiv && (
-                  <div className="mt-2 text-xs text-slate-500">{plan.monthlyEquiv}</div>
-                )}
-              </div>
-
-              <ul className="space-y-3 mb-8 flex-1">
-                {[
-                  { key: 'atsScan', label: 'ATS scan & red flags' },
-                  { key: 'pdfReport', label: 'PDF report download' },
-                  { key: 'aiRewrite', label: 'AI resume rewrite' },
-                  { key: 'coverLetter', label: 'Cover letter generator' },
-                  { key: 'linkedinReview', label: 'LinkedIn review' },
-                  { key: 'aiInterviewer', label: 'AI mock interviews' },
-                  { key: 'jobMatch', label: 'Job match analyzer' },
-                  { key: 'jobRoadmap', label: 'Job roadmap' },
-                  { key: 'mentoring', label: '1-on-1 mentoring' },
-                  { key: 'prioritySupport', label: 'Priority support' },
-                ].map((f) => (
-                  <li key={f.key} className="flex items-center gap-3 text-slate-300 text-sm">
-                    <FeatureIcon value={getFeatureValue(plan.id, f.key)} />
-                    <span>{f.label}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                onClick={() => handleActivatePlan(plan.id)}
-                disabled={activating !== null}
-                className={`w-full py-3 rounded-xl font-semibold transition-all ${
-                  plan.id === 'free'
-                    ? 'bg-slate-800 text-white border border-slate-700 hover:bg-slate-700'
-                    : plan.id === 'quick'
-                    ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-lg hover:shadow-emerald-500/30'
-                    : plan.id === 'pro'
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg hover:shadow-indigo-500/30'
-                    : 'bg-gradient-to-r from-amber-600 to-amber-500 text-white hover:shadow-lg hover:shadow-amber-500/30'
-                } disabled:opacity-50`}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16 max-w-7xl mx-auto">
+          {PLAN_DISPLAY.map((plan) => {
+            const def = PLAN_DEFINITIONS[plan.id];
+            const Icon = plan.icon;
+            return (
+              <div
+                key={plan.id}
+                className={`relative group transition-all duration-300 ${plan.id === highlightPlan ? 'ring-2 ring-indigo-500/50 scale-[1.02] z-10' : ''} ${def.bgColor} border ${def.borderColor} rounded-3xl p-6 md:p-8 flex flex-col`}
               >
-                {activating === plan.id ? (
-                  <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Activating...</span>
-                ) : plan.id === 'free' ? 'Start Free' : plan.id === 'quick' ? 'Get Quick Fix' : 'Get Started'}
-              </button>
-            </div>
-          ))}
+                {plan.badge && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                    <span className={`px-4 py-1.5 rounded-full text-sm font-bold ${plan.badge.color}`}>
+                      {plan.badge.label}
+                    </span>
+                  </div>
+                )}
+
+                <div className="text-center mb-6">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 ${def.bgColor} border ${def.borderColor}`}>
+                    <Icon className={`w-7 h-7 ${def.color}`} />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-1">{def.name}</h3>
+                  <p className="text-slate-500 text-sm">
+                    {plan.id === 'free' ? 'Free forever' : plan.id === 'quick' ? 'One-time payment' : 'Quarterly subscription'}
+                  </p>
+                </div>
+
+                <div className="text-center mb-6">
+                  <span className="text-5xl font-bold text-white">₹{def.price}</span>
+                  <span className="text-slate-500 text-sm ml-2">{def.period}</span>
+                  <div className="mt-2 text-xs text-slate-500">{def.monthlyEquiv}</div>
+                </div>
+
+                <ul className="space-y-3 mb-8 flex-1">
+                  {[
+                    { key: 'atsScan', label: 'ATS scan & red flags' },
+                    { key: 'pdfReport', label: 'PDF report download' },
+                    { key: 'aiRewrite', label: 'AI resume rewrite' },
+                    { key: 'coverLetter', label: 'Cover letter generator' },
+                    { key: 'linkedinReview', label: 'LinkedIn review' },
+                    { key: 'aiInterviewer', label: 'AI mock interviews' },
+                    { key: 'jobMatch', label: 'Job match analyzer' },
+                    { key: 'jobRoadmap', label: 'Job roadmap' },
+                    { key: 'mentoring', label: '1-on-1 mentoring' },
+                    { key: 'prioritySupport', label: 'Priority support' },
+                  ].map((f) => (
+                    <li key={f.key} className="flex items-center gap-3 text-slate-300 text-sm">
+                      <FeatureIcon value={getFeatureValue(plan.id, f.key)} />
+                      <span>{f.label}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => handleActivatePlan(plan.id)}
+                  className={`w-full py-3 rounded-xl font-semibold transition-all ${
+                    plan.id === 'free'
+                      ? 'bg-slate-800 text-white border border-slate-700 hover:bg-slate-700'
+                      : plan.id === 'quick'
+                      ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white hover:shadow-lg hover:shadow-emerald-500/30'
+                      : plan.id === 'pro'
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg hover:shadow-indigo-500/30'
+                      : 'bg-gradient-to-r from-amber-600 to-amber-500 text-white hover:shadow-lg hover:shadow-amber-500/30'
+                  }`}
+                >
+                  {plan.id === 'free' ? 'Start Free' : plan.id === 'quick' ? 'Get Quick Fix' : 'Get Started'}
+                </button>
+              </div>
+            );
+          })}
         </div>
 
         <div className="mb-16">
@@ -283,26 +262,30 @@ export default function PlansContent() {
               <thead>
                 <tr className="border-b border-slate-800">
                   <th className="text-left py-4 px-6 font-semibold text-slate-400">Feature</th>
-                  {plans.map(p => (
-                    <th key={p.id} className="text-center py-4 px-4 font-semibold text-white">
-                      <div className="flex items-center justify-center gap-2">
-                        <p.icon className={`w-5 h-5 ${p.color}`} />
-                        <span>{p.name}</span>
-                      </div>
-                    </th>
-                  ))}
+                  {PLAN_DISPLAY.map((p) => {
+                    const def = PLAN_DEFINITIONS[p.id];
+                    const Icon = p.icon;
+                    return (
+                      <th key={p.id} className="text-center py-4 px-4 font-semibold text-white">
+                        <div className="flex items-center justify-center gap-2">
+                          <Icon className={`w-5 h-5 ${def.color}`} />
+                          <span>{def.name}</span>
+                        </div>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
                 {features.map((cat) => (
                   <Fragment key={cat.category}>
                     <tr className="border-b border-slate-800/50">
-                      <td className="py-3 px-6 text-sm font-semibold text-slate-400 uppercase tracking-wider bg-slate-900/50" colSpan={5}>{cat.category}</td>
+                      <td className="py-4 px-6 text-sm font-semibold text-slate-400 uppercase tracking-wider bg-slate-900/50" colSpan={5}>{cat.category}</td>
                     </tr>
                     {cat.items.map((item) => (
                       <tr key={item.key} className="border-b border-slate-800/30 hover:bg-slate-900/30">
                         <td className="py-4 px-6 text-slate-300">{item.label}</td>
-                        {plans.map((p) => (
+                        {PLAN_DISPLAY.map((p) => (
                           <td key={p.id} className="py-4 px-4 text-center">
                             <FeatureIcon value={getFeatureValue(p.id, item.key)} />
                           </td>
@@ -328,19 +311,17 @@ export default function PlansContent() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
               onClick={() => handleActivatePlan('pro')}
-              disabled={activating !== null}
-              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
             >
-              {activating === 'pro' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-              {activating === 'pro' ? 'Activating...' : 'Get Started with Pro'}
+              <Download className="w-5 h-5" />
+              Get Started with Pro
             </button>
             <button
               onClick={() => handleActivatePlan('vip')}
-              disabled={activating !== null}
-              className="inline-flex items-center gap-2 px-8 py-4 bg-slate-800 text-white font-semibold rounded-xl border border-slate-700 hover:bg-slate-700 transition-all disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-slate-800 text-white font-semibold rounded-xl border border-slate-700 hover:bg-slate-700 transition-all"
             >
-              {activating === 'vip' ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
-              {activating === 'vip' ? 'Activating...' : 'Upgrade to VIP'}
+              <Star className="w-5 h-5" />
+              Upgrade to VIP
             </button>
           </div>
         </div>

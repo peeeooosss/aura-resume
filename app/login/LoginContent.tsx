@@ -4,14 +4,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Github, Chrome, Loader2 } from 'lucide-react';
-import { usePlan } from '@/lib/hooks/usePlan';
-import { useCreditsStore } from '@/lib/hooks/useCredits';
 
 export default function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const redirectParam = searchParams.get('redirect');
   const planParam = searchParams.get('plan');
-  const setPlan = usePlan(s => s.setPlan);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,20 +18,9 @@ export default function LoginContent() {
   const [isSignup, setIsSignup] = useState(false);
   const [error, setError] = useState('');
 
-  const activatePlanAndRedirect = async (planId: string) => {
-    try {
-      const res = await fetch('/api/plan/activate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planId }),
-      });
-      if (res.ok) {
-        setPlan(planId as any);
-        useCreditsStore.getState().refresh();
-      }
-    } catch {
-      // Ignore activation errors
-    }
+  const getRedirectTarget = () => {
+    if (redirectParam && redirectParam.startsWith('/')) return redirectParam;
+    return '/dashboard';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,11 +51,7 @@ export default function LoginContent() {
         throw new Error('Invalid credentials');
       }
 
-      if (planParam && planParam !== 'free') {
-        await activatePlanAndRedirect(planParam);
-      }
-
-      router.push('/dashboard');
+      router.push(getRedirectTarget());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -82,12 +65,7 @@ export default function LoginContent() {
 
     try {
       await signIn(provider, { redirect: false });
-
-      if (planParam && planParam !== 'free') {
-        await activatePlanAndRedirect(planParam);
-      }
-
-      router.push('/dashboard');
+      router.push(getRedirectTarget());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

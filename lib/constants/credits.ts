@@ -1,3 +1,5 @@
+import { PLAN_DEFINITIONS } from './plans';
+
 export const CREDIT_COSTS = {
   resume_analysis: 25,
   linkedin_analysis: 30,
@@ -81,16 +83,5 @@ export async function addCredits(userId: string, amount: number): Promise<number
 }
 
 export function getInitialCredits(plan: string): number {
-  switch (plan) {
-    case 'free':
-      return 25;
-    case 'quick':
-      return 150;
-    case 'pro':
-      return 900;
-    case 'vip':
-      return 1800;
-    default:
-      return 100;
-  }
+  return PLAN_DEFINITIONS[plan as keyof typeof PLAN_DEFINITIONS]?.credits ?? 50;
 }

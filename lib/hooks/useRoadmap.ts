@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { RoadmapData, RoadmapPhase, RoadmapWeek, RoadmapDay, SkillGap } from '@/lib/types/roadmap';
 import { useCreditsStore } from './useCredits';
+import { readJsonResponse } from '@/lib/utils/helpers';
 
 export type { RoadmapData, RoadmapPhase, RoadmapWeek, RoadmapDay, SkillGap };
 
@@ -16,10 +17,8 @@ export function useRoadmap(roadmapId?: string) {
   const fetchRoadmaps = useCallback(async () => {
     try {
       const res = await fetch('/api/roadmap');
-      const data = await res.json();
-      if (res.ok) {
-        setRoadmaps(data.roadmaps || []);
-      }
+      const data = await readJsonResponse(res);
+      setRoadmaps(data.roadmaps || []);
     } catch (err) {
       console.error('Failed to fetch roadmaps:', err);
     }
@@ -29,10 +28,8 @@ export function useRoadmap(roadmapId?: string) {
     try {
       setLoading(true);
       const res = await fetch(`/api/roadmap/${id}`);
-      const data = await res.json();
-      if (res.ok) {
-        setCurrentRoadmap(data.roadmap);
-      }
+      const data = await readJsonResponse(res);
+      setCurrentRoadmap(data.roadmap);
     } catch (err) {
       console.error('Failed to fetch roadmap:', err);
     } finally {
@@ -59,10 +56,7 @@ export function useRoadmap(roadmapId?: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resumeId }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Roadmap generation failed');
-      }
+      const data = await readJsonResponse(res);
 
       useCreditsStore.getState().refresh();
       await fetchRoadmaps();
@@ -82,8 +76,8 @@ export function useRoadmap(roadmapId?: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completed: true }),
       });
-      const data = await res.json();
-      if (res.ok && data.roadmap) {
+      const data = await readJsonResponse(res);
+      if (data.roadmap) {
         setCurrentRoadmap(data.roadmap);
         await fetchRoadmaps();
       }
@@ -101,8 +95,8 @@ export function useRoadmap(roadmapId?: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'unlock_phase', phaseNumber }),
       });
-      const data = await res.json();
-      if (res.ok && data.roadmap) {
+      const data = await readJsonResponse(res);
+      if (data.roadmap) {
         setCurrentRoadmap(data.roadmap);
         await fetchRoadmaps();
       }

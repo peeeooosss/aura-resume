@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSessionUserId } from '@/lib/auth/getSessionUser';
 import { prisma } from '@/lib/db';
-import { getInitialCredits } from '@/lib/constants/credits';
+import { getPlanDefinition } from '@/lib/constants/plans';
 import { generateATSPerfectResume } from '@/lib/ai/openrouter';
 import crypto from 'crypto';
+import Razorpay from 'razorpay';
 
+const KEY_ID = process.env.RAZORPAY_KEY_ID || '';
 const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '';
+
+const razorpay = new Razorpay({ key_id: KEY_ID, key_secret: KEY_SECRET });
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,7 +19,6 @@ export async function POST(req: NextRequest) {
       razorpay_payment_id: paymentId,
       razorpay_order_id: orderId,
       razorpay_signature: signature,
-      plan,
       resumeText,
       analysis,
       fileName,
@@ -35,29 +38,62 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment verification failed' }, { status: 400 });
     }
 
-    const resolvedPlan = plan || 'quick';
+    const payment = await prisma.payment.findUnique({ where: { razorpayId: orderId } });
+    if (!payment || payment.userId !== userId) {
+      return NextResponse.json({ error: 'Payment record not found' }, { status: 400 });
+    }
+
+    if (payment.status === 'completed') {
+      return NextResponse.json({ success: true, alreadyProcessed: true, plan: payment.plan });
+    }
+    if (payment.status !== 'created') {
+      return NextResponse.json({ error: 'Payment record is not in a pending state' }, { status: 400 });
+    }
+
+    let order: { status: string; amount: number };
+    try {
+      order = await razorpay.orders.fetch(orderId) as any;
+    } catch (err) {
+      console.error('[RazorPay] Order fetch failed:', err);
+      return NextResponse.json({ error: 'Payment verification failed' }, { status: 400 });
+    }
+
+    if (order.status !== 'paid' || Number(order.amount) !== payment.amount) {
+      console.error('[RazorPay] Order status/amount mismatch', order.status, order.amount, payment.amount);
+      return NextResponse.json({ error: 'Payment verification failed' }, { status: 400 });
+    }
 
     await prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: userId },
-        data: { plan: resolvedPlan },
-      });
+      if (payment.plan === 'credit_refill') {
+        const credits = Number((payment.metadata as Record<string, any>)?.credits) || 0;
+        if (credits <= 0) throw new Error('Invalid refill credits');
+        await tx.creditBalance.upsert({
+          where: { userId },
+          create: { userId, balance: credits },
+          update: { balance: { increment: credits } },
+        });
+      } else {
+        const def = getPlanDefinition(payment.plan);
+        await tx.user.update({
+          where: { id: userId },
+          data: { plan: payment.plan },
+        });
+        await tx.creditBalance.upsert({
+          where: { userId },
+          create: { userId, balance: def.credits },
+          update: { balance: def.credits },
+        });
+      }
 
-      await tx.creditBalance.upsert({
-        where: { userId },
-        create: { userId, balance: getInitialCredits(resolvedPlan) },
-        update: { balance: getInitialCredits(resolvedPlan) },
-      });
-
-      await tx.payment.create({
+      await tx.payment.update({
+        where: { id: payment.id },
         data: {
-          userId,
-          razorpayId: paymentId,
-          amount: body.amount || (resolvedPlan === 'quick' ? 4900 : resolvedPlan === 'pro' ? 49900 : 149900),
-          currency: 'INR',
-          plan: resolvedPlan,
           status: 'completed',
-          metadata: { orderId, plan: resolvedPlan },
+          metadata: {
+            ...((payment.metadata as Record<string, any>) || {}),
+            paymentId,
+            verifiedAt: new Date().toISOString(),
+          },
         },
       });
     });
@@ -109,7 +145,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      plan: resolvedPlan,
+      plan: payment.plan,
       resumeId,
       optimizedResume,
     });

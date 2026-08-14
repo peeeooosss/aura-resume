@@ -112,7 +112,7 @@ export function PlanGate({
                   <Shield className="w-4 h-4 text-surface-900 dark:text-white" />
                 </div>
                 <span className="text-xs font-semibold text-surface-500 dark:text-slate-400 uppercase tracking-wider">
-                  {plan === 'free' ? 'FREE' : plan === 'quick' ? '₹49' : plan === 'pro' ? '₹499' : '₹1,499'}
+                  {plan === 'free' ? 'FREE' : `₹${def.price}`}
                 </span>
                 <span className="text-xs text-surface-400 dark:text-slate-500 block mt-1">{planLabels[plan]}</span>
               </div>

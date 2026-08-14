@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireSessionUserId, getSessionUserId } from '@/lib/auth/getSessionUser';
+import { resolvePlanValidity } from '@/lib/billing';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,7 +70,8 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } });
-    const userPlan = user?.plan || 'free';
+    const storedPlan = user?.plan || 'free';
+    const userPlan = await resolvePlanValidity(userId, storedPlan);
     const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };
     const canSave = (PLAN_TIER[userPlan] ?? 0) >= (PLAN_TIER['quick'] ?? 0);
 

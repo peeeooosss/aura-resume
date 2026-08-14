@@ -79,65 +79,73 @@ async function callOpenRouter(
   return { content, tokensUsed, finishReason };
 }
 
-function extractJsonFromResponse(text: string): string {
-  const trimmed = text.trim();
-
-  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-    try {
-      JSON.parse(trimmed);
-      return trimmed;
-    } catch {}
+function isPlainJson(text: string): boolean {
+  if (!text) return false;
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    return false;
   }
-
-  const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    try {
-      JSON.parse(jsonMatch[0]);
-      return jsonMatch[0];
-    } catch {}
-
-    // Try to recover truncated JSON by closing unclosed structures
-    const recovered = tryRecoverTruncatedJson(jsonMatch[0]);
-    if (recovered) {
-      return recovered;
-    }
-  }
-
-  return trimmed;
 }
 
-function tryRecoverTruncatedJson(text: string): string | null {
-  // Count unclosed braces and brackets
-  let braces = 0;
-  let brackets = 0;
+function findFirstJsonStart(text: string): number {
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '{' || text[i] === '[') return i;
+  }
+  return -1;
+}
+
+function extractBalanced(text: string): string | null {
+  const first = text[0];
+  if (first !== '{' && first !== '[') return null;
+
+  const stack: string[] = [];
   let inString = false;
   let escape = false;
 
-  for (const char of text) {
-    if (escape) {
-      escape = false;
-      continue;
-    }
-    if (char === '\\') {
-      escape = true;
-      continue;
-    }
-    if (char === '"') {
-      inString = !inString;
-      continue;
-    }
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
     if (inString) continue;
-    if (char === '{') braces++;
-    if (char === '}') braces--;
-    if (char === '[') brackets++;
-    if (char === ']') brackets--;
+    if (ch === '{' || ch === '[') stack.push(ch);
+    else if (ch === '}' || ch === ']') {
+      const top = stack[stack.length - 1];
+      if ((ch === '}' && top === '{') || (ch === ']' && top === '[')) stack.pop();
+      if (stack.length === 0) return text.slice(0, i + 1);
+    }
+  }
+  return null;
+}
+
+function tryRecoverTruncatedJson(text: string): string | null {
+  if (!text.trim()) return null;
+
+  const stack: string[] = [];
+  let inString = false;
+  let escape = false;
+  let end = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    end = i;
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') stack.push('}');
+    else if (ch === '[') stack.push(']');
+    else if (ch === '}') { if (stack[stack.length - 1] === '}') stack.pop(); }
+    else if (ch === ']') { if (stack[stack.length - 1] === ']') stack.pop(); }
   }
 
-  // Close any unclosed strings, then close brackets and braces
-  let recovered = text;
+  let recovered = text.slice(0, end + 1);
   if (inString) recovered += '"';
-  while (brackets > 0) { recovered += ']'; brackets--; }
-  while (braces > 0) { recovered += '}'; braces--; }
+  recovered = recovered.replace(/,\s*$/, '');
+
+  while (stack.length) recovered += stack.pop()!;
 
   try {
     JSON.parse(recovered);
@@ -145,6 +153,30 @@ function tryRecoverTruncatedJson(text: string): string | null {
   } catch {
     return null;
   }
+}
+
+function extractJsonFromResponse(text: string): string {
+  let trimmed = (text || '').trim();
+
+  const fence = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+  if (fence) trimmed = fence[1].trim();
+
+  if (isPlainJson(trimmed)) return trimmed;
+
+  const start = findFirstJsonStart(trimmed);
+  if (start >= 0) {
+    const candidate = extractBalanced(trimmed.slice(start));
+    if (candidate && isPlainJson(candidate)) return candidate;
+    if (candidate) {
+      const recovered = tryRecoverTruncatedJson(candidate);
+      if (recovered) return recovered;
+    }
+  }
+
+  const recovered = tryRecoverTruncatedJson(trimmed);
+  if (recovered) return recovered;
+
+  return trimmed;
 }
 
 export async function analyzeResume(resumeText: string): Promise<{
@@ -712,39 +744,52 @@ export async function analyzeJobRolePotential(
   }
 }
 
-export async function generateRoadmapFromResume(
-  resumeText: string,
-  analysis: any
-): Promise<RoadmapGenerationResult> {
-  const { content, tokensUsed, finishReason } = await callOpenRouter([
-    { role: 'system', content: ROADMAP_FROM_RESUME_PROMPT },
-    { role: 'user', content: buildRoadmapFromResumePrompt(resumeText, analysis) },
-  ],   { model: 'google/gemini-2.5-pro', temperature: 0.4, maxTokens: 20000, expectJson: true });
-
-  if (finishReason === 'length') {
-    console.error('Roadmap generation truncated at', tokensUsed, 'tokens.');
-  }
-
+async function tryParseRoadmap(
+  content: string,
+  tokensUsed: number
+): Promise<RoadmapGenerationResult | null> {
   try {
     const parsed = JSON.parse(content);
-    const phases = (parsed.phases || []).map((phase: any) => ({
-      ...phase,
-      weeksData: (phase.weeksData || []).map((week: any) => ({
-        ...week,
-        isUnlocked: true,
-        days: (week.days || []).map((day: any) => ({
-          ...day,
-          isCompleted: false,
+
+    if (!parsed || !Array.isArray(parsed.phases) || parsed.phases.length === 0) {
+      console.error('Roadmap response missing phases. Content (first 300):\n', content.slice(0, 300));
+      return null;
+    }
+
+    const phases = (parsed.phases || []).map((phase: any) => {
+      const pc = phase.phaseContent || {};
+      return {
+        ...phase,
+        weeksData: (phase.weeksData || []).map((week: any) => ({
+          ...week,
+          isUnlocked: true,
+          days: (week.days || []).map((day: any) => ({
+            ...day,
+            isCompleted: false,
+          })),
         })),
-      })),
-      phaseContent: phase.phaseContent || { videos: [], quiz: [], projects: [], aiInterview: [] },
-    }));
+        phaseContent: {
+          videos: pc.videos || [],
+          researchResources: pc.researchResources || [],
+          practicePlatforms: pc.practicePlatforms || [],
+          quiz: pc.quiz || [],
+          projects: pc.projects || [],
+          aiInterview: pc.aiInterview || [],
+        },
+      };
+    });
 
     const { roadmap: repairedRoadmap } = await repairRoadmapLinks({ ...parsed, phases });
     const repairedPhases = repairedRoadmap.phases || phases;
 
     return {
-      recommendedRole: parsed.recommendedRole,
+      recommendedRole: parsed.recommendedRole || {
+        title: 'Career Transition',
+        matchScore: 0,
+        reasoning: 'AI-generated roadmap based on your resume.',
+        salaryRange: '',
+        timeToReady: '90 days',
+      },
       currentStrengths: parsed.currentStrengths || [],
       criticalGaps: parsed.criticalGaps || [],
       phases: repairedPhases,
@@ -756,8 +801,38 @@ export async function generateRoadmapFromResume(
   } catch (e) {
     console.error('Failed to parse roadmap. Raw content (first 500):\n', content.slice(0, 500));
     console.error('Raw content (last 500):\n', content.slice(-500));
-    throw new Error('AI returned invalid data. Please try again.');
+    return null;
   }
+}
+
+export async function generateRoadmapFromResume(
+  resumeText: string,
+  analysis: any
+): Promise<RoadmapGenerationResult> {
+  const attempts = 2;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const systemPrompt =
+      attempt === 0
+        ? ROADMAP_FROM_RESUME_PROMPT
+        : `${ROADMAP_FROM_RESUME_PROMPT}
+
+IMPORTANT: Your previous response was cut off before it finished. Generate the roadmap again but be CONCISE — keep every required field but avoid verbose wording so the full JSON fits within the token limit.`;
+
+    const { content, tokensUsed, finishReason } = await callOpenRouter([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: buildRoadmapFromResumePrompt(resumeText, analysis) },
+    ], { model: 'google/gemini-2.5-pro', temperature: 0.4, maxTokens: 32768, expectJson: true });
+
+    if (finishReason === 'length') {
+      console.error('Roadmap generation truncated at', tokensUsed, 'tokens (attempt', attempt + 1, ').');
+    }
+
+    const result = await tryParseRoadmap(content, tokensUsed);
+    if (result) return result;
+  }
+
+  throw new Error('AI returned invalid data. Please try again.');
 }
 
 export async function generateInterviewQuestions(
