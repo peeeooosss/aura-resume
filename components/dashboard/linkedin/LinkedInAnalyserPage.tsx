@@ -340,7 +340,7 @@ export function LinkedInAnalyserPage() {
   const [error, setError] = useState('');
   const [urlError, setUrlError] = useState('');
 
-  const hasAccess = currentPlan !== 'free' && currentPlan !== 'quick';
+  const hasAccess = currentPlan !== 'free';
 
   const handleUrlChange = (value: string) => {
     setLinkedinUrl(value);

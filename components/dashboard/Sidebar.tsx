@@ -16,7 +16,7 @@ import { REFILL_THRESHOLD } from '@/lib/constants/credits';
 import { PlanBadge } from './PlanBadge';
 import { CreditRefillModal } from './CreditRefillModal';
 
-const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };
+const PLAN_TIER: Record<string, number> = { free: 0, pro: 1, vip: 2 };
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -137,20 +137,17 @@ export function Sidebar() {
                 'w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0',
                 currentPlan === 'pro' ? 'bg-primary-100 dark:bg-primary-900/30 border border-primary-300 dark:border-primary-700' :
                 currentPlan === 'vip' ? 'bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700' :
-                currentPlan === 'quick' ? 'bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-300 dark:border-emerald-700' :
                 'bg-surface-200 dark:bg-slate-700/50 border border-surface-300 dark:border-slate-600'
               )}>
                 {currentPlan === 'pro' && <Sparkles className="w-4 h-4 text-primary-600 dark:text-primary-400" />}
                 {currentPlan === 'vip' && <Award className="w-4 h-4 text-amber-600 dark:text-amber-400" />}
-                {currentPlan === 'quick' && <Zap className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
-                {currentPlan === 'free' && <Shield className="w-4 h-4 text-surface-500 dark:text-slate-400" />}
+                {(currentPlan === 'free' || !currentPlan) && <Shield className="w-4 h-4 text-surface-500 dark:text-slate-400" />}
               </div>
               {!collapsed && (
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-surface-500 dark:text-slate-500 truncate">Current Plan</p>
                   <p className="font-semibold text-surface-900 dark:text-surface-900 dark:text-white truncate capitalize">
                     {currentPlan === 'free' ? 'Free' :
-                     currentPlan === 'quick' ? 'Quick Fix' :
                      currentPlan === 'pro' ? 'Pro Bundle' : 'VIP Mentorship'}
                   </p>
                 </div>

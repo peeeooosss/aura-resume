@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, Eye, Loader2, Target, TrendingUp, IndianRupee, ChevronDown, ChevronUp, Lock, ExternalLink } from 'lucide-react';
+import { Upload, Zap, ArrowRight, Sparkles, FileText, X, Check, AlertTriangle, Download, Eye, Loader2, Target, TrendingUp, IndianRupee, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import { generateAnalysisPDF, getPDFBlobURL, generateOptimizedResumePDF } from '@/lib/pdf/generateReport';
 import type { JobRolePotential } from '@/lib/types';
@@ -60,7 +60,7 @@ function ScoreCircle({ score, size = 140 }: { score: number; size?: number }) {
   );
 }
 
-const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };
+const PLAN_TIER: Record<string, number> = { free: 0, pro: 1, vip: 2 };
 
 function BlurGate({ children, hasAccess, requiredPlan = 'pro' }: { children: React.ReactNode; hasAccess: boolean; requiredPlan?: string }) {
   if (hasAccess) return <>{children}</>;
@@ -70,7 +70,7 @@ function BlurGate({ children, hasAccess, requiredPlan = 'pro' }: { children: Rea
       <div className="absolute inset-0 flex items-center justify-center z-10">
         <Link href={`/plans?plan=${requiredPlan}`} className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all">
           <Lock className="w-4 h-4" />
-          Upgrade to {requiredPlan === 'pro' ? 'Pro' : 'Quick Fix'} to unlock
+          Upgrade to {requiredPlan === 'pro' ? 'Pro' : 'VIP'} to unlock
         </Link>
       </div>
     </div>
@@ -399,19 +399,13 @@ export function FixerPage() {
                   </p>
                   <div className="flex flex-wrap items-center gap-3">
                     <Link
-                      href="/plans?plan=pro"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold rounded-lg hover:shadow-lg hover:shadow-indigo-500/30 transition-all"
-                    >
-                      View Plans
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
-                    <Link
-                      href="/"
+                      href="/plans"
                       className="inline-flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-sm font-medium hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
                     >
-                      Quick Fix (₹49) only on landing page
-                      <ExternalLink className="w-3.5 h-3.5" />
+                      View All Plans
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
+                    
                   </div>
                 </div>
               </div>

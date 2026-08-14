@@ -42,7 +42,7 @@ export function ResumesPage() {
     toast(ok ? 'success' : 'error', ok ? 'Resume deleted' : 'Failed to delete resume');
   };
 
-  const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };
+  const PLAN_TIER: Record<string, number> = { free: 0, pro: 1, vip: 2 };
   const canSave = (PLAN_TIER[currentPlan] ?? 0) >= (PLAN_TIER['pro'] ?? 0);
 
   const filteredResumes = filter === 'all'
@@ -101,7 +101,7 @@ export function ResumesPage() {
             </div>
             <div>
               <p className="font-semibold text-surface-900 dark:text-white">Upgrade to Pro to save resumes</p>
-              <p className="text-sm text-surface-500 dark:text-slate-400">Free and Quick Fix plans can view analysis but cannot save resumes.</p>
+              <p className="text-sm text-surface-500 dark:text-slate-400">Free plan can view analysis but cannot save resumes.</p>
             </div>
           </div>
           <Link

@@ -154,7 +154,7 @@ export function TemplatesPage() {
   const [resumes, setResumes] = useState<Array<{id: string; title: string}>>([]);
   const [genError, setGenError] = useState('');
 
-  const hasAccess = currentPlan !== 'free' && currentPlan !== 'quick';
+  const hasAccess = currentPlan !== 'free';
 
   useEffect(() => {
     loadTemplates();

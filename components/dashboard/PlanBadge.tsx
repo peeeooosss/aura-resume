@@ -1,10 +1,10 @@
 'use client';
 
-import { Shield, Zap, Sparkles, Award } from 'lucide-react';
+import { Shield, Sparkles, Award } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 
 interface PlanBadgeProps {
-  plan?: 'free' | 'quick' | 'pro' | 'vip';
+  plan?: 'free' | 'pro' | 'vip';
   size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
   variant?: 'default' | 'outline' | 'dot';
@@ -16,12 +16,6 @@ const planStyles = {
     colors: 'bg-slate-500/20 text-surface-500 dark:text-slate-400 border-slate-500/30',
     dotColor: 'bg-slate-400',
     label: 'Free',
-  },
-  quick: {
-    icon: Zap,
-    colors: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    dotColor: 'bg-emerald-400',
-    label: 'Quick Fix',
   },
   pro: {
     icon: Sparkles,

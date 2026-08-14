@@ -208,7 +208,7 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
               <p className="text-sm text-surface-500 dark:text-slate-400 mb-4">
                 AI will optimize your resume specifically for this job description
               </p>
-              {currentPlan === 'free' || currentPlan === 'quick' ? (
+              {currentPlan === 'free' ? (
                 <Link
                   href="/plans"
                   className="w-full px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all flex items-center justify-center gap-2"

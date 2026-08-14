@@ -1,6 +1,6 @@
 'use client';
 
-import { Shield, Zap, Sparkles, Award, Lock, ArrowRight, ExternalLink } from 'lucide-react';
+import { Shield, Sparkles, Award, Lock, ArrowRight, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils/helpers';
 import { usePlan } from '@/lib/hooks/usePlan';
 import { PLAN_DEFINITIONS } from '@/lib/constants/plans';
@@ -8,7 +8,7 @@ import Link from 'next/link';
 
 interface PlanGateProps {
   children: React.ReactNode;
-  requiredPlan?: 'free' | 'quick' | 'pro' | 'vip';
+  requiredPlan?: 'free' | 'pro' | 'vip';
   featureName?: string;
   fallback?: React.ReactNode;
   showUpgrade?: boolean;
@@ -17,19 +17,17 @@ interface PlanGateProps {
 
 const planIcons = {
   free: Shield,
-  quick: Zap,
   pro: Sparkles,
   vip: Award,
 };
 
 const planLabels = {
   free: 'Free',
-  quick: 'Quick Fix',
   pro: 'Pro Bundle',
   vip: 'VIP Mentorship',
 };
 
-const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };
+const PLAN_TIER: Record<string, number> = { free: 0, pro: 1, vip: 2 };
 
 export function PlanGate({
   children,
@@ -84,11 +82,9 @@ export function PlanGate({
           </Link>
 
           <p className="text-surface-400 dark:text-slate-500 text-sm">
-            {currentPlan === 'free' 
-              ? 'Start with Quick Fix (₹49) for instant access, or unlock all Pro features.'
-              : currentPlan === 'quick'
-              ? 'Upgrade to Pro (₹499/3mo) for unlimited tailored resumes, job matches, and roadmaps.'
-              : 'Upgrade to VIP (₹1,499/3mo) for unlimited everything plus 1-on-1 mentoring.'}
+            {currentPlan === 'free'
+              ? 'Upgrade to Pro or VIP for full access to all features.'
+              : 'Upgrade to VIP for 1-on-1 mentoring and unlimited features.'}
           </p>
         </div>
       )}
@@ -96,7 +92,7 @@ export function PlanGate({
       <div className="mt-8 pt-8 border-t border-surface-200 dark:border-slate-800">
         <h4 className="text-sm font-medium text-surface-400 dark:text-slate-500 mb-4">Plan Comparison</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          {(['free', 'quick', 'pro', 'vip'] as const).map((plan) => {
+          {(['free', 'pro', 'vip'] as const).map((plan) => {
             const def = PLAN_DEFINITIONS[plan];
             const Icon = planIcons[plan];
             return (
@@ -130,7 +126,7 @@ export function FeatureLock({
   description,
 }: {
   featureName: string;
-  requiredPlan?: 'free' | 'quick' | 'pro' | 'vip';
+  requiredPlan?: 'free' | 'pro' | 'vip';
   description?: string;
 }) {
   const currentPlan = usePlan(s => s.currentPlan);

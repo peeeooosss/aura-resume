@@ -3,7 +3,6 @@
 import { create } from 'zustand';
 import { useEffect, useCallback } from 'react';
 import { usePlan } from './usePlan';
-import type { PlanId } from '@/lib/constants/plans';
 
 interface CreditsState {
   balance: number;
@@ -16,7 +15,7 @@ async function fetchUserState() {
     const res = await fetch('/api/credits');
     const data = await res.json();
     if (res.ok) {
-      return { balance: data.balance ?? 0, plan: data.plan as PlanId | undefined };
+      return { balance: data.balance ?? 0, plan: data.plan as string | undefined };
     }
     return { balance: 0, plan: undefined };
   } catch (err) {
@@ -31,8 +30,12 @@ const useCreditsStore = create<CreditsState>((set) => ({
   refresh: async () => {
     set({ loading: true });
     const { balance, plan } = await fetchUserState();
-    if (plan && plan !== usePlan.getState().currentPlan) {
-      usePlan.getState().setPlan(plan);
+    // Dashboard only recognizes free/pro/vip; map 'quick' to 'free' since
+    // Quick Fix is a landing-page-only purchase not tracked in the dashboard.
+    if (plan && (plan === 'free' || plan === 'pro' || plan === 'vip')) {
+      if (plan !== usePlan.getState().currentPlan) {
+        usePlan.getState().setPlan(plan as 'free' | 'pro' | 'vip');
+      }
     }
     set({ balance, loading: false });
   },

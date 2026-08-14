@@ -163,7 +163,7 @@ export function canAccessFeature(
   userPlan: string,
   requiredPlan: string
 ): boolean {
-  const planOrder: string[] = ['free', 'quick', 'pro', 'vip'];
+  const planOrder: string[] = ['free', 'pro', 'vip'];
   return planOrder.indexOf(userPlan) >= planOrder.indexOf(requiredPlan);
 }
 
@@ -171,4 +171,4 @@ export function getPlanLimit(userPlan: string, limitKey: keyof PlanDefinition['l
   return PLAN_DEFINITIONS[userPlan as PlanId]?.limits[limitKey] ?? 0;
 }
 
-export const PLAN_TIER: Record<string, number> = { free: 0, quick: 1, pro: 2, vip: 3 };
+export const PLAN_TIER: Record<string, number> = { free: 0, pro: 1, vip: 2 };

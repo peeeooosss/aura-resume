@@ -2,10 +2,12 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { PLAN_DEFINITIONS, type PlanId } from '@/lib/constants/plans';
+import { PLAN_DEFINITIONS } from '@/lib/constants/plans';
+
+type DashboardPlanId = 'free' | 'pro' | 'vip';
 
 interface PlanState {
-  currentPlan: PlanId;
+  currentPlan: DashboardPlanId;
   usage: {
     resumes: number;
     scansThisMonth: number;
@@ -13,7 +15,7 @@ interface PlanState {
     tailoredResumes: number;
     roadmaps: number;
   };
-  setPlan: (plan: PlanId) => void;
+  setPlan: (plan: DashboardPlanId) => void;
   setUsage: (usage: Partial<PlanState['usage']>) => void;
   incrementUsage: (key: keyof PlanState['usage']) => void;
   resetMonthlyUsage: () => void;
@@ -21,7 +23,7 @@ interface PlanState {
   getUsagePercent: (feature: keyof PlanState['usage']) => number;
 }
 
-function getPlanLimit(plan: PlanId, key: string): number {
+function getPlanLimit(plan: DashboardPlanId, key: string): number {
   const def = PLAN_DEFINITIONS[plan] || PLAN_DEFINITIONS.free;
   const limitsMap: Record<string, number> = {
     resumes: def.limits.resumes,
@@ -44,7 +46,7 @@ export const usePlan = create<PlanState>()(
         tailoredResumes: 0,
         roadmaps: 0,
       },
-      setPlan: (plan) => set({ currentPlan: plan }),
+      setPlan: (plan) => set({ currentPlan: plan as DashboardPlanId }),
       setUsage: (usage) => set((state) => ({ usage: { ...state.usage, ...usage } })),
       incrementUsage: (key) => set((state) => ({
         usage: { ...state.usage, [key]: state.usage[key] + 1 },

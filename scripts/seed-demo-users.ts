@@ -16,21 +16,21 @@ interface UserData {
 const demoUsers: UserData[] = [
   {
     id: 'demo-free-user',
-    email: 'free@demo.aura-resume.local',
+    email: 'demo-free@tryaura.in',
     name: 'Free Demo',
     plan: 'free',
     credits: 50,
   },
   {
     id: 'demo-pro-user',
-    email: 'pro@demo.aura-resume.local',
+    email: 'demo-pro@tryaura.in',
     name: 'Pro Demo',
     plan: 'pro',
     credits: 900,
   },
   {
     id: 'demo-vip-user',
-    email: 'vip@demo.aura-resume.local',
+    email: 'demo-vip@tryaura.in',
     name: 'VIP Demo',
     plan: 'vip',
     credits: 1800,
@@ -141,14 +141,14 @@ async function main() {
   await prisma.payment.create({
     data: {
       userId: 'demo-pro-user',
-      amount: 499,
+      amount: 100, // ₹1 in paise
       currency: 'INR',
       plan: 'pro',
       status: 'completed',
       metadata: { demo: true },
     },
   });
-  console.log('  → 1 payment record (₹499)');
+  console.log('  → 1 payment record (₹1)');
 
   // --- VIP user demo data ---
   console.log('\nAdding VIP demo data...');
@@ -275,14 +275,14 @@ async function main() {
   await prisma.payment.create({
     data: {
       userId: 'demo-vip-user',
-      amount: 1499,
+      amount: 100, // ₹1 in paise
       currency: 'INR',
       plan: 'vip',
       status: 'completed',
       metadata: { demo: true },
     },
   });
-  console.log('  → 1 payment record (₹1,499)');
+  console.log('  → 1 payment record (₹1)');
 
   console.log('\n--- Summary ---');
   console.log('Free: free@demo.aura-resume.local / demo123 (50 credits)');

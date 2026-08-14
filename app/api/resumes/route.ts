@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     if (!canSave) {
       return NextResponse.json(
-        { error: 'Resume saving requires Quick Fix, Pro, or VIP plan', upgradeRequired: true },
+        { error: 'Resume saving requires a paid plan (Pro or VIP)', upgradeRequired: true },
         { status: 403 }
       );
     }
