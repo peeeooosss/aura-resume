@@ -88,18 +88,34 @@ export async function POST(req: NextRequest) {
         paymentUserId = created.id;
       }
 
-      metadata = { ...metadata, guest: true, guestName: name, guestEmail: email, guestPhone: phone };
+      metadata = {
+        ...metadata,
+        guest: true,
+        guestName: name,
+        guestEmail: email,
+        guestPhone: phone,
+        ...(body.resultId ? { resultId: body.resultId } : {}),
+      };
     } else if (userId) {
       paymentUserId = userId;
     } else {
       return NextResponse.json({ error: 'Please sign in to purchase this plan' }, { status: 401 });
     }
 
+    const resultId = (metadata as Record<string, unknown>).resultId
+      ? String((metadata as Record<string, unknown>).resultId)
+      : null;
+
     const order = await razorpay.orders.create({
       amount,
       currency: 'INR',
       receipt: `rcpt_${paymentUserId.slice(0, 8)}_${Date.now()}`,
-      notes: { userId: paymentUserId, plan, ...metadata },
+      notes: {
+        userId: paymentUserId,
+        plan,
+        ...(resultId ? { resultId } : {}),
+        ...metadata,
+      },
     });
 
     await prisma.payment.create({
@@ -110,7 +126,11 @@ export async function POST(req: NextRequest) {
         currency: 'INR',
         plan,
         status: 'created',
-        metadata: { ...metadata, orderId: order.id },
+        metadata: {
+          ...metadata,
+          orderId: order.id,
+          ...(resultId ? { resultId } : {}),
+        },
       },
     });
 

@@ -60,6 +60,7 @@ export default function PaymentForm() {
         body: JSON.stringify({
           plan: plan.slug,
           ...(guestData ? { guest: guestData } : {}),
+          ...(resultId ? { resultId } : {}),
         }),
       });
 

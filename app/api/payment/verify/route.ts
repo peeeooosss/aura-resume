@@ -80,6 +80,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment verification failed' }, { status: 400 });
     }
 
+    let resumeId: string | null = null;
+    let optimizedResume: string | null = null;
+
     await prisma.$transaction(async (tx) => {
       if (payment.plan === 'credit_refill') {
         const credits = Number((payment.metadata as Record<string, any>)?.credits) || 0;
@@ -102,6 +105,49 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      if (resumeText && typeof resumeText === 'string' && resumeText.trim().length >= 50) {
+        try {
+          const result = await generateATSPerfectResume(resumeText.trim(), analysis || {});
+          optimizedResume = result.optimizedResume;
+
+          const title = fileName
+            ? fileName.replace(/\.[^/.]+$/, '')
+            : 'Quick Fix Resume';
+
+          const resume = await tx.resume.create({
+            data: {
+              userId: payUserId,
+              title,
+              fileUrl: '',
+              rawText: resumeText,
+              optimizedText: optimizedResume || null,
+              status: 'fixed',
+            },
+          });
+
+          if (analysis) {
+            await tx.analysis.create({
+              data: {
+                resumeId: resume.id,
+                userId: payUserId,
+                type: 'resume',
+                overallScore: analysis.score || 0,
+                strengths: analysis.strengths || [],
+                redFlags: analysis.redFlags || [],
+                suggestions: analysis.suggestions || [],
+                keywordGaps: analysis.keywordGaps || [],
+                jobRolePotential: analysis.jobRolePotential || null,
+                modelUsed: 'google/gemini-2.5-flash-lite',
+              },
+            });
+          }
+
+          resumeId = resume.id;
+        } catch (err) {
+          console.error('[RazorPay] Resume generation failed after payment:', err);
+        }
+      }
+
       await tx.payment.update({
         where: { id: payment.id },
         data: {
@@ -110,55 +156,12 @@ export async function POST(req: NextRequest) {
             ...((payment.metadata as Record<string, any>) || {}),
             paymentId,
             verifiedAt: new Date().toISOString(),
+            ...(resumeId ? { resumeId } : {}),
+            ...(optimizedResume ? { optimizedResume } : {}),
           },
         },
       });
     });
-
-    let resumeId: string | null = null;
-    let optimizedResume: string | null = null;
-
-    if (resumeText && typeof resumeText === 'string' && resumeText.trim().length >= 50) {
-      try {
-        const result = await generateATSPerfectResume(resumeText.trim(), analysis || {});
-        optimizedResume = result.optimizedResume;
-
-        const title = fileName
-          ? fileName.replace(/\.[^/.]+$/, '')
-          : `Quick Fix Resume`;
-
-        const resume = await prisma.resume.create({
-          data: {
-            userId: payUserId,
-            title,
-            fileUrl: '',
-            rawText: resumeText,
-            status: 'fixed',
-          },
-        });
-
-        if (analysis) {
-          await prisma.analysis.create({
-            data: {
-              resumeId: resume.id,
-              userId: payUserId,
-              type: 'resume',
-              overallScore: analysis.score || 0,
-              strengths: analysis.strengths || [],
-              redFlags: analysis.redFlags || [],
-              suggestions: analysis.suggestions || [],
-              keywordGaps: analysis.keywordGaps || [],
-              jobRolePotential: analysis.jobRolePotential || null,
-              modelUsed: 'google/gemini-2.5-flash-lite',
-            },
-          });
-        }
-
-        resumeId = resume.id;
-      } catch (err) {
-        console.error('[RazorPay] Resume generation failed after payment:', err);
-      }
-    }
 
     return NextResponse.json({
       success: true,

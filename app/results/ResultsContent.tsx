@@ -321,25 +321,49 @@ export default function ResultsContent({ id, testMode }: Props) {
 
       if (!optimizedText && result.resume?.originalText) {
         if (status !== 'authenticated') {
+          // Guest path: try to recover the previously-generated optimized resume
+          // from the completed payment (no auth required).
+          try {
+            const res = await fetch(`/api/results/recover?resultId=${encodeURIComponent(id || '')}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data?.optimizedResume) {
+                optimizedText = data.optimizedResume;
+                if (id) {
+                  analyses[id] = analyses[id] || {};
+                  analyses[id].optimizedResumeText = optimizedText;
+                  localStorage.setItem('aura-analyses', JSON.stringify(analyses));
+                }
+              }
+            }
+          } catch (recoverErr) {
+            console.error('Guest resume recovery failed:', recoverErr);
+          }
+        }
+
+        if (!optimizedText && status !== 'authenticated') {
           setGeneratingResume(false);
           return;
         }
-        const response = await fetch('/api/generate-resume', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            resumeText: result.resume.originalText,
-            analysis: result.resume,
-          }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Generation failed');
-        optimizedText = data.optimizedResume;
-        if (id) {
-          analyses[id].optimizedResumeText = optimizedText;
-          localStorage.setItem('aura-analyses', JSON.stringify(analyses));
+
+        if (!optimizedText && status === 'authenticated') {
+          const response = await fetch('/api/generate-resume', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              resumeText: result.resume.originalText,
+              analysis: result.resume,
+            }),
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'Generation failed');
+          optimizedText = data.optimizedResume;
+          if (id) {
+            analyses[id].optimizedResumeText = optimizedText;
+            localStorage.setItem('aura-analyses', JSON.stringify(analyses));
+          }
+          useCreditsStore.getState().refresh();
         }
-        useCreditsStore.getState().refresh();
       }
 
       if (!optimizedText) {
@@ -630,7 +654,9 @@ export default function ResultsContent({ id, testMode }: Props) {
                 {!generatingResume && !resumePdfUrl && (
                   <div className="text-center py-8">
                     <p className="text-slate-400 text-sm">
-                      Your optimized resume PDF wasn't generated. Please refresh the page.
+                      {id
+                        ? 'Your optimized resume could not be loaded. Make sure your payment was completed, then refresh the page.'
+                        : 'Your optimized resume was not generated. Please refresh the page.'}
                     </p>
                   </div>
                 )}
