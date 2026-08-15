@@ -64,6 +64,9 @@ async function callOpenRouter(
 
   if (!response.ok) {
     const error = await response.text();
+    if (response.status === 402 || response.status === 403 || response.status === 429) {
+      throw new Error('AI service temporarily unavailable. Please sign in or try again later.');
+    }
     throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
   }
 

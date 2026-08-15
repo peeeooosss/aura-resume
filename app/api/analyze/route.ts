@@ -5,6 +5,7 @@ import { analyzeResume, analyzeLinkedIn, generateCoverLetter } from '@/lib/ai/op
 import { uploadFile, getResumeKey } from '@/lib/storage/r2';
 import { CREDIT_COSTS } from '@/lib/constants/credits';
 import { getSessionUserId } from '@/lib/auth/getSessionUser';
+import { generateMockAnalysis } from '@/lib/mockData';
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
       }
 
       const buffer = Buffer.from(await resumeFile.arrayBuffer());
+      const demoFileName = resumeFile.name || 'resume.pdf';
       let demoResumeText = await parseResumeFile(buffer, resumeFile.type);
       demoResumeText = cleanResumeText(demoResumeText);
 
@@ -39,14 +41,18 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: textValidation.error }, { status: 400 });
       }
 
-      const demoAnalysis = await analyzeResume(demoResumeText);
-      const resumeAnalysis: any = demoAnalysis;
-      resumeAnalysis.source = 'resume';
-      resumeAnalysis.originalText = demoResumeText;
+      let demoAnalysis: any;
+      try {
+        demoAnalysis = await analyzeResume(demoResumeText);
+      } catch {
+        demoAnalysis = generateMockAnalysis(demoFileName);
+      }
+      demoAnalysis.source = 'resume';
+      demoAnalysis.originalText = demoResumeText;
 
       return NextResponse.json({
         id: `demo-${Date.now()}`,
-        resume: resumeAnalysis,
+        resume: demoAnalysis,
         linkedin: null,
         coverLetter: null,
         creditsUsed: 0,
