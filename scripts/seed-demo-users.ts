@@ -285,9 +285,9 @@ async function main() {
   console.log('  → 1 payment record (₹1)');
 
   console.log('\n--- Summary ---');
-  console.log('Free: free@demo.aura-resume.local / demo123 (50 credits)');
-  console.log('Pro:  pro@demo.aura-resume.local / demo123  (900 credits)');
-  console.log('VIP:  vip@demo.aura-resume.local / demo123  (1,800 credits)');
+  console.log('Free: demo-free@tryaura.in / demo123 (50 credits)');
+  console.log('Pro:  demo-pro@tryaura.in / demo123  (900 credits)');
+  console.log('VIP:  demo-vip@tryaura.in / demo123  (1,800 credits)');
   console.log('\nDone!');
 }
 
