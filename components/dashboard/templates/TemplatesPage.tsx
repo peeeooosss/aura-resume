@@ -50,20 +50,20 @@ function TemplateCard({ template, onUse, onDelete, onCopy }: { template: Templat
 
       <div className="flex items-center gap-4 mb-4">
         <span className="px-2 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-400 rounded-full">
-          {template.matchHighlights.length} key matches
+          {(template.matchHighlights || []).length} key matches
         </span>
         <span className="text-surface-400 dark:text-slate-500 text-sm">{date}</span>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {template.templates.matchHighlights.slice(0, 3).map((highlight, i) => (
+        {(template.templates?.matchHighlights || []).slice(0, 3).map((highlight, i) => (
           <span key={i} className="px-2.5 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-400 rounded-lg">
             {highlight}
           </span>
         ))}
-        {template.templates.matchHighlights.length > 3 && (
+        {(template.templates?.matchHighlights || []).length > 3 && (
           <span className="px-2.5 py-1 text-xs font-medium bg-surface-100 dark:bg-slate-800 text-surface-700 dark:text-slate-400 rounded-lg">
-            +{template.templates.matchHighlights.length - 3} more
+            +{(template.templates?.matchHighlights || []).length - 3} more
           </span>
         )}
       </div>
@@ -72,8 +72,8 @@ function TemplateCard({ template, onUse, onDelete, onCopy }: { template: Templat
 }
 
 function CoverLetterEditor({ template, onSave, onClose }: { template: Template | null; onSave: (letter: string) => void; onClose: () => void }) {
-  const [letter, setLetter] = useState(template?.templates.coverLetter || '');
-  const [subjectLine, setSubjectLine] = useState(template?.templates.subjectLines[0] || '');
+  const [letter, setLetter] = useState(template?.templates?.coverLetter || '');
+  const [subjectLine, setSubjectLine] = useState(template?.templates?.subjectLines?.[0] || '');
   const [activeTab, setActiveTab] = useState<'letter' | 'subject'>('letter');
 
   return (
@@ -118,7 +118,7 @@ function CoverLetterEditor({ template, onSave, onClose }: { template: Template |
                 className="w-full bg-surface-100 dark:bg-slate-800 border border-surface-300 dark:border-slate-700 rounded-xl px-4 py-3 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                 placeholder="Subject: Application for [Role] at [Company]"
               />
-              {template?.templates.subjectLines.slice(1).map((sl, i) => (
+              {(template?.templates?.subjectLines || []).slice(1).map((sl, i) => (
                 <button key={i} onClick={() => setSubjectLine(sl)} className="w-full text-left px-4 py-2 bg-surface-100 dark:bg-slate-800/50 border border-surface-300 dark:border-slate-700 rounded-xl text-surface-600 dark:text-slate-300 hover:bg-surface-200 dark:hover:bg-slate-800 hover:text-surface-900 dark:text-white transition-colors">
                   {sl}
                 </button>
@@ -196,7 +196,19 @@ export function TemplatesPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Generation failed');
-      setTemplates([{ ...data, id: data.id || `template_${Date.now()}` }, ...templates]);
+      const newTemplate: Template = {
+        id: data.id || `template_${Date.now()}`,
+        jdText: newJDText,
+        jdUrl: newJDUrl || undefined,
+        templates: {
+          coverLetter: data.coverLetter || '',
+          matchHighlights: data.matchHighlights || [],
+          subjectLines: data.suggestedSubjectLines || [],
+        },
+        matchHighlights: data.matchHighlights || [],
+        createdAt: new Date().toISOString(),
+      };
+      setTemplates([newTemplate, ...templates]);
       setNewJDText('');
       setNewJDUrl('');
       useCreditsStore.getState().refresh();
@@ -336,7 +348,7 @@ export function TemplatesPage() {
                 template={template}
                 onUse={() => openEditor(template)}
                 onDelete={() => handleDelete(template.id)}
-                onCopy={() => handleCopy(template.templates.coverLetter)}
+                onCopy={() => handleCopy(template.templates?.coverLetter || '')}
               />
             ))}
           </div>
@@ -354,7 +366,7 @@ export function TemplatesPage() {
           template={editingTemplate}
           onSave={(letter) => {
             const updated = templates.map(t =>
-              t.id === editingTemplate.id ? { ...t, templates: { ...t.templates, coverLetter: letter } } : t
+              t.id === editingTemplate.id ? { ...t, templates: { ...(t.templates || {}), coverLetter: letter } } : t
             );
             setTemplates(updated);
             closeEditor();
